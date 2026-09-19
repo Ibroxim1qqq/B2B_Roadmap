@@ -199,31 +199,7 @@ export default function DashboardView({
 
   return (
     <div className="flex-1 flex flex-col bg-slate-100 min-w-0 overflow-y-auto p-6 space-y-6">
-      {/* 1. Top Header with Sync Action */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 flex items-center gap-2.5">
-            <BarChart2 className="w-6 h-6 text-blue-600" />
-            <span>B2B Samarqand • Tahlil va Boshqaruv Dashboardi</span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Barcha TJM-lar, tashriflar, B2B CRM to'ldirilishi va tumanlar bo'yicha real vaqt umumiy hisoboti
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onSync}
-            disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-            <span>{syncing ? 'Sinxronlanmoqda...' : 'Hozir sinxronlash'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. 5 KPI Summary Cards */}
+      {/* 1. 5 KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         {cards.map((card, i) => {
           const Icon = card.icon;
