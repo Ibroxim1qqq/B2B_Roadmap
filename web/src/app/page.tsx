@@ -169,6 +169,13 @@ export default function Home() {
     handleSelectObject(id);
   };
 
+  // Switch tab and clean up selected object panel
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSelectedId(null);
+    setIsEditing(false);
+  };
+
   // CRUD: Update B2B data
   const handleSaveObject = async (data: Record<string, string>) => {
     if (!selectedId) return;
@@ -322,7 +329,7 @@ export default function Home() {
         <div className="hidden lg:flex">
           <LeftSidebar
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           />
@@ -444,7 +451,7 @@ export default function Home() {
               totalCount={markers.length}
               onSync={handleSyncWithSheets}
               syncing={syncing}
-              onNavigateToTab={(t) => setActiveTab(t)}
+              onNavigateToTab={(t) => handleTabChange(t)}
             />
           )}
 
@@ -453,8 +460,8 @@ export default function Home() {
           )}
         </main>
 
-        {/* Right Drawer / Sidebar (Desktop) */}
-        {selectedId && (
+        {/* Right Drawer / Sidebar (ONLY FOR MAP TAB) */}
+        {selectedId && activeTab === 'map' && (
           <div className="hidden xl:flex w-[410px] shrink-0 h-full">
             {detailLoading ? (
               <div className="w-full h-full flex items-center justify-center bg-white border-l border-slate-200">
@@ -477,7 +484,7 @@ export default function Home() {
                 <ObjectDetails
                   detail={objectDetail}
                   distance={selectedDistance}
-                  onClose={() => setSelectedId(null)}
+                  onClose={() => { setSelectedId(null); setIsEditing(false); }}
                   onEdit={() => setIsEditing(true)}
                   onRecordVisit={handleRecordVisit}
                   onClearB2B={handleClearB2B}
@@ -487,18 +494,62 @@ export default function Home() {
           </div>
         )}
 
-        {/* Mobile View Bottom Sheet Drawer */}
-        <div className="xl:hidden">
-          <BottomSheet
-            isOpen={!!selectedId}
-            onClose={() => setSelectedId(null)}
-          >
+        {/* Mobile View Bottom Sheet Drawer (For Map tab on mobile) */}
+        {activeTab === 'map' && (
+          <div className="xl:hidden">
+            <BottomSheet
+              isOpen={!!selectedId}
+              onClose={() => { setSelectedId(null); setIsEditing(false); }}
+            >
+              {detailLoading ? (
+                <div className="p-8 text-center text-slate-500 text-xs">Yuklanmoqda...</div>
+              ) : objectDetail ? (
+                isEditing ? (
+                  <ObjectEdit
+                    sourceId={selectedId as string}
+                    initialData={objectDetail.internal}
+                    fields={customFields}
+                    onSave={handleSaveObject}
+                    onCancel={() => setIsEditing(false)}
+                    onClear={handleClearB2B}
+                  />
+                ) : (
+                  <ObjectDetails
+                    detail={objectDetail}
+                    distance={selectedDistance}
+                    onClose={() => { setSelectedId(null); setIsEditing(false); }}
+                    onEdit={() => setIsEditing(true)}
+                    onRecordVisit={handleRecordVisit}
+                    onClearB2B={handleClearB2B}
+                  />
+                )
+              ) : null}
+            </BottomSheet>
+          </div>
+        )}
+      </div>
+
+      {/* Center Modal for Object Details (When on Objects, Visits, or Dashboard tabs) */}
+      {selectedId && activeTab !== 'map' && (
+        <div 
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedId(null);
+              setIsEditing(false);
+            }
+          }}
+        >
+          <div className="bg-white w-full max-w-xl h-[85vh] rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col animate-in zoom-in-95 duration-150">
             {detailLoading ? (
-              <div className="p-8 text-center text-slate-500 text-xs">Yuklanmoqda...</div>
+              <div className="p-12 flex flex-col items-center justify-center gap-3 h-full">
+                <div className="w-6 h-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+                <p className="text-xs text-slate-400 font-semibold">Yuklanmoqda...</p>
+              </div>
             ) : objectDetail ? (
               isEditing ? (
                 <ObjectEdit
-                  sourceId={selectedId as string}
+                  sourceId={selectedId}
                   initialData={objectDetail.internal}
                   fields={customFields}
                   onSave={handleSaveObject}
@@ -509,16 +560,16 @@ export default function Home() {
                 <ObjectDetails
                   detail={objectDetail}
                   distance={selectedDistance}
-                  onClose={() => setSelectedId(null)}
+                  onClose={() => { setSelectedId(null); setIsEditing(false); }}
                   onEdit={() => setIsEditing(true)}
                   onRecordVisit={handleRecordVisit}
                   onClearB2B={handleClearB2B}
                 />
               )
             ) : null}
-          </BottomSheet>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Create New Object Modal */}
       <CreateObjectModal
@@ -529,11 +580,10 @@ export default function Home() {
         userLng={location.lng}
       />
 
-
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
       />
     </div>
   );
