@@ -151,16 +151,7 @@ export default function CustomFieldManager() {
         </div>
       )}
 
-      {/* 2. Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4.5 flex items-start gap-3.5 text-xs text-blue-800">
-        <FileSpreadsheet className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-bold text-slate-900">Avtomatik Google Sheets & TJM Sinxronizatsiyasi</p>
-          <p className="text-slate-600">
-            Bu yerda kiritilgan har qanday yangi maydon darhol <strong>TJM ma'lumotlari</strong> oynasida ko'rinadi va tahrirlashda kiritilgan barcha qiymatlar markaziy Google Sheets bazasiga avtomatik yoziladi.
-          </p>
-        </div>
-      </div>
+
 
       {/* 3. Fields Table */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">

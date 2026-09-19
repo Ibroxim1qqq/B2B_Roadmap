@@ -335,16 +335,7 @@ export default function ObjectsTableView({
             )}
           </div>
 
-          {/* Clear Filters */}
-          {hasActiveFilters && (
-            <button
-              onClick={clearAllFilters}
-              className="text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 px-2.5 py-1.5 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-              <span>Tozalash</span>
-            </button>
-          )}
+
         </div>
 
         {/* Found Count */}
