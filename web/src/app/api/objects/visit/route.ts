@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import { updateObjectInSheet } from '@/lib/googleSheets';
+import { updateObjectInSheet, logActivity } from '@/lib/googleSheets';
 import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
@@ -30,8 +30,24 @@ export async function POST(request: Request) {
     // 2. Direct Google Sheets API update
     try {
       await updateObjectInSheet(String(source_id), visitData);
+
+      // Log to ActivityLog sheet
+      await logActivity({
+        action: 'VISIT',
+        source_id: String(source_id),
+        user: visited_by || 'Field Sales',
+        details: visitData,
+        status: 'SUCCESS'
+      });
     } catch (sheetErr: any) {
       console.error('Google Sheets visit update error:', sheetErr);
+      await logActivity({
+        action: 'VISIT',
+        source_id: String(source_id),
+        user: visited_by || 'Field Sales',
+        details: `Xatolik: ${sheetErr.message}`,
+        status: 'FAILED'
+      });
       return NextResponse.json({ 
         success: false, 
         error: `Google Sheets xatosi: ${sheetErr.message}` 

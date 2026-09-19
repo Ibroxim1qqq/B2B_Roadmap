@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import { createObjectInSheet } from '@/lib/googleSheets';
+import { createObjectInSheet, logActivity } from '@/lib/googleSheets';
 import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
@@ -70,8 +70,26 @@ export async function POST(request: Request) {
     // 2. Direct Google Sheets API append
     try {
       await createObjectInSheet(newObjectRecord);
+
+      // Log to ActivityLog sheet
+      await logActivity({
+        action: 'CREATE',
+        source_id: String(source_id),
+        object_name: name,
+        user: body.user || 'Menejer',
+        details: { object_name: name, address: newObjectRecord.address, district_soato: newObjectRecord.district_soato },
+        status: 'SUCCESS'
+      });
     } catch (sheetErr: any) {
       console.error('Google Sheets create error:', sheetErr);
+      await logActivity({
+        action: 'CREATE',
+        source_id: String(source_id),
+        object_name: name,
+        user: body.user || 'Menejer',
+        details: `Xatolik: ${sheetErr.message}`,
+        status: 'FAILED'
+      });
       return NextResponse.json({ 
         success: false, 
         error: `Google Sheets xatosi: ${sheetErr.message}` 

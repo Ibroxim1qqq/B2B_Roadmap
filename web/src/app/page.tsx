@@ -179,7 +179,8 @@ export default function Home() {
   const handleSaveObject = async (data: Record<string, string>) => {
     if (!selectedId) return;
     try {
-      const res = await api.updateObject(selectedId, data);
+      const userName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Menejer';
+      const res = await api.updateObject(selectedId, data, userName);
       if (res && res.success) {
         const detail = await api.getObject(selectedId);
         setObjectDetail(detail);
@@ -199,7 +200,8 @@ export default function Home() {
   const handleClearB2B = async () => {
     if (!selectedId) return;
     try {
-      const res = await api.clearObject(selectedId);
+      const userName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Menejer';
+      const res = await api.clearObject(selectedId, userName);
       if (res && res.success) {
         const detail = await api.getObject(selectedId);
         setObjectDetail(detail);
@@ -248,7 +250,8 @@ export default function Home() {
   // CRUD: Create new building object
   const handleCreateObject = async (newData: Record<string, any>) => {
     try {
-      const res = await api.createObject(newData);
+      const userName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Menejer';
+      const res = await api.createObject(newData, userName);
       if (res && res.success) {
         await refresh();
         const newId = res.data?.source_id;

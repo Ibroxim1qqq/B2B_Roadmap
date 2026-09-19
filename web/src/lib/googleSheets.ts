@@ -370,7 +370,7 @@ export async function addCustomFieldToSheet(field: {
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: `'${tab}'!A1:${colLetter}1`,
-      valueInputOption: 'USER_ENTERED',
+      valueInputOption: 'RAW',
       requestBody: {
         values: [headers]
       }
@@ -391,7 +391,7 @@ export async function addCustomFieldToSheet(field: {
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
     range: 'Settings!A1:G',
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     requestBody: {
       values: [settingsRow]
@@ -404,3 +404,52 @@ export async function addCustomFieldToSheet(field: {
     column_letter: colLetter
   };
 }
+
+/**
+ * Append an activity audit record to the ActivityLog tab in Google Sheets
+ * Columns: Timestamp | Action | Source_ID | Object_Name | User | Details | Status
+ */
+export async function logActivity(params: {
+  action: 'UPDATE' | 'VISIT' | 'CLEAR' | 'CREATE' | 'ADD_FIELD';
+  source_id?: string;
+  object_name?: string;
+  user?: string;
+  details?: Record<string, any> | string;
+  status?: 'SUCCESS' | 'FAILED';
+}) {
+  try {
+    const sheets = await getSheetsClient();
+    const now = new Date();
+    const timestamp = `${now.toISOString().slice(0, 10)} ${now.toTimeString().slice(0, 8)}`;
+
+    let detailsStr = '';
+    if (typeof params.details === 'object' && params.details !== null) {
+      detailsStr = JSON.stringify(params.details);
+    } else {
+      detailsStr = String(params.details || '');
+    }
+
+    const row = [
+      timestamp,
+      params.action,
+      params.source_id || '',
+      params.object_name || '',
+      params.user || 'Menejer',
+      detailsStr,
+      params.status || 'SUCCESS'
+    ];
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'ActivityLog!A1:G',
+      valueInputOption: 'RAW',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: {
+        values: [row]
+      }
+    });
+  } catch (err) {
+    console.warn('Failed to record to ActivityLog:', err);
+  }
+}
+

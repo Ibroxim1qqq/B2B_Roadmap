@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCustomFieldsFromSheet, addCustomFieldToSheet } from '@/lib/googleSheets';
+import { getCustomFieldsFromSheet, addCustomFieldToSheet, logActivity } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +56,15 @@ export async function POST(request: Request) {
       desc: (desc || '').trim(),
       required: false,
       visible: true
+    });
+
+    await logActivity({
+      action: 'ADD_FIELD',
+      source_id: '-',
+      object_name: (label || cleanKey).trim(),
+      user: body.user || 'Administrator',
+      details: { field_name: cleanKey, field_type: field_type || 'text', label },
+      status: 'SUCCESS'
     });
 
     return NextResponse.json({ success: true, data: result });

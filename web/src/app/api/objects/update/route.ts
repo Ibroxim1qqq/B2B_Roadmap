@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import { updateObjectInSheet } from '@/lib/googleSheets';
+import { updateObjectInSheet, logActivity } from '@/lib/googleSheets';
 import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { source_id, data } = body;
+    const { source_id, data, user } = body;
 
     if (!source_id || !data) {
       return NextResponse.json({ success: false, error: 'source_id va data talab qilinadi' }, { status: 400 });
@@ -21,8 +21,26 @@ export async function POST(request: Request) {
     // 2. Direct Google Sheets API update (Permanent Source of Truth)
     try {
       await updateObjectInSheet(String(source_id), data);
+      
+      // Log to ActivityLog sheet
+      await logActivity({
+        action: 'UPDATE',
+        source_id: String(source_id),
+        object_name: data.tjm_name || '',
+        user: user || 'Menejer',
+        details: data,
+        status: 'SUCCESS'
+      });
     } catch (sheetErr: any) {
       console.error('Google Sheets update error:', sheetErr);
+      await logActivity({
+        action: 'UPDATE',
+        source_id: String(source_id),
+        object_name: data.tjm_name || '',
+        user: user || 'Menejer',
+        details: `Xatolik: ${sheetErr.message}`,
+        status: 'FAILED'
+      });
       return NextResponse.json({ 
         success: false, 
         error: `Google Sheets xatosi: ${sheetErr.message}` 

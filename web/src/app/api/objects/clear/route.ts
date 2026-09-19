@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import { updateObjectInSheet, INTERNAL_COLUMNS } from '@/lib/googleSheets';
+import { updateObjectInSheet, logActivity, INTERNAL_COLUMNS } from '@/lib/googleSheets';
 import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { source_id } = body;
+    const { source_id, user } = body;
 
     if (!source_id) {
       return NextResponse.json({ success: false, error: 'source_id talab qilinadi' }, { status: 400 });
@@ -27,8 +27,24 @@ export async function POST(request: Request) {
     // 2. Direct Google Sheets API update
     try {
       await updateObjectInSheet(String(source_id), clearedFields);
+
+      // Log to ActivityLog sheet
+      await logActivity({
+        action: 'CLEAR',
+        source_id: String(source_id),
+        user: user || 'Menejer',
+        details: "Barcha B2B ma'lumotlari tozalandi",
+        status: 'SUCCESS'
+      });
     } catch (sheetErr: any) {
       console.error('Google Sheets clear error:', sheetErr);
+      await logActivity({
+        action: 'CLEAR',
+        source_id: String(source_id),
+        user: user || 'Menejer',
+        details: `Xatolik: ${sheetErr.message}`,
+        status: 'FAILED'
+      });
       return NextResponse.json({ 
         success: false, 
         error: `Google Sheets xatosi: ${sheetErr.message}` 

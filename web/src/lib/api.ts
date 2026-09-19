@@ -209,20 +209,20 @@ export const api = {
     };
   },
 
-  updateObject: async (id: string, data: Record<string, any>): Promise<{ success: boolean; message?: string }> => {
+  updateObject: async (id: string, data: Record<string, any>, user?: string): Promise<{ success: boolean; message?: string }> => {
     const res = await fetch('/api/objects/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source_id: id, data })
+      body: JSON.stringify({ source_id: id, data, user })
     });
     return await res.json();
   },
 
-  clearObject: async (id: string): Promise<{ success: boolean; message?: string }> => {
+  clearObject: async (id: string, user?: string): Promise<{ success: boolean; message?: string }> => {
     const res = await fetch('/api/objects/clear', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source_id: id })
+      body: JSON.stringify({ source_id: id, user })
     });
     return await res.json();
   },
@@ -241,11 +241,11 @@ export const api = {
     return await res.json();
   },
 
-  createObject: async (data: Record<string, any>): Promise<{ success: boolean; message?: string; data?: any }> => {
+  createObject: async (data: Record<string, any>, user?: string): Promise<{ success: boolean; message?: string; data?: any }> => {
     const res = await fetch('/api/objects/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify({ ...data, user })
     });
     return await res.json();
   },
