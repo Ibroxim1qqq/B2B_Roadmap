@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+.turbo/
+out/
+dist/
+coverage/
+.agents/
+tests/
+__pycache__/
+*.pyc
+scraper/.env
+scraper/credentials.json
