@@ -10,7 +10,6 @@ import { getCurrentUser, setCurrentUser as saveCurrentUser, logout as authLogout
 import Navbar from '../components/Header/Navbar';
 import LeftSidebar from '../components/Sidebar/LeftSidebar';
 import FilterToolbar from '../components/Filters/FilterToolbar';
-import BottomResults from '../components/ObjectCards/BottomResults';
 import ObjectDetails from '../components/ObjectPanel/ObjectDetails';
 import ObjectEdit from '../components/ObjectPanel/ObjectEdit';
 import BottomSheet from '../components/UI/BottomSheet';
@@ -19,6 +18,7 @@ import VisitsView from '../components/Visits/VisitsView';
 import DashboardView from '../components/Dashboard/DashboardView';
 import CustomFieldManager from '../components/CustomFields/CustomFieldManager';
 import { useRouter } from 'next/navigation';
+import { Building2, MapPin, CheckCircle2, Clock } from 'lucide-react';
 import MobileBottomNav from '../components/Navigation/MobileBottomNav';
 
 const CreateObjectModal = dynamic(() => import('../components/ObjectPanel/CreateObjectModal'), { 
@@ -135,11 +135,13 @@ export default function Home() {
   const objectsWithDistance = useDistance(activeFilteredMarkers, location.lat, location.lng);
   const displayList = (location.lat && location.lng ? objectsWithDistance : activeFilteredMarkers) as (MapObject & { distance?: number })[];
 
-  // Auto-select the first real object when markers load if none selected
-  useEffect(() => {
-    if (!selectedId && markers.length > 0) {
-      handleSelectObject(markers[0].source_id);
-    }
+  // Real-time calculation for the 4 top summary cards
+  const stats = useMemo(() => {
+    const total = markers.length;
+    const visited = markers.filter(m => Boolean(m.is_visited || m.last_visit)).length;
+    const filled = markers.filter(m => Boolean(m.has_internal || m.tjm_name || m.phone || m.manager_name)).length;
+    const notVisited = Math.max(0, total - visited);
+    return { total, visited, filled, notVisited };
   }, [markers]);
 
   // Load custom field settings
@@ -329,7 +331,7 @@ export default function Home() {
         {/* Center Canvas */}
         <main className="flex-1 flex flex-col overflow-y-auto bg-slate-100 min-w-0">
           {/* Map View: Kept mounted in DOM to prevent Leaflet container re-use crashes */}
-          <div className={activeTab === 'map' ? 'flex flex-col flex-1 min-w-0' : 'hidden'}>
+          <div className={activeTab === 'map' ? 'flex flex-col flex-1 h-full min-w-0 overflow-hidden' : 'hidden'}>
             {/* Top Filter Pills Bar */}
             <FilterToolbar
               selectedDistrict={selectedDistrict}
@@ -340,9 +342,64 @@ export default function Home() {
               locating={locating}
             />
 
-            {/* Map Area */}
-            <div className="p-5 pb-3 shrink-0">
-              <div className="h-[400px] w-full">
+            {/* 4 Summary Stat Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-5 pt-3 pb-2 shrink-0">
+              {/* Card 1: Jami TJM-lar */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-slate-500 truncate">Jami TJM-lar</p>
+                  <p className="text-lg font-black text-slate-900 leading-tight">
+                    {stats.total} <span className="text-xs font-normal text-slate-400">ta</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 2: Tashrif qilingan */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-slate-500 truncate">Tashrif qilingan</p>
+                  <p className="text-lg font-black text-emerald-600 leading-tight">
+                    {stats.visited} <span className="text-xs font-normal text-slate-400">ta</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 3: Ma'lumot to'ldirilgan */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-slate-500 truncate">Ma'lumot to'ldirilgan</p>
+                  <p className="text-lg font-black text-indigo-600 leading-tight">
+                    {stats.filled} <span className="text-xs font-normal text-slate-400">ta</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 4: Tashrif qilinmagan */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-slate-500 truncate">Tashrif qilinmagan</p>
+                  <p className="text-lg font-black text-amber-600 leading-tight">
+                    {stats.notVisited} <span className="text-xs font-normal text-slate-400">ta</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Fullscreen Map Area */}
+            <div className="flex-1 p-5 pt-2 pb-4 min-h-0">
+              <div className="h-full w-full rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-white">
                 <DynamicMap
                   markers={displayList}
                   onSelect={handleSelectObject}
@@ -351,17 +408,6 @@ export default function Home() {
                   userLng={location.lng}
                 />
               </div>
-            </div>
-
-            {/* Bottom Results & Cards */}
-            <div className="flex-1">
-              <BottomResults
-                objects={displayList}
-                totalCount={markers.length}
-                onSelect={handleSelectObject}
-                selectedId={selectedId}
-                onLocate={handleLocateMe}
-              />
             </div>
           </div>
 
