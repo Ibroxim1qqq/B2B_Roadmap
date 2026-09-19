@@ -9,7 +9,8 @@ import {
 import { 
   Navigation, MapPin, ArrowDownUp, Search, Compass, 
   CheckCircle2, Clock, Phone, ChevronRight, Eye, Layers, 
-  Route as RouteIcon, Sparkles, Check, Crosshair, X, LocateFixed
+  Route as RouteIcon, Sparkles, Check, Crosshair, X, LocateFixed,
+  Play, Pause
 } from 'lucide-react';
 import { getCallUrl } from '../../lib/utils';
 
@@ -64,6 +65,7 @@ export default function RoutePlannerView({
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [matchedTJMs, setMatchedTJMs] = useState<TJMAlongRoute[]>([]);
   const [activeMobileTab, setActiveMobileTab] = useState<'list' | 'map'>('list');
+  const [isDriving, setIsDriving] = useState(false);
 
   // 1. Automatically acquire user's live GPS location for Point A on mount
   useEffect(() => {
@@ -137,7 +139,8 @@ export default function RoutePlannerView({
   // Calculate Route
   const handleCalculateRoute = useCallback(async (
     customStart = startPoint,
-    customEnd = endPoint
+    customEnd = endPoint,
+    startDrive = false
   ) => {
     if (!customStart || !customEnd) return;
 
@@ -155,6 +158,11 @@ export default function RoutePlannerView({
       // Find TJMs along this route within the selected radius
       const found = findTJMsAlongRoute(objects, res.coordinates, bufferRadius);
       setMatchedTJMs(found);
+
+      if (startDrive) {
+        setActiveMobileTab('map');
+        setIsDriving(true);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -170,10 +178,10 @@ export default function RoutePlannerView({
     }
   }, [bufferRadius, routeResult, objects]);
 
-  // Trigger calculation when start or end points change
+  // Trigger calculation when start or end points change initially
   useEffect(() => {
     if (startPoint && endPoint) {
-      handleCalculateRoute(startPoint, endPoint);
+      handleCalculateRoute(startPoint, endPoint, false);
     }
   }, [startPoint?.lat, startPoint?.lng, endPoint?.lat, endPoint?.lng]);
 
@@ -558,12 +566,13 @@ export default function RoutePlannerView({
 
               <button
                 type="button"
-                onClick={() => handleCalculateRoute(startPoint, endPoint)}
+                onClick={() => handleCalculateRoute(startPoint, endPoint, true)}
                 disabled={calculating || !startPoint || !endPoint}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer ml-auto"
+                title="Marshrutni hisoblash va mashinada ko'rish"
               >
-                <RouteIcon className="w-3.5 h-3.5" />
-                <span>{calculating ? 'Hisoblanmoqda...' : 'Marshrut'}</span>
+                <Navigation className="w-3.5 h-3.5" />
+                <span>{calculating ? 'Hisoblanmoqda...' : 'Marshrut (Yurish 🚗)'}</span>
               </button>
             </div>
           </div>
@@ -571,7 +580,7 @@ export default function RoutePlannerView({
 
         {/* Route Stats Summary Banner */}
         {routeResult && (
-          <div className="p-3 bg-blue-50/70 border-b border-blue-100 shrink-0">
+          <div className="p-3 bg-blue-50/70 border-b border-blue-100 shrink-0 space-y-2.5">
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-white p-2 rounded-xl border border-blue-100/80 shadow-2xs">
                 <p className="text-[10px] text-slate-400 font-semibold uppercase">Masofa</p>
@@ -592,6 +601,32 @@ export default function RoutePlannerView({
                 </p>
               </div>
             </div>
+
+            {/* Mashinada harakatlanish tugmasi */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMobileTab('map');
+                setIsDriving(!isDriving);
+              }}
+              className={`w-full py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer ${
+                isDriving
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25'
+                  : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/25'
+              }`}
+            >
+              {isDriving ? (
+                <>
+                  <Pause className="w-4 h-4 fill-white" />
+                  <span>Harakatni to'xtatib turish (Pauza)</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm">🚗</span>
+                  <span>Mashinada harakatlanishni boshlash (Ketdik!)</span>
+                </>
+              )}
+            </button>
           </div>
         )}
 
@@ -744,6 +779,9 @@ export default function RoutePlannerView({
           onDragEndPoint={handleDragEndPoint}
           onSetPointFromObject={handleSetPointFromObject}
           onCancelPicking={() => setPickingMode(null)}
+          isDriving={isDriving}
+          setIsDriving={setIsDriving}
+          onRecordVisit={onRecordVisit}
         />
 
         {/* Mobile Switch to List button (Floating) */}

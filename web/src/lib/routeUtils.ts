@@ -198,3 +198,110 @@ export function formatDuration(seconds: number): string {
   const remainingMins = mins % 60;
   return `~${hours} soat ${remainingMins} daq`;
 }
+
+/**
+ * Calculate compass bearing between two coordinates in degrees [0, 360)
+ */
+export function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = Math.PI / 180;
+  const toDeg = 180 / Math.PI;
+  const phi1 = lat1 * toRad;
+  const phi2 = lat2 * toRad;
+  const deltaLambda = (lon2 - lon1) * toRad;
+
+  const y = Math.sin(deltaLambda) * Math.cos(phi2);
+  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+  const theta = Math.atan2(y, x);
+  return (theta * toDeg + 360) % 360;
+}
+
+/**
+ * Calculate array of cumulative distances along route coordinates
+ */
+export function getRouteCumulativeDistances(coords: [number, number][]): number[] {
+  if (coords.length === 0) return [0];
+  const cum: number[] = [0];
+  for (let i = 0; i < coords.length - 1; i++) {
+    const d = haversineMeters(coords[i][0], coords[i][1], coords[i + 1][0], coords[i + 1][1]);
+    cum.push(cum[i] + d);
+  }
+  return cum;
+}
+
+export interface RouteInterpolation {
+  position: [number, number];
+  bearing: number;
+  passedDistanceMeters: number;
+  totalDistanceMeters: number;
+  traveledCoords: [number, number][];
+}
+
+/**
+ * Smoothly interpolate car position and bearing along route given progress (0 to 1)
+ */
+export function interpolateRoutePosition(
+  coords: [number, number][],
+  cumulativeDists: number[],
+  progress: number
+): RouteInterpolation {
+  if (coords.length === 0) {
+    return {
+      position: [0, 0],
+      bearing: 0,
+      passedDistanceMeters: 0,
+      totalDistanceMeters: 0,
+      traveledCoords: []
+    };
+  }
+
+  if (coords.length === 1) {
+    return {
+      position: coords[0],
+      bearing: 0,
+      passedDistanceMeters: 0,
+      totalDistanceMeters: 0,
+      traveledCoords: [coords[0]]
+    };
+  }
+
+  const totalDist = cumulativeDists[cumulativeDists.length - 1] || 1;
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const targetDist = clampedProgress * totalDist;
+
+  let segIndex = 0;
+  for (let i = 0; i < cumulativeDists.length - 1; i++) {
+    if (targetDist >= cumulativeDists[i] && targetDist <= cumulativeDists[i + 1]) {
+      segIndex = i;
+      break;
+    }
+    if (i === cumulativeDists.length - 2) {
+      segIndex = i;
+    }
+  }
+
+  const segStartDist = cumulativeDists[segIndex];
+  const segEndDist = cumulativeDists[segIndex + 1] || segStartDist + 1;
+  const segLen = segEndDist - segStartDist;
+
+  const t = segLen > 0 ? (targetDist - segStartDist) / segLen : 0;
+  const clampedT = Math.max(0, Math.min(1, t));
+
+  const p1 = coords[segIndex];
+  const p2 = coords[segIndex + 1] || p1;
+
+  const lat = p1[0] + clampedT * (p2[0] - p1[0]);
+  const lng = p1[1] + clampedT * (p2[1] - p1[1]);
+
+  const bearing = calculateBearing(p1[0], p1[1], p2[0], p2[1]);
+  const traveled = coords.slice(0, segIndex + 1);
+  traveled.push([lat, lng]);
+
+  return {
+    position: [lat, lng],
+    bearing,
+    passedDistanceMeters: targetDist,
+    totalDistanceMeters: totalDist,
+    traveledCoords: traveled
+  };
+}
+
