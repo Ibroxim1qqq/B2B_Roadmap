@@ -22,7 +22,22 @@ export default function LeftSidebar({
   ];
 
   return (
-    <aside className={`${isCollapsed ? 'w-[72px]' : 'w-48'} bg-white border-r border-slate-200 flex flex-col shrink-0 p-3 z-20 shadow-xs transition-all duration-300 select-none`}>
+    <aside className={`${isCollapsed ? 'w-[72px]' : 'w-52'} bg-white border-r border-slate-200 flex flex-col shrink-0 p-3 z-20 shadow-xs transition-all duration-300 select-none`}>
+      {/* 1. Brand Logo & Title */}
+      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-2'} py-2 mb-3 pb-3 border-b border-slate-100`}>
+        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shadow-blue-500/20 shrink-0">
+          <Building2 className="w-5 h-5" />
+        </div>
+        {!isCollapsed && (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-black text-slate-900 text-lg tracking-wider">B2B</span>
+            <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-1.5 py-0.2 rounded border border-blue-200">
+              CRM
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Navigation items */}
       <nav className="space-y-1.5 flex-1">
         {menuItems.map((item) => {

@@ -34,17 +34,12 @@ export default function Navbar({
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-5 flex items-center justify-between shrink-0 z-30 shadow-xs">
-      {/* Brand */}
-      <div className="flex items-center gap-3 min-w-[260px]">
-        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
-          <Building2 className="w-6 h-6" />
+      {/* Brand / Logo (Visible on mobile, on desktop it is cleanly inside LeftSidebar) */}
+      <div className="flex items-center gap-2.5 lg:hidden shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shadow-blue-500/20">
+          <Building2 className="w-5 h-5" />
         </div>
-        <div className="flex items-center gap-2">
-          <h1 className="font-bold text-slate-800 text-lg tracking-tight">Samarkand Construction Map</h1>
-          <span className="bg-blue-50 border border-blue-200 text-blue-600 text-[11px] font-bold px-2 py-0.5 rounded-full">
-            B2B
-          </span>
-        </div>
+        <span className="font-black text-slate-900 text-base tracking-wider">B2B</span>
       </div>
 
       {/* Central Search Bar */}
