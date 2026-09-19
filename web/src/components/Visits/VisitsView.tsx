@@ -5,7 +5,7 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { 
   MapPin, Phone, Calendar, Clock, User, CheckCircle2, 
   Send, Map as MapIcon, Plus, Eye, Search, AlertCircle,
-  ChevronLeft, ChevronRight, X, Building2, Layers, ChevronDown, Check, ShieldCheck
+  ChevronLeft, ChevronRight, X, Building2, Layers, ChevronDown, Check, ShieldCheck, Tag
 } from 'lucide-react';
 import { getNavigationUrl, getCallUrl } from '../../lib/utils';
 
@@ -31,7 +31,7 @@ export default function VisitsView({
   const [selectedDistrict, setSelectedDistrict] = useState('Barcha tumanlar');
   const [districtOpen, setDistrictOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 12;
+  const pageSize = 15;
 
   const districtRef = useRef<HTMLDivElement>(null);
   useClickOutside(districtRef, () => setDistrictOpen(false), districtOpen);
@@ -104,27 +104,7 @@ export default function VisitsView({
   return (
     <div className="flex-1 flex flex-col bg-slate-100 min-w-0 overflow-y-auto p-5 space-y-4">
       
-      {/* 1. Top Header Banner */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-emerald-600" />
-              <span>Tashriflar va Monitoring Boshqaruvi</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              B2B sotuv menejerlarining qurilish obyektlariga qilgan tashriflari va to'ldirilgan ma'lumotlar hisoboti
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700">
-            <User className="w-4 h-4 text-blue-600" />
-            <span>Mas'ul: <strong className="text-slate-900">{currentUser?.name || 'Operator'}</strong></span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Interactive Filter Stat Cards (Ustiga bossa filtrlash) */}
+      {/* 1. Interactive Filter Stat Cards (Ustiga bossa filtrlash) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Tashrif qilinganlar */}
         <div
@@ -227,7 +207,7 @@ export default function VisitsView({
         </div>
       </div>
 
-      {/* 3. Search & District Filters Bar */}
+      {/* 2. Search & District Filters Bar */}
       <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-1 min-w-[280px]">
           <div className="relative flex-1 max-w-md">
@@ -242,7 +222,7 @@ export default function VisitsView({
             {query && (
               <button
                 onClick={() => { setQuery(''); setCurrentPage(1); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -267,7 +247,7 @@ export default function VisitsView({
                   <button
                     key={d}
                     onClick={() => { setSelectedDistrict(d); setDistrictOpen(false); setCurrentPage(1); }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-colors ${
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
                       selectedDistrict === d ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
                     }`}
                   >
@@ -286,7 +266,7 @@ export default function VisitsView({
         </div>
       </div>
 
-      {/* 4. TJM Cards Grid */}
+      {/* 3. TJM Visits Table */}
       {activeList.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400 shadow-xs">
           <AlertCircle className="w-10 h-10 mx-auto text-slate-300 mb-2" />
@@ -294,156 +274,190 @@ export default function VisitsView({
           <p className="text-xs text-slate-400 mt-1">Tanlangan filtr bo'yicha hech qanday obyekt mavjud emas</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {paginated.map((obj) => {
-            const hasB2B = Boolean(obj.has_internal || obj.phone || obj.tjm_name || obj.manager_name);
-            const isVisitedObj = Boolean(obj.last_visit || obj.is_visited);
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                  <th className="py-3 px-4"># ID</th>
+                  <th className="py-3 px-4">TJM / Obyekt nomi</th>
+                  <th className="py-3 px-4">Tuman & Manzil</th>
+                  <th className="py-3 px-4">Qavat / Xonadon</th>
+                  <th className="py-3 px-4">B2B Kontaktlar</th>
+                  <th className="py-3 px-4">Tashrif Holati</th>
+                  <th className="py-3 px-4 text-right">Amallar</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paginated.map((obj) => {
+                  const hasB2B = Boolean(obj.has_internal || obj.phone || obj.tjm_name || obj.manager_name);
+                  const isVisitedObj = Boolean(obj.last_visit || obj.is_visited);
 
-            return (
-              <div
-                key={obj.source_id}
-                className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group"
-              >
-                <div>
-                  {/* Top Bar: Title & ID */}
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-blue-600 transition-colors" title={obj.tjm_name || obj.object_name}>
-                      {obj.tjm_name || obj.object_name}
-                    </h3>
-                    <span className="bg-slate-100 text-slate-500 text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0">
-                      #{obj.source_id}
-                    </span>
-                  </div>
+                  return (
+                    <tr
+                      key={obj.source_id}
+                      className="hover:bg-blue-50/40 transition-colors group cursor-pointer"
+                      onClick={() => onSelect(obj.source_id)}
+                    >
+                      {/* 1. ID */}
+                      <td className="py-3 px-4 font-mono font-bold text-slate-400 text-[11px]">
+                        #{obj.source_id}
+                      </td>
 
-                  {/* Location & District */}
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-                    <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    <span className="truncate">{obj.district_name || 'Samarqand'} • {obj.address || 'Manzil ko\'rsatilmagan'}</span>
-                  </div>
-
-                  {/* Badges: Status & Building info */}
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                      {obj.status || 'Qurilish jarayonida'}
-                    </span>
-                    {obj.floors && obj.floors !== '—' && (
-                      <span className="bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Layers className="w-3 h-3" />
-                        {obj.floors} qavat
-                      </span>
-                    )}
-                    {obj.apartment_count && obj.apartment_count !== '0' && (
-                      <span className="bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        {obj.apartment_count} xonadon
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Visit Status Box */}
-                  <div className={`mt-3 rounded-xl p-2.5 text-xs border ${
-                    isVisitedObj 
-                      ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' 
-                      : 'bg-slate-50 border-slate-200 border-dashed text-slate-500'
-                  }`}>
-                    {isVisitedObj ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-emerald-800 font-bold text-[11px]">
-                          <span className="flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Tashrif buyurilgan</span>
-                          </span>
-                          <span className="text-[10px] bg-emerald-100 px-2 py-0.5 rounded-full text-emerald-800">
-                            {obj.visited_by || 'Field Sales'}
-                          </span>
+                      {/* 2. Title & Status */}
+                      <td className="py-3 px-4 min-w-[220px] max-w-[320px]">
+                        <div className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1" title={obj.tjm_name || obj.object_name}>
+                          {obj.tjm_name || obj.object_name}
                         </div>
-                        <div className="text-[11px] text-emerald-700 flex items-center gap-1 font-medium">
-                          <Clock className="w-3 h-3 text-emerald-600" />
-                          <span>{obj.last_visit}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                            {obj.status || 'Jarayonda'}
+                          </span>
+                          {obj.priority && (
+                            <span className="text-[10px] font-semibold text-indigo-600 flex items-center gap-0.5">
+                              <Tag className="w-3 h-3" />
+                              {obj.priority}
+                            </span>
+                          )}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-slate-400">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Hali tashrif qilinmagan</span>
-                        </span>
-                        <button
-                          onClick={() => onRecordVisit(obj.source_id)}
-                          className="text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-md cursor-pointer transition-colors"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>Tashrif</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                      </td>
 
-                  {/* B2B Contacts preview if available */}
-                  {hasB2B && (
-                    <div className="mt-2.5 space-y-1 text-xs text-slate-700 pt-2 border-t border-slate-100">
-                      {obj.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                          <a href={getCallUrl(obj.phone)} className="font-bold text-slate-900 hover:text-emerald-600">
-                            {obj.phone}
+                      {/* 3. District & Address */}
+                      <td className="py-3 px-4 text-slate-600 min-w-[180px] max-w-[240px]">
+                        <div className="font-semibold text-slate-800 flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span className="truncate">{obj.district_name || 'Samarqand'}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                          {obj.address || 'Manzil ko\'rsatilmagan'}
+                        </div>
+                      </td>
+
+                      {/* 4. Floors & Apartments */}
+                      <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
+                        <div className="font-semibold text-slate-800 flex items-center gap-1">
+                          <Layers className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{obj.floors && obj.floors !== '—' ? `${obj.floors} qavat` : '—'}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          {obj.apartment_count && obj.apartment_count !== '0' ? `${obj.apartment_count} xonadon` : '—'}
+                        </div>
+                      </td>
+
+                      {/* 5. Contacts */}
+                      <td className="py-3 px-4 min-w-[160px]">
+                        {obj.phone ? (
+                          <div className="space-y-0.5">
+                            <a
+                              href={getCallUrl(obj.phone)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                            >
+                              <Phone className="w-3 h-3" />
+                              <span>{obj.phone}</span>
+                            </a>
+                            {obj.manager_name && (
+                              <div className="text-[11px] text-slate-500 truncate flex items-center gap-1">
+                                <User className="w-3 h-3 text-slate-400" />
+                                <span>{obj.manager_name}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic text-[11px]">Kiritilmagan</span>
+                        )}
+                      </td>
+
+                      {/* 6. Visit Status */}
+                      <td className="py-3 px-4 min-w-[200px]">
+                        {isVisitedObj ? (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2 space-y-0.5">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-emerald-800">
+                              <span className="flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Tashrif buyurilgan</span>
+                              </span>
+                              <span className="text-[10px] bg-emerald-100 px-1.5 py-0.2 rounded text-emerald-700">
+                                {obj.visited_by || 'Field Sales'}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-emerald-700 flex items-center gap-1 font-medium">
+                              <Clock className="w-3 h-3 text-emerald-600" />
+                              <span>{obj.last_visit}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg text-[10px] font-semibold whitespace-nowrap">
+                              Tashrif qilinmagan
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRecordVisit(obj.source_id);
+                              }}
+                              className="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                            >
+                              + Tashrif
+                            </button>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 7. Action buttons */}
+                      <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => onSelect(obj.source_id)}
+                            className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                            title="Tafsilot"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => onViewOnMap(obj.source_id)}
+                            className="p-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs transition-colors cursor-pointer"
+                            title="Xaritada ko'rish"
+                          >
+                            <MapIcon className="w-3.5 h-3.5" />
+                          </button>
+
+                          <a
+                            href={getNavigationUrl(obj.latitude, obj.longitude)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-xs transition-colors cursor-pointer"
+                            title="Google Maps Navigatsiya"
+                          >
+                            <Send className="w-3.5 h-3.5" />
                           </a>
+
+                          <button
+                            type="button"
+                            onClick={() => onRecordVisit(obj.source_id)}
+                            className="p-1.5 text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                            title="Tashrifni yangilash"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                      )}
-                      {obj.manager_name && (
-                        <div className="flex items-center gap-2 text-slate-500">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="truncate">{obj.manager_name}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Card Action Buttons Footer */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
-                  <button
-                    onClick={() => onSelect(obj.source_id)}
-                    className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Tafsilot</span>
-                  </button>
-
-                  <button
-                    onClick={() => onViewOnMap(obj.source_id)}
-                    className="p-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs transition-colors cursor-pointer"
-                    title="Xaritada ko'rish"
-                  >
-                    <MapIcon className="w-4 h-4" />
-                  </button>
-
-                  <a
-                    href={getNavigationUrl(obj.latitude, obj.longitude)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl text-xs transition-colors cursor-pointer"
-                    title="Google Maps Navigatsiya"
-                  >
-                    <Send className="w-4 h-4" />
-                  </a>
-
-                  <button
-                    onClick={() => onRecordVisit(obj.source_id)}
-                    className="p-2 text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                    title="Tashrifni yangilash"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* 5. Pagination Footer */}
+      {/* 4. Pagination Footer */}
       {totalPages > 1 && (
-        <div className="mt-5 p-3.5 bg-white border border-slate-200 rounded-2xl shadow-2xs flex items-center justify-between text-xs">
+        <div className="mt-4 p-3.5 bg-white border border-slate-200 rounded-2xl shadow-2xs flex items-center justify-between text-xs">
           <span className="text-slate-500 font-medium">
             Ko'rsatilmoqda: {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, activeList.length)} / jami {activeList.length} ta
           </span>
