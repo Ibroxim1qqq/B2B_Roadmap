@@ -310,34 +310,35 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-100 overflow-hidden font-sans">
-      {/* 1. Top Navbar */}
-      <Navbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSync={handleSyncWithSheets}
-        syncing={syncing}
-        onOpenCreate={() => setIsCreateOpen(true)}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
+    <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans">
+      {/* 1. Left Sidebar (Full 100vh Height) */}
+      <div className="hidden lg:flex h-full shrink-0">
+        <LeftSidebar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+      </div>
 
-      {/* 2. Main Workspace Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar */}
-        <div className="hidden lg:flex">
-          <LeftSidebar
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          />
-        </div>
+      {/* 2. Main Right Workspace (Header + Canvas) */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        {/* Top Navbar (Only over the right section) */}
+        <Navbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onSync={handleSyncWithSheets}
+          syncing={syncing}
+          onOpenCreate={() => setIsCreateOpen(true)}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+        />
 
-        {/* Center Canvas */}
-        <main className="flex-1 flex flex-col overflow-y-auto bg-slate-100 min-w-0">
-          {/* Map View: Kept mounted in DOM to prevent Leaflet container re-use crashes */}
-          <div className={activeTab === 'map' ? 'flex flex-col flex-1 h-full min-w-0 overflow-hidden' : 'hidden'}>
+        {/* Workspace Body (Center Canvas + Right Panel) */}
+        <div className="flex-1 flex overflow-hidden min-h-0 relative">
+          <main className="flex-1 flex flex-col overflow-y-auto bg-slate-100 min-w-0">
+            {/* Map View: Kept mounted in DOM to prevent Leaflet container re-use crashes */}
+            <div className={activeTab === 'map' ? 'flex flex-col flex-1 h-full min-w-0 overflow-hidden' : 'hidden'}>
             {/* 1. 4 Summary Stat Cards at the Top */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-5 pt-4 pb-2 shrink-0">
               {/* Card 1: Jami TJM-lar */}
@@ -515,6 +516,7 @@ export default function Home() {
             </BottomSheet>
           </div>
         )}
+        </div>
       </div>
 
       {/* Center Modal for Object Details (When on Objects, Visits, or Dashboard tabs) */}

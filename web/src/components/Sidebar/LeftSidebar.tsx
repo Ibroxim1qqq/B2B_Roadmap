@@ -22,16 +22,16 @@ export default function LeftSidebar({
   ];
 
   return (
-    <aside className={`${isCollapsed ? 'w-[72px]' : 'w-52'} bg-white border-r border-slate-200 flex flex-col shrink-0 p-3 z-20 shadow-xs transition-all duration-300 select-none`}>
-      {/* 1. Brand Logo & Title */}
-      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-2'} py-2 mb-3 pb-3 border-b border-slate-100`}>
-        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shadow-blue-500/20 shrink-0">
+    <aside className={`${isCollapsed ? 'w-[72px]' : 'w-56'} h-full bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 shadow-xs transition-all duration-300 select-none`}>
+      {/* 1. Brand Logo & Title (Aligned with Navbar h-16) */}
+      <div className={`h-16 flex items-center ${isCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} border-b border-slate-200 shrink-0`}>
+        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shadow-blue-500/20 shrink-0">
           <Building2 className="w-5 h-5" />
         </div>
         {!isCollapsed && (
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <span className="font-black text-slate-900 text-lg tracking-wider">B2B</span>
-            <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-1.5 py-0.2 rounded border border-blue-200">
+            <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-1.5 py-0.5 rounded-md border border-blue-200">
               CRM
             </span>
           </div>
@@ -39,7 +39,7 @@ export default function LeftSidebar({
       </div>
 
       {/* Navigation items */}
-      <nav className="space-y-1.5 flex-1">
+      <nav className="p-3 space-y-1.5 flex-1 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -63,7 +63,7 @@ export default function LeftSidebar({
       </nav>
 
       {/* Collapse / Expand Arrow Button */}
-      <div className="pt-3 border-t border-slate-100 space-y-2">
+      <div className="p-3 border-t border-slate-100 space-y-2 shrink-0">
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
