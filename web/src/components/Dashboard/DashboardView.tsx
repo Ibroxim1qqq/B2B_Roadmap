@@ -168,20 +168,28 @@ export default function DashboardView({
   ];
 
   // SVG Line Chart Calculation helpers
-  const chartWidth = 600;
-  const chartHeight = 180;
-  const paddingX = 40;
-  const paddingY = 25;
-  const maxDataVal = Math.max(5, ...stats.dailyData.map(d => Math.max(d.visits, d.filled)));
+  const chartWidth = 500;
+  const chartHeight = 130;
+  const paddingX = 35;
+  const paddingY = 20;
 
-  const getCoordinates = (val: number, index: number) => {
+  const maxVisitsVal = Math.max(3, ...stats.dailyData.map(d => d.visits));
+  const maxFilledVal = Math.max(3, ...stats.dailyData.map(d => d.filled));
+
+  const getVisitsCoords = (val: number, index: number) => {
     const x = paddingX + (index / (stats.dailyData.length - 1)) * (chartWidth - paddingX * 2);
-    const y = chartHeight - paddingY - (val / maxDataVal) * (chartHeight - paddingY * 2);
+    const y = chartHeight - paddingY - (val / maxVisitsVal) * (chartHeight - paddingY * 2);
     return { x, y };
   };
 
-  const visitsPoints = stats.dailyData.map((d, i) => getCoordinates(d.visits, i));
-  const filledPoints = stats.dailyData.map((d, i) => getCoordinates(d.filled, i));
+  const getFilledCoords = (val: number, index: number) => {
+    const x = paddingX + (index / (stats.dailyData.length - 1)) * (chartWidth - paddingX * 2);
+    const y = chartHeight - paddingY - (val / maxFilledVal) * (chartHeight - paddingY * 2);
+    return { x, y };
+  };
+
+  const visitsPoints = stats.dailyData.map((d, i) => getVisitsCoords(d.visits, i));
+  const filledPoints = stats.dailyData.map((d, i) => getFilledCoords(d.filled, i));
 
   const visitsPath = visitsPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
   const filledPath = filledPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
@@ -246,116 +254,124 @@ export default function DashboardView({
         })}
       </div>
 
-      {/* 3. Main Analytics Grid (District Bar Chart & Daily Timeline Line Chart) */}
+      {/* 3. Main Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Left: District Comparison Bar Chart (Total vs Visited Progress Bar) */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-blue-600" />
-                <span>Tumanlar bo'yicha TJM va Tashriflar (Progress Bar)</span>
-              </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Har bir tumandagi jami TJM-lar ichida qilingan tashriflar progressi
-              </p>
-            </div>
-            
-            {/* Legend */}
-            <div className="flex items-center gap-3 text-[11px] font-semibold">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-slate-200 border border-slate-300"></div>
-                <span className="text-slate-600">Jami TJM</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-emerald-500"></div>
-                <span className="text-slate-600">Borilgan</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3.5 pt-1">
-            {stats.districtsList.map((d) => {
-              const fillPercent = d.total > 0 ? (d.visited / d.total) * 100 : 0;
-              const displayWidth = d.visited > 0 ? Math.max(3, fillPercent) : 0;
-
-              return (
-                <div key={d.name} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800">{d.name}</span>
-                    <div className="flex items-center gap-2 font-mono text-[11px]">
-                      <span className="text-slate-600 font-semibold">{d.total} ta TJM</span>
-                      <span className="text-slate-300">/</span>
-                      <span className="text-emerald-600 font-bold">{d.visited} borilgan</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                        d.visited > 0 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                          : 'bg-slate-50 text-slate-400 border-slate-200'
-                      }`}>
-                        {d.visitRate}%
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Unified Progress Bar: Total TJM is the background track, Borilgan fills inside */}
-                  <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/80 p-0.5">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500 shadow-xs"
-                      style={{ width: `${displayWidth}%` }}
-                    ></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right: Daily Trends Line Chart (B2B Visits & Data Filled) */}
+        {/* Left: District Comparison (Progress Bar) */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  <span>Kunlik Dinamika (Line Chart)</span>
+                  <BarChart2 className="w-4 h-4 text-blue-600" />
+                  <span>Tumanlar bo'yicha TJM va Tashriflar (Progress Bar)</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  B2B kunlik borilgan TJM-lar va to'ldirilgan ma'lumotlar grafigi
+                  Har bir tumandagi jami TJM-lar ichida qilingan tashriflar progressi
                 </p>
               </div>
-
-              {/* Legends */}
+              
+              {/* Legend */}
               <div className="flex items-center gap-3 text-[11px] font-semibold">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                  <span className="text-slate-600">Tashriflar (B2B)</span>
+                  <div className="w-3 h-3 rounded bg-slate-200 border border-slate-300"></div>
+                  <span className="text-slate-600">Jami TJM</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
-                  <span className="text-slate-600">Ma'lumot to'ldirish</span>
+                  <div className="w-3 h-3 rounded bg-emerald-500"></div>
+                  <span className="text-slate-600">Borilgan</span>
                 </div>
               </div>
             </div>
 
-            {/* Interactive SVG Line Graph */}
-            <div className="pt-3 relative">
+            <div className="space-y-3.5 pt-2">
+              {stats.districtsList.map((d) => {
+                const fillPercent = d.total > 0 ? (d.visited / d.total) * 100 : 0;
+                const displayWidth = d.visited > 0 ? Math.max(3, fillPercent) : 0;
+
+                return (
+                  <div key={d.name} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-800">{d.name}</span>
+                      <div className="flex items-center gap-2 font-mono text-[11px]">
+                        <span className="text-slate-600 font-semibold">{d.total} ta TJM</span>
+                        <span className="text-slate-300">/</span>
+                        <span className="text-emerald-600 font-bold">{d.visited} borilgan</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                          d.visited > 0 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                            : 'bg-slate-50 text-slate-400 border-slate-200'
+                        }`}>
+                          {d.visitRate}%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Unified Progress Bar */}
+                    <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/80 p-0.5">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500 shadow-xs"
+                        style={{ width: `${displayWidth}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bottom Callout banner */}
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex items-center justify-between text-xs mt-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-slate-500" />
+              <span className="text-slate-600 font-medium">Barcha obyektlar jadvaliga o'tish</span>
+            </div>
+            <button
+              onClick={() => onNavigateToTab('objects')}
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center gap-1 text-[11px] transition-colors cursor-pointer"
+            >
+              <span>Jadval</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Right: 2 Separate Line Charts */}
+        <div className="space-y-6">
+          
+          {/* 1. Line Chart: Kunlik Tashriflar (B2B) */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  <span>Kunlik Tashriflar Dinamikasi (Line Chart 1)</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  B2B sotuv jamoasining kunlik obyektlarga qilgan tashriflari soni
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <span>Tashriflar (B2B)</span>
+              </div>
+            </div>
+
+            {/* SVG Line Chart 1 */}
+            <div className="pt-2">
               <svg 
                 viewBox={`0 0 ${chartWidth} ${chartHeight}`} 
-                className="w-full h-44 overflow-visible"
+                className="w-full h-32 overflow-visible"
               >
                 <defs>
-                  <linearGradient id="visitsGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.25" />
+                  <linearGradient id="visitsOnlyGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.3" />
                     <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
-                  </linearGradient>
-                  <linearGradient id="filledGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366F1" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#6366F1" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
 
-                {/* Grid horizontal lines */}
+                {/* Grid lines */}
                 {[0, 0.5, 1].map((p, idx) => {
                   const y = paddingY + p * (chartHeight - paddingY * 2);
                   return (
@@ -372,11 +388,10 @@ export default function DashboardView({
                   );
                 })}
 
-                {/* Area fills */}
-                <path d={visitsArea} fill="url(#visitsGrad)" />
-                <path d={filledArea} fill="url(#filledGrad)" />
+                {/* Area */}
+                <path d={visitsArea} fill="url(#visitsOnlyGrad)" />
 
-                {/* Main Lines */}
+                {/* Line */}
                 <path
                   d={visitsPath}
                   fill="none"
@@ -385,22 +400,14 @@ export default function DashboardView({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <path
-                  d={filledPath}
-                  fill="none"
-                  stroke="#6366F1"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
 
-                {/* Points for Visits (Emerald) */}
+                {/* Points */}
                 {visitsPoints.map((p, idx) => (
                   <circle
                     key={`v-${idx}`}
                     cx={p.x}
                     cy={p.y}
-                    r="4"
+                    r="4.5"
                     fill="#10B981"
                     stroke="#FFFFFF"
                     strokeWidth="2"
@@ -408,32 +415,18 @@ export default function DashboardView({
                   />
                 ))}
 
-                {/* Points for Filled (Indigo) */}
-                {filledPoints.map((p, idx) => (
-                  <circle
-                    key={`f-${idx}`}
-                    cx={p.x}
-                    cy={p.y}
-                    r="4"
-                    fill="#6366F1"
-                    stroke="#FFFFFF"
-                    strokeWidth="2"
-                    className="cursor-pointer hover:r-6 transition-all"
-                  />
-                ))}
-
-                {/* X Axis Date Labels */}
+                {/* X Axis Labels */}
                 {stats.dailyData.map((d, idx) => {
                   if (idx % 2 !== 0 && idx !== stats.dailyData.length - 1) return null;
-                  const coord = getCoordinates(0, idx);
+                  const coord = getVisitsCoords(0, idx);
                   return (
                     <text
                       key={d.date}
                       x={coord.x}
-                      y={chartHeight - 4}
+                      y={chartHeight - 2}
                       textAnchor="middle"
                       fill="#94A3B8"
-                      fontSize="10"
+                      fontSize="9.5"
                       fontWeight="600"
                     >
                       {d.shortDate}
@@ -444,21 +437,106 @@ export default function DashboardView({
             </div>
           </div>
 
-          {/* Bottom Callout banner */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex items-center justify-between text-xs mt-2">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-slate-500" />
-              <span className="text-slate-600 font-medium">Barcha obyektlar jadvaliga o'tish</span>
+          {/* 2. Line Chart: Kunlik Ma'lumot To'ldirish */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-indigo-600" />
+                  <span>Kunlik Ma'lumot To'ldirish Dinamikasi (Line Chart 2)</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Menejerlar tomonidan kunlik kiritilgan va to'ldirilgan B2B ma'lumotlari
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-xl">
+                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                <span>Ma'lumot to'ldirish</span>
+              </div>
             </div>
-            <button
-              onClick={() => onNavigateToTab('objects')}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center gap-1 text-[11px] transition-colors cursor-pointer"
-            >
-              <span>Jadval</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
+
+            {/* SVG Line Chart 2 */}
+            <div className="pt-2">
+              <svg 
+                viewBox={`0 0 ${chartWidth} ${chartHeight}`} 
+                className="w-full h-32 overflow-visible"
+              >
+                <defs>
+                  <linearGradient id="filledOnlyGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366F1" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#6366F1" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid lines */}
+                {[0, 0.5, 1].map((p, idx) => {
+                  const y = paddingY + p * (chartHeight - paddingY * 2);
+                  return (
+                    <line
+                      key={idx}
+                      x1={paddingX}
+                      y1={y}
+                      x2={chartWidth - paddingX}
+                      y2={y}
+                      stroke="#E2E8F0"
+                      strokeDasharray="4 4"
+                      strokeWidth="1"
+                    />
+                  );
+                })}
+
+                {/* Area */}
+                <path d={filledArea} fill="url(#filledOnlyGrad)" />
+
+                {/* Line */}
+                <path
+                  d={filledPath}
+                  fill="none"
+                  stroke="#6366F1"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+
+                {/* Points */}
+                {filledPoints.map((p, idx) => (
+                  <circle
+                    key={`f-${idx}`}
+                    cx={p.x}
+                    cy={p.y}
+                    r="4.5"
+                    fill="#6366F1"
+                    stroke="#FFFFFF"
+                    strokeWidth="2"
+                    className="cursor-pointer hover:r-6 transition-all"
+                  />
+                ))}
+
+                {/* X Axis Labels */}
+                {stats.dailyData.map((d, idx) => {
+                  if (idx % 2 !== 0 && idx !== stats.dailyData.length - 1) return null;
+                  const coord = getFilledCoords(0, idx);
+                  return (
+                    <text
+                      key={d.date}
+                      x={coord.x}
+                      y={chartHeight - 2}
+                      textAnchor="middle"
+                      fill="#94A3B8"
+                      fontSize="9.5"
+                      fontWeight="600"
+                    >
+                      {d.shortDate}
+                    </text>
+                  );
+                })}
+              </svg>
+            </div>
           </div>
+
         </div>
+
       </div>
     </div>
   );
