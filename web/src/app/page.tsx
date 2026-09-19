@@ -338,18 +338,8 @@ export default function Home() {
         <main className="flex-1 flex flex-col overflow-y-auto bg-slate-100 min-w-0">
           {/* Map View: Kept mounted in DOM to prevent Leaflet container re-use crashes */}
           <div className={activeTab === 'map' ? 'flex flex-col flex-1 h-full min-w-0 overflow-hidden' : 'hidden'}>
-            {/* Top Filter Pills Bar */}
-            <FilterToolbar
-              selectedDistrict={selectedDistrict}
-              onDistrictChange={setSelectedDistrict}
-              selectedStatus={selectedStatus}
-              onStatusChange={setSelectedStatus}
-              onMyLocation={handleLocateMe}
-              locating={locating}
-            />
-
-            {/* 4 Summary Stat Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-5 pt-3 pb-2 shrink-0">
+            {/* 1. 4 Summary Stat Cards at the Top */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-5 pt-4 pb-2 shrink-0">
               {/* Card 1: Jami TJM-lar */}
               <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -403,7 +393,17 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Fullscreen Map Area */}
+            {/* 2. Filter Pills Bar (Directly Above the Map) */}
+            <FilterToolbar
+              selectedDistrict={selectedDistrict}
+              onDistrictChange={setSelectedDistrict}
+              selectedStatus={selectedStatus}
+              onStatusChange={setSelectedStatus}
+              onMyLocation={handleLocateMe}
+              locating={locating}
+            />
+
+            {/* 3. Fullscreen Map Area */}
             <div className="flex-1 p-5 pt-2 pb-4 min-h-0">
               <div className="h-full w-full rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-white">
                 <DynamicMap
