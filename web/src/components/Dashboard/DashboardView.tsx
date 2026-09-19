@@ -249,23 +249,23 @@ export default function DashboardView({
       {/* 3. Main Analytics Grid (District Bar Chart & Daily Timeline Line Chart) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Left: District Comparison Bar Chart (Total vs Visited) */}
+        {/* Left: District Comparison Bar Chart (Total vs Visited Progress Bar) */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 text-blue-600" />
-                <span>Tumanlar bo'yicha TJM va Tashriflar (Bar Chart)</span>
+                <span>Tumanlar bo'yicha TJM va Tashriflar (Progress Bar)</span>
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Har bir tumandagi jami TJM va unga qilingan tashriflar taqqoslanishi
+                Har bir tumandagi jami TJM-lar ichida qilingan tashriflar progressi
               </p>
             </div>
             
             {/* Legend */}
             <div className="flex items-center gap-3 text-[11px] font-semibold">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-blue-500"></div>
+                <div className="w-3 h-3 rounded bg-slate-200 border border-slate-300"></div>
                 <span className="text-slate-600">Jami TJM</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -275,42 +275,35 @@ export default function DashboardView({
             </div>
           </div>
 
-          <div className="space-y-4 pt-1">
-            {stats.districtsList.slice(0, 7).map((d) => {
-              const maxTotal = stats.districtsList[0]?.total || 1;
-              const totalBarWidth = Math.max(8, Math.round((d.total / maxTotal) * 100));
-              const visitedBarWidth = d.total > 0 ? Math.max(4, Math.round((d.visited / maxTotal) * 100)) : 0;
+          <div className="space-y-3.5 pt-1">
+            {stats.districtsList.map((d) => {
+              const fillPercent = d.total > 0 ? (d.visited / d.total) * 100 : 0;
+              const displayWidth = d.visited > 0 ? Math.max(3, fillPercent) : 0;
 
               return (
                 <div key={d.name} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-800">{d.name}</span>
                     <div className="flex items-center gap-2 font-mono text-[11px]">
-                      <span className="text-blue-600 font-bold">{d.total} ta TJM</span>
+                      <span className="text-slate-600 font-semibold">{d.total} ta TJM</span>
                       <span className="text-slate-300">/</span>
                       <span className="text-emerald-600 font-bold">{d.visited} borilgan</span>
-                      <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                        d.visited > 0 
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                          : 'bg-slate-50 text-slate-400 border-slate-200'
+                      }`}>
                         {d.visitRate}%
                       </span>
                     </div>
                   </div>
 
-                  {/* Dual Bar Chart */}
-                  <div className="space-y-1">
-                    {/* Total bar */}
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                        style={{ width: `${totalBarWidth}%` }}
-                      ></div>
-                    </div>
-                    {/* Visited bar */}
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                        style={{ width: `${visitedBarWidth}%` }}
-                      ></div>
-                    </div>
+                  {/* Unified Progress Bar: Total TJM is the background track, Borilgan fills inside */}
+                  <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/80 p-0.5">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500 shadow-xs"
+                      style={{ width: `${displayWidth}%` }}
+                    ></div>
                   </div>
                 </div>
               );
