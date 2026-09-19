@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Map, Building2, BarChart3, SlidersHorizontal } from 'lucide-react';
+import { Map, Navigation, Building2, BarChart3, SlidersHorizontal } from 'lucide-react';
 
 interface LeftSidebarProps {
   activeTab: string;
@@ -15,6 +15,7 @@ export default function LeftSidebar({
 
   const menuItems = [
     { id: 'map', label: 'Xarita', icon: Map },
+    { id: 'route', label: "Yo'l-yo'lakay", icon: Navigation },
     { id: 'objects', label: 'Obyektlar', icon: Building2 },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'custom_fields', label: "Qo'shimcha maydonlar", icon: SlidersHorizontal },

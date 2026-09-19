@@ -1,5 +1,5 @@
 'use client';
-import { Map, Building2, MapPin, BarChart3, SlidersHorizontal } from 'lucide-react';
+import { Map, Navigation, Building2, BarChart3, SlidersHorizontal } from 'lucide-react';
 
 interface MobileBottomNavProps {
   activeTab: string;
@@ -9,6 +9,7 @@ interface MobileBottomNavProps {
 export default function MobileBottomNav({ activeTab, onTabChange }: MobileBottomNavProps) {
   const items = [
     { id: 'map', label: 'Xarita', icon: Map },
+    { id: 'route', label: "Yo'nalish", icon: Navigation },
     { id: 'objects', label: 'Obyektlar', icon: Building2 },
     { id: 'dashboard', label: 'Tahlil', icon: BarChart3 },
     { id: 'custom_fields', label: 'Sozlama', icon: SlidersHorizontal },

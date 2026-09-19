@@ -1,4 +1,4 @@
-import { Building2, RefreshCw, Plus, LogOut, ChevronDown, UserCheck, ChevronRight, Map, BarChart3, SlidersHorizontal } from 'lucide-react';
+import { Building2, RefreshCw, Plus, LogOut, ChevronDown, UserCheck, ChevronRight, Map, Navigation, BarChart3, SlidersHorizontal } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { UserProfile } from '../../lib/types';
 import { useClickOutside } from '../../hooks/useClickOutside';
@@ -14,6 +14,7 @@ interface NavbarProps {
 
 const TAB_INFO: Record<string, { title: string; icon: any }> = {
   map: { title: 'Xarita', icon: Map },
+  route: { title: "Yo'l-yo'lakay", icon: Navigation },
   objects: { title: 'Obyektlar', icon: Building2 },
   dashboard: { title: 'Dashboard', icon: BarChart3 },
   custom_fields: { title: "Qo'shimcha maydonlar", icon: SlidersHorizontal }

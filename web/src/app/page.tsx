@@ -36,6 +36,18 @@ const DynamicMap = dynamic(() => import('../components/Map/MapContainer'), {
   )
 });
 
+const RoutePlannerView = dynamic(() => import('../components/RoutePlanner/RoutePlannerView'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-slate-100">
+      <div className="text-slate-500 font-semibold text-xs flex items-center gap-2">
+        <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+        <span>Yo'l-yo'lakay navigator yuklanmoqda...</span>
+      </div>
+    </div>
+  )
+});
+
 export default function Home() {
   const { markers, loading, error, refresh } = useObjects();
   const { location, getCurrentPosition } = useLocation();
@@ -417,6 +429,17 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {activeTab === 'route' && (
+            <RoutePlannerView
+              objects={markers}
+              userLat={location.lat}
+              userLng={location.lng}
+              onSelectObject={handleSelectObject}
+              selectedId={selectedId}
+              onRecordVisit={handleRecordVisitForId}
+            />
+          )}
 
           {activeTab === 'objects' && (
             <ObjectsTableView
