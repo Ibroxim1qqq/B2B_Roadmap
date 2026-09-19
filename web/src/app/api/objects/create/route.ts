@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { createObjectInSheet } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,6 @@ export async function POST(request: Request) {
     const lat = body.latitude ? String(body.latitude) : '39.6542';
     const lng = body.longitude ? String(body.longitude) : '66.9597';
 
-    // Status mapping
     let status = body.status || 'Qurilish jarayonida';
     let status_id = '2';
     const lowerStatus = status.toLowerCase();
@@ -64,43 +63,36 @@ export async function POST(request: Request) {
       visit_lat_lng: body.visit_lat_lng ? String(body.visit_lat_lng).trim() : ''
     };
 
-    // 1. Immediately update local JSON file cache (insert at beginning)
-    const filePath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
-    if (fs.existsSync(filePath)) {
-      try {
+    // 1. Update local JSON file cache
+    try {
+      const filePath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
+      if (fs.existsSync(filePath)) {
         const raw = fs.readFileSync(filePath, 'utf-8');
         const json = JSON.parse(raw);
-        // Avoid duplicate if existing
         const exists = json.rows.some((r: any) => String(r.source_id).trim() === String(source_id).trim());
         if (!exists) {
           json.rows.unshift(newObjectRecord);
           fs.writeFileSync(filePath, JSON.stringify(json, null, 2), 'utf-8');
         }
-      } catch (err) {
-        console.error('Failed to update local cache on create:', err);
       }
+    } catch (err) {
+      console.warn('Failed to update local cache on create:', err);
     }
 
-    // 2. Spawn python sync_manager to append row into Google Sheets
-    const scraperDir = path.resolve(process.cwd(), '..', 'scraper');
-    await new Promise<void>((resolve, reject) => {
-      const py = spawn('python', ['sync_manager.py', 'create'], {
-        cwd: scraperDir,
-        env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
-      });
-
-      let errOutput = '';
-      py.stderr.on('data', (d) => { errOutput += d.toString(); });
-      py.on('error', (err) => reject(err));
-
-      py.stdin.write(JSON.stringify(newObjectRecord));
-      py.stdin.end();
-
-      py.on('close', (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`Python process exited with code ${code}: ${errOutput}`));
-      });
-    });
+    // 2. Direct Google Sheets API append
+    try {
+      await createObjectInSheet(newObjectRecord);
+    } catch (sheetErr: any) {
+      console.error('Google Sheets create error:', sheetErr);
+      if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        return NextResponse.json({
+          success: true,
+          message: 'Saqlandi (Lokal)',
+          data: newObjectRecord
+        });
+      }
+      return NextResponse.json({ success: false, error: `Google Sheets xatosi: ${sheetErr.message}` }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
