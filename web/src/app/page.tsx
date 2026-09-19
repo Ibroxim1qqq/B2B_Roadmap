@@ -311,22 +311,19 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans">
-      {/* 1. Left Sidebar (Full 100vh Height) */}
+      {/* 1. Left Sidebar (Full 100vh Height, Auto-expand on Hover) */}
       <div className="hidden lg:flex h-full shrink-0">
         <LeftSidebar
           activeTab={activeTab}
           onTabChange={handleTabChange}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
       </div>
 
       {/* 2. Main Right Workspace (Header + Canvas) */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Top Navbar (Only over the right section) */}
+        {/* Top Navbar (Shows current section title, actions, and user profile) */}
         <Navbar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          activeTab={activeTab}
           onSync={handleSyncWithSheets}
           syncing={syncing}
           onOpenCreate={() => setIsCreateOpen(true)}

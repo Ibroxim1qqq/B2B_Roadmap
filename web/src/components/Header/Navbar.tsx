@@ -1,12 +1,10 @@
-'use client';
-import { Building2, Search, RefreshCw, X, Plus, LogOut, ChevronDown, UserCheck } from 'lucide-react';
+import { Building2, RefreshCw, Plus, LogOut, ChevronDown, UserCheck, ChevronRight, Map, BarChart3, SlidersHorizontal } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { UserProfile } from '../../lib/types';
 import { useClickOutside } from '../../hooks/useClickOutside';
 
 interface NavbarProps {
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
+  activeTab?: string;
   onSync: () => Promise<void>;
   syncing?: boolean;
   onOpenCreate?: () => void;
@@ -14,9 +12,15 @@ interface NavbarProps {
   onLogout?: () => void;
 }
 
+const TAB_INFO: Record<string, { title: string; icon: any }> = {
+  map: { title: 'Xarita', icon: Map },
+  objects: { title: 'Obyektlar', icon: Building2 },
+  dashboard: { title: 'Dashboard', icon: BarChart3 },
+  custom_fields: { title: "Qo'shimcha maydonlar", icon: SlidersHorizontal }
+};
+
 export default function Navbar({
-  searchQuery,
-  onSearchChange,
+  activeTab = 'map',
   onSync,
   syncing = false,
   onOpenCreate,
@@ -32,35 +36,31 @@ export default function Navbar({
   const displayRole = currentUser?.role || 'Field Sales';
   const displayInitials = currentUser?.avatarInitials || 'IT';
 
-  return (
-    <header className="h-16 bg-white border-b border-slate-200 px-5 flex items-center justify-between shrink-0 z-30 shadow-xs">
-      {/* Brand / Logo (Visible on mobile, on desktop it is cleanly inside LeftSidebar) */}
-      <div className="flex items-center gap-2.5 lg:hidden shrink-0">
-        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shadow-blue-500/20">
-          <Building2 className="w-5 h-5" />
-        </div>
-        <span className="font-black text-slate-900 text-base tracking-wider">B2B</span>
-      </div>
+  const currentTab = TAB_INFO[activeTab] || { title: 'Xarita', icon: Map };
+  const CurrentIcon = currentTab.icon;
 
-      {/* Central Search Bar */}
-      <div className="flex-1 max-w-2xl px-6">
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Obyekt nomi, TJM, manzil, developer, telefon..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-3 focus:ring-blue-500/10 rounded-full pl-11 pr-10 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-200 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+  return (
+    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
+      {/* Active Section Title & Breadcrumb */}
+      <div className="flex items-center gap-3">
+        {/* Mobile Brand */}
+        <div className="flex items-center gap-2.5 lg:hidden shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shadow-blue-500/20">
+            <Building2 className="w-4 h-4" />
+          </div>
+          <span className="font-black text-slate-900 text-sm tracking-wider">B2B</span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-blue-600 shrink-0">
+            <CurrentIcon className="w-4 h-4" />
+          </div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-black text-slate-900 tracking-tight">
+              {currentTab.title}
+            </h2>
+          </div>
         </div>
       </div>
 
