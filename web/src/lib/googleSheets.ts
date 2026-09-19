@@ -52,15 +52,15 @@ export async function getSheetsClient() {
 }
 
 /**
- * Update internal B2B columns for an object in Google Sheet
+ * Update internal B2B and custom columns for an object in Google Sheet
  */
 export async function updateObjectInSheet(sourceId: string, updateData: Record<string, any>) {
   const sheets = await getSheetsClient();
   
-  // 1. Fetch existing headers and IDs
+  // 1. Fetch existing headers and IDs (Range A:ZZ)
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'A:AH'
+    range: 'A1:ZZ500'
   });
 
   const rows = res.data.values || [];
@@ -68,7 +68,7 @@ export async function updateObjectInSheet(sourceId: string, updateData: Record<s
     throw new Error('Google Sheet is empty');
   }
 
-  const headers = rows[0];
+  let headers: string[] = [...(rows[0] || [])];
   const idCol = headers.indexOf('source_id') !== -1 ? headers.indexOf('source_id') : 0;
 
   let rowIndex = -1;
@@ -77,7 +77,7 @@ export async function updateObjectInSheet(sourceId: string, updateData: Record<s
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     if (r && r[idCol] && String(r[idCol]).trim() === String(sourceId).trim()) {
-      rowIndex = i + 1; // 1-based index
+      rowIndex = i + 1; // 1-based row index
       existingRow = r;
       break;
     }
@@ -87,34 +87,46 @@ export async function updateObjectInSheet(sourceId: string, updateData: Record<s
     throw new Error(`Object with source_id "${sourceId}" not found in sheet`);
   }
 
-  // Column W is col 23 (index 22 in 0-based index)
-  const wIndex = 22;
-  const currentInternal = existingRow.slice(wIndex, wIndex + INTERNAL_COLUMNS.length);
-  while (currentInternal.length < INTERNAL_COLUMNS.length) {
-    currentInternal.push('');
-  }
-
-  const currentDict: Record<string, string> = {};
-  INTERNAL_COLUMNS.forEach((col, idx) => {
-    currentDict[col] = currentInternal[idx] || '';
-  });
-
-  // Apply updates
-  for (const [k, v] of Object.entries(updateData)) {
-    if (INTERNAL_COLUMNS.includes(k)) {
-      currentDict[k] = v !== null && v !== undefined ? String(v) : '';
+  // Check if any updateData keys are missing from headers, and add them
+  let headersModified = false;
+  for (const key of Object.keys(updateData)) {
+    if (!headers.includes(key)) {
+      headers.push(key);
+      headersModified = true;
     }
   }
 
-  const updatedValues = INTERNAL_COLUMNS.map(k => currentDict[k] || '');
+  if (headersModified) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: '1:1',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [headers]
+      }
+    });
+  }
 
-  // Update range W{row}:AH{row}
+  // Construct updated row array
+  const updatedRow = [...existingRow];
+  while (updatedRow.length < headers.length) {
+    updatedRow.push('');
+  }
+
+  for (const [k, v] of Object.entries(updateData)) {
+    const colIdx = headers.indexOf(k);
+    if (colIdx !== -1) {
+      updatedRow[colIdx] = v !== null && v !== undefined ? String(v) : '';
+    }
+  }
+
+  // Update the row
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `W${rowIndex}:AH${rowIndex}`,
+    range: `A${rowIndex}:${rowIndex}`,
     valueInputOption: 'USER_ENTERED',
     requestBody: {
-      values: [updatedValues]
+      values: [updatedRow]
     }
   });
 

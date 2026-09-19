@@ -14,7 +14,6 @@ import ObjectDetails from '../components/ObjectPanel/ObjectDetails';
 import ObjectEdit from '../components/ObjectPanel/ObjectEdit';
 import BottomSheet from '../components/UI/BottomSheet';
 import ObjectsTableView from '../components/ObjectsTable/ObjectsTableView';
-import VisitsView from '../components/Visits/VisitsView';
 import DashboardView from '../components/Dashboard/DashboardView';
 import CustomFieldManager from '../components/CustomFields/CustomFieldManager';
 import { useRouter } from 'next/navigation';
@@ -431,17 +430,6 @@ export default function Home() {
               onDistrictChange={setSelectedDistrict}
               selectedStatus={selectedStatus}
               onStatusChange={setSelectedStatus}
-            />
-          )}
-
-          {activeTab === 'visits' && (
-            <VisitsView
-              currentUser={currentUser}
-              objects={displayList}
-              totalCount={markers.length}
-              onSelect={handleSelectObject}
-              onViewOnMap={handleViewOnMap}
-              onRecordVisit={handleRecordVisitForId}
             />
           )}
 

@@ -17,7 +17,6 @@ export default function LeftSidebar({
   const menuItems = [
     { id: 'map', label: 'Xarita', icon: Map },
     { id: 'objects', label: 'Obyektlar', icon: Building2 },
-    { id: 'visits', label: 'Tashriflar', icon: MapPin },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'custom_fields', label: "Qo'shimcha maydonlar", icon: SlidersHorizontal },
   ];

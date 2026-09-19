@@ -258,6 +258,28 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
                 {internal.notes || <span className="text-slate-400 font-normal italic">Izoh yo'q</span>}
               </span>
             </div>
+
+            {/* User defined custom fields */}
+            {(() => {
+              const standardKeys = [
+                'tjm_name', 'phone', 'sales_office', 'manager_name', 
+                'manager_phone', 'telegram', 'instagram', 'priority', 'notes',
+                'last_visit', 'visited_by', 'visit_lat_lng'
+              ];
+              const extraEntries = Object.entries(internal).filter(([k, v]) => !standardKeys.includes(k) && Boolean(v));
+              if (extraEntries.length === 0) return null;
+
+              return (
+                <div className="pt-2 mt-2 border-t border-slate-200/60 space-y-2">
+                  {extraEntries.map(([k, v]) => (
+                    <div key={k} className="flex items-start justify-between gap-3">
+                      <span className="text-slate-400 shrink-0 capitalize">{k.replace(/_/g, ' ')}:</span>
+                      <span className="font-semibold text-slate-800 text-right">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

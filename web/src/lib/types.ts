@@ -84,7 +84,7 @@ export interface CustomField {
   field_type: 'text' | 'phone' | 'number' | 'date' | 'url' | 'select' | 'textarea' | 'checkbox';
   required: boolean;
   visible: boolean;
-  column_letter: string;
+  column_letter?: string;
 }
 
 export interface DashboardStats {

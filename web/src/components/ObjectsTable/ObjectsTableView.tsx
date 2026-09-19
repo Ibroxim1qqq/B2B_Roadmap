@@ -172,9 +172,6 @@ export default function ObjectsTableView({
             <div className="text-xl font-black text-slate-900 leading-tight mt-0.5">
               {totalObjectsCount} <span className="text-xs font-normal text-slate-400">ta</span>
             </div>
-            <div className="text-[10px] text-blue-600 font-semibold mt-0.5">
-              {dataFilter === 'all' ? '● Tanlangan' : 'Filtrlash uchun bosing'}
-            </div>
           </div>
         </div>
 
@@ -196,9 +193,6 @@ export default function ObjectsTableView({
             <div className="text-xs font-bold text-slate-600 truncate">Tashrif qilingan</div>
             <div className="text-xl font-black text-emerald-700 leading-tight mt-0.5">
               {visitedCount} <span className="text-xs font-normal text-slate-400">ta</span>
-            </div>
-            <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
-              {dataFilter === 'visited' ? '● Tanlangan' : 'Filtrlash uchun bosing'}
             </div>
           </div>
         </div>
@@ -222,9 +216,6 @@ export default function ObjectsTableView({
             <div className="text-xl font-black text-indigo-700 leading-tight mt-0.5">
               {filledCount} <span className="text-xs font-normal text-slate-400">ta</span>
             </div>
-            <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">
-              {dataFilter === 'filled' ? '● Tanlangan' : 'Filtrlash uchun bosing'}
-            </div>
           </div>
         </div>
 
@@ -246,9 +237,6 @@ export default function ObjectsTableView({
             <div className="text-xs font-bold text-slate-600 truncate">Tashrif qilinmagan</div>
             <div className="text-xl font-black text-amber-700 leading-tight mt-0.5">
               {pendingCount} <span className="text-xs font-normal text-slate-400">ta</span>
-            </div>
-            <div className="text-[10px] text-amber-600 font-semibold mt-0.5">
-              {dataFilter === 'pending' ? '● Tanlangan' : 'Filtrlash uchun bosing'}
             </div>
           </div>
         </div>

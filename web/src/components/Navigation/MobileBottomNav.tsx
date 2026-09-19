@@ -10,7 +10,6 @@ export default function MobileBottomNav({ activeTab, onTabChange }: MobileBottom
   const items = [
     { id: 'map', label: 'Xarita', icon: Map },
     { id: 'objects', label: 'Obyektlar', icon: Building2 },
-    { id: 'visits', label: 'Tashriflar', icon: MapPin },
     { id: 'dashboard', label: 'Tahlil', icon: BarChart3 },
     { id: 'custom_fields', label: 'Sozlama', icon: SlidersHorizontal },
   ];
