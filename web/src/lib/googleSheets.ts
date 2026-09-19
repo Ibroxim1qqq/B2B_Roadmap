@@ -1,8 +1,17 @@
 import { google } from 'googleapis';
-import fs from 'fs';
 import path from 'path';
+import fs from 'fs';
+import { dataCache } from './dataCache';
 
 export const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1ZmPUfae89OAiK4kJykrL4O3XaSrYUK8KoJlmCjYhzKA';
+
+export const SOURCE_COLUMNS = [
+  'source_id', 'object_name', 'region_soato', 'district_soato', 
+  'address', 'latitude', 'longitude', 'status', 'status_id', 
+  'sphere_id', 'customer', 'designer', 'builder', 'difficulty', 
+  'floors', 'apartment_count', 'block_count', 'deadline', 
+  'created_at', 'task_id', 'passport_url', 'source_url'
+];
 
 export const INTERNAL_COLUMNS = [
   'tjm_name', 'phone', 'sales_office', 'manager_name', 
@@ -16,13 +25,26 @@ const DEFAULT_SERVICE_ACCOUNT = {
 };
 
 /**
+ * Convert 0-based column index to A1 notation letter (0 -> A, 25 -> Z, 26 -> AA, 33 -> AH)
+ */
+export function colToA1(index: number): string {
+  let temp = index + 1;
+  let letter = '';
+  while (temp > 0) {
+    const mod = (temp - 1) % 26;
+    letter = String.fromCharCode(65 + mod) + letter;
+    temp = Math.floor((temp - mod) / 26);
+  }
+  return letter;
+}
+
+/**
  * Get authenticated Google Sheets client
  */
 export async function getSheetsClient() {
   let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.SERVICE_ACCOUNT_EMAIL;
   let privateKey = process.env.GOOGLE_PRIVATE_KEY || process.env.PRIVATE_KEY;
 
-  // Check if full JSON is provided in env
   if (!email && process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     try {
       const parsed = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
@@ -33,13 +55,11 @@ export async function getSheetsClient() {
     }
   }
 
-  // Fallback to built-in default service account
   if (!email || !privateKey) {
     email = DEFAULT_SERVICE_ACCOUNT.client_email;
     privateKey = DEFAULT_SERVICE_ACCOUNT.private_key;
   }
 
-  // Fix escaped newlines in private key if passed via single-line env var
   const formattedKey = privateKey.replace(/\\n/g, '\n').trim();
 
   const auth = new google.auth.JWT({
@@ -51,16 +71,90 @@ export async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
+let cachedPrimarySheetTitle: string | null = null;
+
+/**
+ * Dynamically find the main data sheet title (e.g. 'Varaq1' or 'Objects')
+ */
+export async function getPrimarySheetName(sheets: any): Promise<string> {
+  if (cachedPrimarySheetTitle) return cachedPrimarySheetTitle;
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+    const titles: string[] = (meta.data.sheets || []).map((s: any) => s.properties?.title);
+    if (titles.includes('Varaq1')) {
+      cachedPrimarySheetTitle = 'Varaq1';
+    } else if (titles.includes('Objects')) {
+      cachedPrimarySheetTitle = 'Objects';
+    } else if (titles.length > 0) {
+      cachedPrimarySheetTitle = titles[0];
+    } else {
+      cachedPrimarySheetTitle = 'Varaq1';
+    }
+  } catch (e) {
+    cachedPrimarySheetTitle = 'Varaq1';
+  }
+  return cachedPrimarySheetTitle;
+}
+
+/**
+ * Fetch all objects from Google Sheet (without arbitrary row limits)
+ * Populates in-memory cache and writes to local backup file if writable
+ */
+export async function exportAllObjectsFromSheet() {
+  const sheets = await getSheetsClient();
+  const tab = await getPrimarySheetName(sheets);
+
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: `'${tab}'!A1:ZZ`
+  });
+
+  const values = res.data.values || [];
+  if (values.length <= 1) {
+    return { success: false, count: 0, rows: [], headers: [] };
+  }
+
+  const headers: string[] = values[0];
+  const rows: Record<string, string>[] = [];
+
+  for (let i = 1; i < values.length; i++) {
+    const r = values[i];
+    // Skip empty trailing rows
+    if (!r || !r[0] || String(r[0]).trim() === '') continue;
+
+    const rowObj: Record<string, string> = {};
+    headers.forEach((h, idx) => {
+      rowObj[h] = r[idx] !== undefined && r[idx] !== null ? String(r[idx]).trim() : '';
+    });
+    rows.push(rowObj);
+  }
+
+  // Update synchronized shared in-memory cache
+  dataCache.setAll(headers, rows);
+
+  // Update local disk cache if writable (safe fallback)
+  try {
+    const filePath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
+    fs.writeFileSync(filePath, JSON.stringify({ headers, rows }, null, 2), 'utf-8');
+  } catch (e) {
+    // Read-only filesystem in production, harmless
+  }
+
+  return { success: true, count: rows.length, headers, rows };
+}
+
 /**
  * Update internal B2B and custom columns for an object in Google Sheet
+ * Strictly guarantees source data columns are never lost or corrupted!
  */
 export async function updateObjectInSheet(sourceId: string, updateData: Record<string, any>) {
   const sheets = await getSheetsClient();
-  
-  // 1. Fetch existing headers and IDs (Range A:ZZ)
+  const tab = await getPrimarySheetName(sheets);
+
+  // 1. Fetch full existing data with headers from sheet
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'A1:ZZ500'
+    range: `'${tab}'!A1:ZZ`
   });
 
   const rows = res.data.values || [];
@@ -77,7 +171,7 @@ export async function updateObjectInSheet(sourceId: string, updateData: Record<s
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     if (r && r[idCol] && String(r[idCol]).trim() === String(sourceId).trim()) {
-      rowIndex = i + 1; // 1-based row index
+      rowIndex = i + 1; // 1-based row index in Google Sheets
       existingRow = r;
       break;
     }
@@ -87,7 +181,7 @@ export async function updateObjectInSheet(sourceId: string, updateData: Record<s
     throw new Error(`Object with source_id "${sourceId}" not found in sheet`);
   }
 
-  // Check if any updateData keys are missing from headers, and add them
+  // 2. Check if any updateData keys are new custom fields not in headers
   let headersModified = false;
   for (const key of Object.keys(updateData)) {
     if (!headers.includes(key)) {
@@ -97,9 +191,10 @@ export async function updateObjectInSheet(sourceId: string, updateData: Record<s
   }
 
   if (headersModified) {
+    const lastHeaderCol = colToA1(headers.length - 1);
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
-      range: '1:1',
+      range: `'${tab}'!A1:${lastHeaderCol}1`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [headers]
@@ -107,57 +202,96 @@ export async function updateObjectInSheet(sourceId: string, updateData: Record<s
     });
   }
 
-  // Construct updated row array
+  // 3. Construct updated row preserving all existing data
   const updatedRow = [...existingRow];
   while (updatedRow.length < headers.length) {
     updatedRow.push('');
   }
 
   for (const [k, v] of Object.entries(updateData)) {
+    // Rule 1: Never change source_id
+    if (k === 'source_id') continue;
+
     const colIdx = headers.indexOf(k);
     if (colIdx !== -1) {
-      updatedRow[colIdx] = v !== null && v !== undefined ? String(v) : '';
+      // Rule 2: Never overwrite source columns (A-V) with empty string
+      if (SOURCE_COLUMNS.includes(k)) {
+        if (v !== null && v !== undefined && String(v).trim() !== '') {
+          updatedRow[colIdx] = String(v).trim();
+        }
+      } else {
+        // Internal B2B and custom columns can be updated or emptied
+        updatedRow[colIdx] = v !== null && v !== undefined ? String(v).trim() : '';
+      }
     }
   }
 
-  // Update the row
+  // 4. Update the exact row range with standard A1 notation: 'Varaq1'!A{row}:{lastCol}{row}
+  const lastColLetter = colToA1(headers.length - 1);
+  const targetRange = `'${tab}'!A${rowIndex}:${lastColLetter}${rowIndex}`;
+
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `A${rowIndex}:${rowIndex}`,
-    valueInputOption: 'USER_ENTERED',
+    range: targetRange,
+    valueInputOption: 'RAW',
     requestBody: {
       values: [updatedRow]
     }
   });
 
+  // 5. Instantly update in-memory cache so reads immediately return the updated data
+  dataCache.updateRow(sourceId, updateData);
+
   return { success: true, rowIndex, updated: updateData };
 }
 
 /**
- * Append a new object to Google Sheet
+ * Append a brand new object to Google Sheet
  */
 export async function createObjectInSheet(newRecord: Record<string, any>) {
   const sheets = await getSheetsClient();
+  const tab = await getPrimarySheetName(sheets);
 
-  // Get headers
+  // Get current headers
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: '1:1'
+    range: `'${tab}'!1:1`
   });
 
-  const headers = res.data.values?.[0] || [];
+  let headers: string[] = res.data.values?.[0] || [];
   if (headers.length === 0) {
     throw new Error('No headers found in sheet');
   }
 
+  // Check if any keys in newRecord are missing from headers
+  let headersModified = false;
+  for (const key of Object.keys(newRecord)) {
+    if (!headers.includes(key)) {
+      headers.push(key);
+      headersModified = true;
+    }
+  }
+
+  if (headersModified) {
+    const lastHeaderCol = colToA1(headers.length - 1);
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `'${tab}'!A1:${lastHeaderCol}1`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [headers]
+      }
+    });
+  }
+
   const row = headers.map(h => {
     const val = newRecord[h];
-    return val !== null && val !== undefined ? String(val) : '';
+    return val !== null && val !== undefined ? String(val).trim() : '';
   });
 
   const appendRes = await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: 'A:AH',
+    range: `'${tab}'!A1:ZZ`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: {
@@ -165,36 +299,108 @@ export async function createObjectInSheet(newRecord: Record<string, any>) {
     }
   });
 
+  // Update in-memory cache immediately
+  dataCache.appendRow(newRecord);
+
   return { success: true, appendRes };
 }
 
 /**
- * Fetch all objects from sheet and refresh local cache
+ * Get custom field definitions from Settings tab in Google Sheets
  */
-export async function exportAllObjectsFromSheet() {
+export async function getCustomFieldsFromSheet() {
   const sheets = await getSheetsClient();
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Settings!A2:G100'
+    });
 
-  const res = await sheets.spreadsheets.values.get({
+    const rows = res.data.values || [];
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return rows.map((r: any) => ({
+      field_name: r[0] || '',
+      field_type: r[1] || 'text',
+      required: String(r[2]).toUpperCase() === 'TRUE',
+      visible: String(r[3]).toUpperCase() !== 'FALSE',
+      column_letter: r[4] || '',
+      label: r[5] || r[0] || '',
+      desc: r[6] || ''
+    }));
+  } catch (e) {
+    console.warn('Failed to read Settings tab:', e);
+    return null;
+  }
+}
+
+/**
+ * Add a new custom field to both Settings tab and main data sheet (Varaq1)
+ */
+export async function addCustomFieldToSheet(field: {
+  field_name: string;
+  field_type?: string;
+  label?: string;
+  desc?: string;
+  required?: boolean;
+  visible?: boolean;
+}) {
+  const sheets = await getSheetsClient();
+  const tab = await getPrimarySheetName(sheets);
+
+  // 1. Get current headers in main data sheet
+  const headersRes = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'A:AH'
+    range: `'${tab}'!1:1`
   });
 
-  const values = res.data.values || [];
-  if (values.length <= 1) {
-    return { success: false, count: 0, rows: [] };
-  }
+  const headers: string[] = headersRes.data.values?.[0] || [];
+  let colLetter = '';
 
-  const headers = values[0];
-  const rows: Record<string, string>[] = [];
+  if (headers.includes(field.field_name)) {
+    const colIdx = headers.indexOf(field.field_name);
+    colLetter = colToA1(colIdx);
+  } else {
+    // Append header to main data sheet
+    headers.push(field.field_name);
+    colLetter = colToA1(headers.length - 1);
 
-  for (let i = 1; i < values.length; i++) {
-    const r = values[i];
-    const rowObj: Record<string, string> = {};
-    headers.forEach((h, idx) => {
-      rowObj[h] = r[idx] || '';
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `'${tab}'!A1:${colLetter}1`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [headers]
+      }
     });
-    rows.push(rowObj);
   }
 
-  return { success: true, count: rows.length, headers, rows };
+  // 2. Append to Settings sheet
+  const settingsRow = [
+    field.field_name,
+    field.field_type || 'text',
+    field.required ? 'TRUE' : 'FALSE',
+    field.visible !== false ? 'TRUE' : 'FALSE',
+    colLetter,
+    field.label || field.field_name,
+    field.desc || ''
+  ];
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Settings!A1:G',
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: {
+      values: [settingsRow]
+    }
+  });
+
+  return {
+    success: true,
+    field_name: field.field_name,
+    column_letter: colLetter
+  };
 }

@@ -157,6 +157,17 @@ export const api = {
   },
 
   getSettings: async (): Promise<CustomField[]> => {
+    try {
+      const res = await fetch('/api/custom-fields', { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          return json.data;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load custom fields from API:', e);
+    }
     return [
       { field_name: 'tjm_name', field_type: 'text', required: false, visible: true, column_letter: 'W' },
       { field_name: 'phone', field_type: 'phone', required: false, visible: true, column_letter: 'X' },
@@ -239,8 +250,18 @@ export const api = {
     return await res.json();
   },
 
-  addCustomField: async (field: CustomField): Promise<{ success: boolean }> => {
-    return { success: true };
+  addCustomField: async (field: CustomField & { label?: string; desc?: string }): Promise<{ success: boolean; data?: any }> => {
+    try {
+      const res = await fetch('/api/custom-fields', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(field)
+      });
+      return await res.json();
+    } catch (e) {
+      console.error('Failed to add custom field:', e);
+      return { success: false };
+    }
   },
 
   getDistricts: async () => {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
 import { createObjectInSheet } from '@/lib/googleSheets';
+import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +64,21 @@ export async function POST(request: Request) {
       visit_lat_lng: body.visit_lat_lng ? String(body.visit_lat_lng).trim() : ''
     };
 
-    // 1. Update local JSON file cache
+    // 1. Immediately update in-memory cache
+    dataCache.appendRow(newObjectRecord);
+
+    // 2. Direct Google Sheets API append
+    try {
+      await createObjectInSheet(newObjectRecord);
+    } catch (sheetErr: any) {
+      console.error('Google Sheets create error:', sheetErr);
+      return NextResponse.json({ 
+        success: false, 
+        error: `Google Sheets xatosi: ${sheetErr.message}` 
+      }, { status: 500 });
+    }
+
+    // 3. Update local backup file if writable
     try {
       const filePath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
       if (fs.existsSync(filePath)) {
@@ -76,22 +91,7 @@ export async function POST(request: Request) {
         }
       }
     } catch (err) {
-      console.warn('Failed to update local cache on create:', err);
-    }
-
-    // 2. Direct Google Sheets API append
-    try {
-      await createObjectInSheet(newObjectRecord);
-    } catch (sheetErr: any) {
-      console.error('Google Sheets create error:', sheetErr);
-      if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-        return NextResponse.json({
-          success: true,
-          message: 'Saqlandi (Lokal)',
-          data: newObjectRecord
-        });
-      }
-      return NextResponse.json({ success: false, error: `Google Sheets xatosi: ${sheetErr.message}` }, { status: 500 });
+      // Harmless
     }
 
     return NextResponse.json({

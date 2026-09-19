@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 import { CustomField } from '../../lib/types';
 import { 
   SlidersHorizontal, Eye, EyeOff, ShieldCheck, Plus, 
@@ -51,6 +52,13 @@ export default function CustomFieldManager() {
     const stored = getStoredCustomFields();
     setFields(stored);
     setLoading(false);
+
+    api.getSettings().then(fetched => {
+      if (fetched && fetched.length > 0) {
+        setFields(fetched as any);
+        saveStoredCustomFields(fetched as any);
+      }
+    }).catch(console.error);
   }, []);
 
   const toggleVisibility = (index: number) => {
@@ -60,7 +68,7 @@ export default function CustomFieldManager() {
     saveStoredCustomFields(updated);
   };
 
-  const handleAddField = (e: React.FormEvent) => {
+  const handleAddField = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLabel.trim()) return;
 
@@ -96,6 +104,13 @@ export default function CustomFieldManager() {
 
     setSavedAlert(true);
     setTimeout(() => setSavedAlert(false), 3000);
+
+    // Save directly to Google Sheets Settings & add header column to main sheet
+    try {
+      await api.addCustomField(newFieldObj);
+    } catch (err) {
+      console.warn('Failed to sync new custom field to Google Sheets:', err);
+    }
   };
 
   const handleDeleteCustomField = (index: number) => {

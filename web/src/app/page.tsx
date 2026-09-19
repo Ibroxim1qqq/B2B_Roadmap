@@ -185,13 +185,13 @@ export default function Home() {
         setObjectDetail(detail);
         setIsEditing(false);
         await refresh();
-        alert("Saqlandi");
+        alert("Muvaffaqiyatli saqlandi!");
       } else {
-        alert("Xatolik yuz berdi");
+        alert("Xatolik: " + ((res as any)?.error || res?.message || 'Saqlash amalga oshmadi'));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Xatolik yuz berdi");
+      alert("Xatolik yuz berdi: " + (err.message || ''));
     }
   };
 
@@ -205,13 +205,13 @@ export default function Home() {
         setObjectDetail(detail);
         setIsEditing(false);
         await refresh();
-        alert("O'chirildi");
+        alert("B2B ma'lumotlari muvaffaqiyatli tozalandi!");
       } else {
-        alert("Xatolik yuz berdi");
+        alert("Xatolik: " + ((res as any)?.error || res?.message || 'Tozalash amalga oshmadi'));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Xatolik yuz berdi");
+      alert("Xatolik yuz berdi: " + (err.message || ''));
     }
   };
 
@@ -230,13 +230,13 @@ export default function Home() {
           const detail = await api.getObject(id);
           setObjectDetail(detail);
         }
-        alert("Saqlandi");
+        alert("Tashrif muvaffaqiyatli saqlandi!");
       } else {
-        alert("Xatolik yuz berdi");
+        alert("Xatolik: " + ((res as any)?.error || res?.message || 'Tashrif qayd etilmadi'));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Xatolik yuz berdi");
+      alert("Xatolik yuz berdi: " + (err.message || ''));
     }
   };
 
@@ -256,13 +256,13 @@ export default function Home() {
           handleSelectObject(newId);
           setActiveTab('map');
         }
-        alert("Saqlandi");
+        alert("Yangi bino muvaffaqiyatli qo'shildi!");
       } else {
-        alert("Xatolik yuz berdi");
+        alert("Xatolik: " + ((res as any)?.error || res?.message || 'Bino yaratilmadi'));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Xatolik yuz berdi");
+      alert("Xatolik yuz berdi: " + (err.message || ''));
     }
   };
 
@@ -277,13 +277,13 @@ export default function Home() {
           const detail = await api.getObject(selectedId);
           setObjectDetail(detail);
         }
-        alert("Sinxronlandi");
+        alert(`Google Sheets bilan sinxronlandi! Jami: ${res.count || 0} ta obyekt`);
       } else {
-        alert("Xatolik yuz berdi");
+        alert("Sinxronizatsiya xatosi: " + ((res as any)?.error || 'Baza bilan ulanib bo\'lmadi'));
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Xatolik yuz berdi");
+      alert("Xatolik yuz berdi: " + (e.message || ''));
     } finally {
       setSyncing(false);
     }

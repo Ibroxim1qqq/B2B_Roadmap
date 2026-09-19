@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
 import { updateObjectInSheet, INTERNAL_COLUMNS } from '@/lib/googleSheets';
+import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,15 +12,30 @@ export async function POST(request: Request) {
     const { source_id } = body;
 
     if (!source_id) {
-      return NextResponse.json({ success: false, error: 'source_id is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'source_id talab qilinadi' }, { status: 400 });
     }
 
+    // ONLY clear internal B2B columns; Government source data is 100% safeguarded!
     const clearedFields: Record<string, string> = {};
     INTERNAL_COLUMNS.forEach(col => {
       clearedFields[col] = '';
     });
 
-    // 1. Update local JSON file cache
+    // 1. Update in-memory cache
+    dataCache.clearRowB2B(String(source_id), INTERNAL_COLUMNS);
+
+    // 2. Direct Google Sheets API update
+    try {
+      await updateObjectInSheet(String(source_id), clearedFields);
+    } catch (sheetErr: any) {
+      console.error('Google Sheets clear error:', sheetErr);
+      return NextResponse.json({ 
+        success: false, 
+        error: `Google Sheets xatosi: ${sheetErr.message}` 
+      }, { status: 500 });
+    }
+
+    // 3. Update local file backup if writable
     try {
       const filePath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
       if (fs.existsSync(filePath)) {
@@ -32,22 +48,12 @@ export async function POST(request: Request) {
         }
       }
     } catch (e) {
-      console.warn('Local cache update skipped:', e);
-    }
-
-    // 2. Direct Google Sheets API update
-    try {
-      await updateObjectInSheet(String(source_id), clearedFields);
-    } catch (sheetErr: any) {
-      console.error('Google Sheets clear error:', sheetErr);
-      if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-        return NextResponse.json({ success: true, message: "O'chirildi (Lokal)" });
-      }
-      return NextResponse.json({ success: false, error: `Google Sheets xatosi: ${sheetErr.message}` }, { status: 500 });
+      // Harmless
     }
 
     return NextResponse.json({ success: true, message: "O'chirildi" });
   } catch (err: any) {
+    console.error('Clear route error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

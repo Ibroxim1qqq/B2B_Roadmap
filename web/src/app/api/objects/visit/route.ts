@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
 import { updateObjectInSheet } from '@/lib/googleSheets';
+import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
     const { source_id, visited_by, lat_lng } = body;
 
     if (!source_id) {
-      return NextResponse.json({ success: false, error: 'source_id is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'source_id talab qilinadi' }, { status: 400 });
     }
 
     const now = new Date();
@@ -23,7 +24,21 @@ export async function POST(request: Request) {
       visit_lat_lng: lat_lng || ''
     };
 
-    // 1. Update local JSON file cache
+    // 1. Immediately update in-memory cache
+    dataCache.updateRow(String(source_id), visitData);
+
+    // 2. Direct Google Sheets API update
+    try {
+      await updateObjectInSheet(String(source_id), visitData);
+    } catch (sheetErr: any) {
+      console.error('Google Sheets visit update error:', sheetErr);
+      return NextResponse.json({ 
+        success: false, 
+        error: `Google Sheets xatosi: ${sheetErr.message}` 
+      }, { status: 500 });
+    }
+
+    // 3. Update local backup file if writable
     try {
       const filePath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
       if (fs.existsSync(filePath)) {
@@ -36,18 +51,7 @@ export async function POST(request: Request) {
         }
       }
     } catch (e) {
-      console.warn('Local cache update skipped:', e);
-    }
-
-    // 2. Direct Google Sheets API update
-    try {
-      await updateObjectInSheet(String(source_id), visitData);
-    } catch (sheetErr: any) {
-      console.error('Google Sheets sync error:', sheetErr);
-      if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-        return NextResponse.json({ success: true, message: 'Saqlandi (Lokal)', visit: visitData });
-      }
-      return NextResponse.json({ success: false, error: `Google Sheets xatosi: ${sheetErr.message}` }, { status: 500 });
+      // Harmless on read-only environments
     }
 
     return NextResponse.json({ success: true, message: 'Saqlandi', visit: visitData });
