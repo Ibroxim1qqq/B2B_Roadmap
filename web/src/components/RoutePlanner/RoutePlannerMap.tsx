@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { MapObject } from '../../lib/types';
 import { TJMAlongRoute, formatDistance } from '../../lib/routeUtils';
+import { Crosshair, X, MapPin } from 'lucide-react';
 
 // Fix Leaflet default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -23,6 +24,12 @@ interface RoutePlannerMapProps {
   selectedTJMId: string | null;
   onSelectTJM: (id: string) => void;
   showAllMarkers?: boolean;
+  pickingMode: 'A' | 'B' | null;
+  onMapClick: (lat: number, lng: number) => void;
+  onDragStartPoint: (lat: number, lng: number) => void;
+  onDragEndPoint: (lat: number, lng: number) => void;
+  onSetPointFromObject: (obj: MapObject, pointType: 'A' | 'B') => void;
+  onCancelPicking: () => void;
 }
 
 export default function RoutePlannerMap({
@@ -34,7 +41,13 @@ export default function RoutePlannerMap({
   allObjects,
   selectedTJMId,
   onSelectTJM,
-  showAllMarkers = false
+  showAllMarkers = false,
+  pickingMode,
+  onMapClick,
+  onDragStartPoint,
+  onDragEndPoint,
+  onSetPointFromObject,
+  onCancelPicking
 }: RoutePlannerMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -89,7 +102,34 @@ export default function RoutePlannerMap({
     }
   }, [mapType]);
 
-  // 3. Render Route, Buffer Corridor, and Markers
+  // 3. Map Click Event when Picking Mode is Active
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      if (pickingMode) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      }
+    };
+
+    map.on('click', handleMapClick);
+
+    // Dynamic cursor styling
+    if (containerRef.current) {
+      if (pickingMode) {
+        containerRef.current.style.cursor = 'crosshair';
+      } else {
+        containerRef.current.style.cursor = '';
+      }
+    }
+
+    return () => {
+      map.off('click', handleMapClick);
+    };
+  }, [pickingMode, onMapClick]);
+
+  // 4. Render Route, Buffer Corridor, and Markers
   useEffect(() => {
     const map = mapRef.current;
     const layerGroup = layerGroupRef.current;
@@ -106,13 +146,57 @@ export default function RoutePlannerMap({
         const isMatched = matchedTJMs.some(m => m.object.source_id === obj.source_id);
         if (!isMatched) {
           const smallDot = L.circleMarker([obj.latitude, obj.longitude], {
-            radius: 4,
-            color: '#94a3b8',
-            fillColor: '#cbd5e1',
-            fillOpacity: 0.5,
-            weight: 1
+            radius: 5,
+            color: '#64748b',
+            fillColor: '#94a3b8',
+            fillOpacity: 0.6,
+            weight: 1.5
           });
-          smallDot.on('click', () => onSelectTJM(obj.source_id));
+
+          // If in picking mode, clicking directly assigns point A or B
+          smallDot.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            if (pickingMode) {
+              onSetPointFromObject(obj, pickingMode);
+            } else {
+              onSelectTJM(obj.source_id);
+            }
+          });
+
+          // Popup with quick A / B actions
+          const popupContent = `
+            <div style="font-family: sans-serif; min-width: 170px; font-size: 12px;">
+              <div style="font-weight: bold; color: #1e293b; margin-bottom: 4px;">${obj.tjm_name || obj.object_name}</div>
+              <div style="color: #64748b; font-size: 11px; margin-bottom: 6px;">${obj.district_name || ''}</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px;">
+                <button id="btn-pick-a-${obj.source_id}" style="padding: 4px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
+                  🟢 A: Shu yerdan
+                </button>
+                <button id="btn-pick-b-${obj.source_id}" style="padding: 4px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
+                  🔴 B: Shu yerga
+                </button>
+              </div>
+            </div>
+          `;
+
+          smallDot.bindPopup(popupContent);
+          smallDot.on('popupopen', () => {
+            const btnA = document.getElementById(`btn-pick-a-${obj.source_id}`);
+            const btnB = document.getElementById(`btn-pick-b-${obj.source_id}`);
+            if (btnA) {
+              btnA.onclick = () => {
+                onSetPointFromObject(obj, 'A');
+                map.closePopup();
+              };
+            }
+            if (btnB) {
+              btnB.onclick = () => {
+                onSetPointFromObject(obj, 'B');
+                map.closePopup();
+              };
+            }
+          });
+
           layerGroup.addLayer(smallDot);
         }
       });
@@ -121,7 +205,6 @@ export default function RoutePlannerMap({
     // B. Draw Route Line & Buffer Corridor
     if (routeCoords.length > 1) {
       // 1. Buffer corridor (semi-transparent glowing strip)
-      // Visual approximation of corridor width
       const bufferCorridor = L.polyline(routeCoords, {
         color: '#60a5fa',
         weight: Math.max(16, Math.round(bufferRadiusMeters / 12)),
@@ -144,7 +227,7 @@ export default function RoutePlannerMap({
       routeCoords.forEach(c => boundsPoints.push(c));
     }
 
-    // C. Start Marker (Point A)
+    // C. Start Marker (Point A) - DRAGGABLE
     if (startPoint) {
       const startIcon = L.divIcon({
         className: 'custom-start-marker',
@@ -152,30 +235,48 @@ export default function RoutePlannerMap({
           <div style="
             background: linear-gradient(135deg, #10b981, #059669);
             color: white;
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45);
             border: 3px solid white;
+            cursor: grab;
           ">
             <span style="transform: rotate(45deg); font-weight: 900; font-size: 14px;">A</span>
           </div>
         `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 36]
+        iconSize: [38, 38],
+        iconAnchor: [19, 38]
       });
 
-      const startMarker = L.marker([startPoint.lat, startPoint.lng], { icon: startIcon })
-        .bindPopup(`<b>Boshlanish nuqtasi (A):</b><br/>${startPoint.name}`);
+      const startMarker = L.marker([startPoint.lat, startPoint.lng], {
+        icon: startIcon,
+        draggable: true,
+        title: "Boshlanish nuqtasi (A) - Ko'chirish uchun suring"
+      });
+
+      startMarker.bindPopup(`
+        <div style="font-family: sans-serif; font-size: 12px;">
+          <div style="font-weight: bold; color: #059669;">📍 Boshlanish nuqtasi (A)</div>
+          <div style="color: #334155; margin-top: 2px;">${startPoint.name}</div>
+          <div style="color: #94a3b8; font-size: 10px; margin-top: 4px;">💡 Joyini o'zgartirish uchun nishonni surishingiz mumkin</div>
+        </div>
+      `);
+
+      startMarker.on('dragend', (e: any) => {
+        const pos = e.target.getLatLng();
+        onDragStartPoint(pos.lat, pos.lng);
+      });
+
       layerGroup.addLayer(startMarker);
       boundsPoints.push([startPoint.lat, startPoint.lng]);
     }
 
-    // D. End Marker (Point B)
+    // D. End Marker (Point B) - DRAGGABLE
     if (endPoint) {
       const endIcon = L.divIcon({
         className: 'custom-end-marker',
@@ -183,25 +284,43 @@ export default function RoutePlannerMap({
           <div style="
             background: linear-gradient(135deg, #ef4444, #dc2626);
             color: white;
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.45);
             border: 3px solid white;
+            cursor: grab;
           ">
             <span style="transform: rotate(45deg); font-weight: 900; font-size: 14px;">B</span>
           </div>
         `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 36]
+        iconSize: [38, 38],
+        iconAnchor: [19, 38]
       });
 
-      const endMarker = L.marker([endPoint.lat, endPoint.lng], { icon: endIcon })
-        .bindPopup(`<b>Maqsad nuqtasi (B):</b><br/>${endPoint.name}`);
+      const endMarker = L.marker([endPoint.lat, endPoint.lng], {
+        icon: endIcon,
+        draggable: true,
+        title: "Maqsad nuqtasi (B) - Ko'chirish uchun suring"
+      });
+
+      endMarker.bindPopup(`
+        <div style="font-family: sans-serif; font-size: 12px;">
+          <div style="font-weight: bold; color: #dc2626;">🏁 Borish manzili (B)</div>
+          <div style="color: #334155; margin-top: 2px;">${endPoint.name}</div>
+          <div style="color: #94a3b8; font-size: 10px; margin-top: 4px;">💡 Joyini o'zgartirish uchun nishonni surishingiz mumkin</div>
+        </div>
+      `);
+
+      endMarker.on('dragend', (e: any) => {
+        const pos = e.target.getLatLng();
+        onDragEndPoint(pos.lat, pos.lng);
+      });
+
       layerGroup.addLayer(endMarker);
       boundsPoints.push([endPoint.lat, endPoint.lng]);
     }
@@ -248,7 +367,7 @@ export default function RoutePlannerMap({
       const phoneText = obj.phone ? `<div style="margin-top:4px; font-weight:bold; color:#059669;">📞 ${obj.phone}</div>` : '';
 
       marker.bindPopup(`
-        <div style="font-family: sans-serif; min-width: 180px; font-size: 12px;">
+        <div style="font-family: sans-serif; min-width: 190px; font-size: 12px;">
           <div style="font-weight:bold; color:#1e293b; margin-bottom:4px;">#${orderNumber}. ${name}</div>
           <div style="color:#64748b; font-size:11px;">📍 Yo'l boshidan: <b>${formatDistance(distAlongRouteMeters)}</b></div>
           <div style="color:#64748b; font-size:11px;">🛣️ Yo'ldan narida: <b>${distFromRoadMeters} metr</b></div>
@@ -258,29 +377,103 @@ export default function RoutePlannerMap({
             </span>
           </div>
           ${phoneText}
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px;">
+            <button id="btn-route-a-${obj.source_id}" style="padding: 4px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
+              🟢 A: Shu yerdan
+            </button>
+            <button id="btn-route-b-${obj.source_id}" style="padding: 4px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
+              🔴 B: Shu yerga
+            </button>
+          </div>
         </div>
       `);
 
-      marker.on('click', () => {
-        onSelectTJM(obj.source_id);
+      marker.on('popupopen', () => {
+        const btnA = document.getElementById(`btn-route-a-${obj.source_id}`);
+        const btnB = document.getElementById(`btn-route-b-${obj.source_id}`);
+        if (btnA) {
+          btnA.onclick = () => {
+            onSetPointFromObject(obj, 'A');
+            map.closePopup();
+          };
+        }
+        if (btnB) {
+          btnB.onclick = () => {
+            onSetPointFromObject(obj, 'B');
+            map.closePopup();
+          };
+        }
+      });
+
+      marker.on('click', (e) => {
+        if (pickingMode) {
+          L.DomEvent.stopPropagation(e);
+          onSetPointFromObject(obj, pickingMode);
+        } else {
+          onSelectTJM(obj.source_id);
+        }
       });
 
       layerGroup.addLayer(marker);
       boundsPoints.push([obj.latitude, obj.longitude]);
     });
 
-    // Fit map bounds
-    if (boundsPoints.length > 0) {
+    // Fit map bounds once if route or points exist
+    if (boundsPoints.length > 0 && !pickingMode) {
       map.fitBounds(L.latLngBounds(boundsPoints), {
-        padding: [50, 50],
+        padding: [60, 60],
         maxZoom: 16
       });
     }
-  }, [routeCoords, matchedTJMs, startPoint, endPoint, bufferRadiusMeters, selectedTJMId, showAllMarkers, allObjects, onSelectTJM]);
+  }, [
+    routeCoords, 
+    matchedTJMs, 
+    startPoint, 
+    endPoint, 
+    bufferRadiusMeters, 
+    selectedTJMId, 
+    showAllMarkers, 
+    allObjects, 
+    pickingMode,
+    onSelectTJM, 
+    onSetPointFromObject, 
+    onDragStartPoint, 
+    onDragEndPoint
+  ]);
 
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full z-10" />
+
+      {/* Picking Mode Floating Instruction Banner */}
+      {pickingMode && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] max-w-md w-11/12 animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-2xl shadow-2xl border border-white/10 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className={`w-3 h-3 rounded-full animate-ping shrink-0 ${
+                pickingMode === 'A' ? 'bg-emerald-400' : 'bg-rose-400'
+              }`} />
+              <div className="text-xs font-medium">
+                <span className="font-bold block text-white">
+                  {pickingMode === 'A' ? "📍 Boshlang'ich nuqtani (A) tanlang:" : "🏁 Borish manzilini (B) tanlang:"}
+                </span>
+                <span className="text-slate-300 text-[11px]">
+                  Xaritada ixtiyoriy joyni yoki TJM obyektini bosing
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onCancelPicking}
+              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer shrink-0"
+              title="Bekor qilish"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Map Switcher (Map / Satellite) */}
       <div className="absolute top-4 right-4 z-[400] flex bg-white/90 backdrop-blur-md border border-slate-200/90 rounded-xl p-1 shadow-sm text-xs font-semibold">
