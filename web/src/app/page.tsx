@@ -55,6 +55,7 @@ export default function Home() {
   // Navigation & View States
   const [activeTab, setActiveTab] = useState('map');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Jarayonda');
   const [locating, setLocating] = useState(false);
@@ -94,9 +95,14 @@ export default function Home() {
     router.replace('/login');
   };
 
-  // Real-time active filtering for search, district, and status
+  // Real-time active filtering for region, search, district, and status
   const activeFilteredMarkers = useMemo(() => {
     return markers.filter(m => {
+      // 0. Region Filter
+      if (selectedRegion && m.region_soato !== selectedRegion) {
+        return false;
+      }
+
       // 1. Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -140,20 +146,23 @@ export default function Home() {
 
       return true;
     });
-  }, [markers, searchQuery, selectedDistrict, selectedStatus]);
+  }, [markers, selectedRegion, searchQuery, selectedDistrict, selectedStatus]);
 
   // Calculate distances if user location exists
   const objectsWithDistance = useDistance(activeFilteredMarkers, location.lat, location.lng);
   const displayList = (location.lat && location.lng ? objectsWithDistance : activeFilteredMarkers) as (MapObject & { distance?: number })[];
 
-  // Real-time calculation for the 4 top summary cards
+  // Real-time calculation for the 4 top summary cards (reflects selected region or nationwide)
   const stats = useMemo(() => {
-    const total = markers.length;
-    const visited = markers.filter(m => Boolean(m.is_visited || m.last_visit)).length;
-    const filled = markers.filter(m => Boolean(m.has_internal || m.tjm_name || m.phone || m.manager_name)).length;
+    const targetPool = selectedRegion 
+      ? markers.filter(m => m.region_soato === selectedRegion)
+      : markers;
+    const total = targetPool.length;
+    const visited = targetPool.filter(m => Boolean(m.is_visited || m.last_visit)).length;
+    const filled = targetPool.filter(m => Boolean(m.has_internal || m.tjm_name || m.phone || m.manager_name)).length;
     const notVisited = Math.max(0, total - visited);
     return { total, visited, filled, notVisited };
-  }, [markers]);
+  }, [markers, selectedRegion]);
 
   // Load custom field settings
   useEffect(() => {
@@ -408,6 +417,11 @@ export default function Home() {
 
             {/* 2. Filter Pills Bar (Directly Above the Map) */}
             <FilterToolbar
+              selectedRegion={selectedRegion}
+              onRegionChange={(reg) => {
+                setSelectedRegion(reg);
+                setSelectedDistrict('');
+              }}
               selectedDistrict={selectedDistrict}
               onDistrictChange={setSelectedDistrict}
               selectedStatus={selectedStatus}
@@ -425,6 +439,7 @@ export default function Home() {
                   selectedId={selectedId}
                   userLat={location.lat}
                   userLng={location.lng}
+                  selectedRegion={selectedRegion}
                 />
               </div>
             </div>
@@ -450,6 +465,11 @@ export default function Home() {
               onViewOnMap={handleViewOnMap}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
+              selectedRegion={selectedRegion}
+              onRegionChange={(reg) => {
+                setSelectedRegion(reg);
+                setSelectedDistrict('');
+              }}
               selectedDistrict={selectedDistrict}
               onDistrictChange={setSelectedDistrict}
               selectedStatus={selectedStatus}

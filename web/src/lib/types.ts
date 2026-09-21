@@ -5,6 +5,8 @@ export interface MapObject {
   longitude: number;
   status: string;
   status_id: number;
+  region_soato?: string;
+  region_name?: string;
   district_soato: string;
   district_name?: string;
   sphere_name?: string;
@@ -38,6 +40,7 @@ export interface ObjectDetail {
     source_id: string;
     object_name: string;
     region_soato: string;
+    region_name?: string;
     district_soato: string;
     district_name?: string;
     address: string;

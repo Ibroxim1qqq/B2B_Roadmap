@@ -6,6 +6,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import { MapObject } from '../../lib/types';
+import { getRegionBySoato, UZBEKISTAN_CENTER, UZBEKISTAN_ZOOM } from '../../lib/regions';
 
 // Fix Leaflet default icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -21,6 +22,7 @@ interface MapContainerProps {
   selectedId: string | null;
   userLat?: number | null;
   userLng?: number | null;
+  selectedRegion?: string;
 }
 
 function escapeHtml(str: string): string {
@@ -31,7 +33,7 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
-export default function MapContainer({ markers, onSelect, selectedId, userLat, userLng }: MapContainerProps) {
+export default function MapContainer({ markers, onSelect, selectedId, userLat, userLng, selectedRegion }: MapContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
@@ -303,7 +305,21 @@ export default function MapContainer({ markers, onSelect, selectedId, userLat, u
     }
   }, [userLat, userLng]);
 
-  // 6. Invalidate size on resize
+  // 6. Fly to Selected Region
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (selectedRegion) {
+      const reg = getRegionBySoato(selectedRegion);
+      if (reg) {
+        map.flyTo(reg.center, reg.zoom, { duration: 1.2 });
+      }
+    } else {
+      map.flyTo(UZBEKISTAN_CENTER, UZBEKISTAN_ZOOM, { duration: 1.2 });
+    }
+  }, [selectedRegion]);
+
+  // 7. Invalidate size on resize
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;

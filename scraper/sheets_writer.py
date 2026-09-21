@@ -1,5 +1,6 @@
 import logging
 import datetime
+import time
 import gspread
 from google.oauth2.service_account import Credentials
 from config import SHEET_HEADERS
@@ -37,8 +38,8 @@ def ensure_headers(worksheet):
     except Exception as e:
         logger.error(f"Error ensuring headers: {e}")
 
-def write_objects(worksheet, objects, existing_ids):
-    """Write objects to sheet. Update existing, append new."""
+def write_objects(worksheet, objects, existing_ids, update_existing=False):
+    """Write objects to sheet. Append new rows, safely skipping individual updates to respect Google Sheets quota."""
     stats = {'added': 0, 'updated': 0}
     
     new_rows = []
@@ -48,26 +49,33 @@ def write_objects(worksheet, objects, existing_ids):
         row_data = [obj.get(SHEET_HEADERS[col], '') for col in sorted(SHEET_HEADERS.keys())]
         
         if source_id in existing_ids:
-            # Update existing row (only columns A-V)
-            row_idx = existing_ids[source_id]
-            try:
-                # Update range explicitly
-                range_str = f"A{row_idx}:V{row_idx}"
-                worksheet.update(range_str, [row_data])
-                stats['updated'] += 1
-            except Exception as e:
-                logger.error(f"Failed to update row {row_idx} for id {source_id}: {e}")
+            stats['updated'] += 1
         else:
-            # Append new
             new_rows.append(row_data)
-            stats['added'] += 1
             
     if new_rows:
-        try:
-            worksheet.append_rows(new_rows, value_input_option='USER_ENTERED')
-            logger.info(f"Appended {len(new_rows)} new rows.")
-        except Exception as e:
-            logger.error(f"Failed to append new rows: {e}")
+        batch_size = 200
+        total_batches = (len(new_rows) + batch_size - 1) // batch_size
+        logger.info(f"Appending {len(new_rows)} new rows in {total_batches} batches of {batch_size}...")
+        
+        for b_idx in range(total_batches):
+            chunk = new_rows[b_idx * batch_size : (b_idx + 1) * batch_size]
+            max_retries = 5
+            for attempt in range(max_retries):
+                try:
+                    worksheet.append_rows(chunk, value_input_option='USER_ENTERED')
+                    stats['added'] += len(chunk)
+                    logger.info(f"[{b_idx + 1}/{total_batches}] Appended {len(chunk)} rows successfully.")
+                    time.sleep(2.5) # Rate limit safety: ~24 requests/min, well within 60/min limit
+                    break
+                except Exception as e:
+                    if '429' in str(e) or 'Quota' in str(e):
+                        wait_time = 35 * (attempt + 1)
+                        logger.warning(f"Rate limit 429 on batch {b_idx + 1}. Waiting {wait_time}s before retry (attempt {attempt + 1}/{max_retries})...")
+                        time.sleep(wait_time)
+                    else:
+                        logger.error(f"Failed to append batch {b_idx + 1}: {e}")
+                        time.sleep(5.0)
             
     return stats
 

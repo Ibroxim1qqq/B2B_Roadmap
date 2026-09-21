@@ -8,10 +8,27 @@ ENDPOINTS = {
     'get-construction-images': f'{DSHK_API_BASE}/get-construction-images'
 }
 
-# Filter Parameters
+# 14 Regions of Uzbekistan (DSHK Country ID -> Name & SOATO)
+UZBEKISTAN_REGIONS = {
+    1: {"name": "Andijon viloyati", "soato": "1703"},
+    2: {"name": "Buxoro viloyati", "soato": "1706"},
+    3: {"name": "Farg'ona viloyati", "soato": "1730"},
+    4: {"name": "Jizzax viloyati", "soato": "1708"},
+    5: {"name": "Xorazm viloyati", "soato": "1733"},
+    6: {"name": "Namangan viloyati", "soato": "1714"},
+    7: {"name": "Navoiy viloyati", "soato": "1712"},
+    8: {"name": "Qashqadaryo viloyati", "soato": "1710"},
+    9: {"name": "Qoraqalpog'iston Respublikasi", "soato": "1735"},
+    10: {"name": "Samarqand viloyati", "soato": "1718"},
+    11: {"name": "Sirdaryo viloyati", "soato": "1724"},
+    12: {"name": "Surxondaryo viloyati", "soato": "1722"},
+    13: {"name": "Toshkent viloyati", "soato": "1727"},
+    14: {"name": "Toshkent shahri", "soato": "1726"}
+}
+
+# Filter Parameters: Ko'p xonadonli uy-joylar, Jarayonda
 FILTER_PARAMS = {
-    'country_id': 10, # Samarqand
-    'sphere_id': 57,  # Ko\'p xonadonli
+    'sphere_id': 57,  # Ko'p xonadonli
     'status': 2       # Jarayonda
 }
 

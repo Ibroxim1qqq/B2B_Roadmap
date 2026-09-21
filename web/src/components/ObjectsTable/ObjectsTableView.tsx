@@ -8,6 +8,7 @@ import {
   Building2, Clock, ShieldCheck, Layers, Tag
 } from 'lucide-react';
 import { getNavigationUrl, getCallUrl } from '../../lib/utils';
+import { REGION_LIST, getDistrictsForRegion, getRegionName } from '../../lib/regions';
 
 interface ObjectsTableViewProps {
   objects: (MapObject & { distance?: number })[];
@@ -17,6 +18,8 @@ interface ObjectsTableViewProps {
   onViewOnMap: (id: string) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  selectedRegion?: string;
+  onRegionChange?: (r: string) => void;
   selectedDistrict: string;
   onDistrictChange: (d: string) => void;
   selectedStatus: string;
@@ -31,6 +34,8 @@ export default function ObjectsTableView({
   onViewOnMap,
   searchQuery,
   onSearchChange,
+  selectedRegion = '',
+  onRegionChange,
   selectedDistrict,
   onDistrictChange,
   selectedStatus,
@@ -40,33 +45,22 @@ export default function ObjectsTableView({
   const [sortBy, setSortBy] = useState<'name' | 'district' | 'floors' | 'apartments' | 'visit'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [regionOpen, setRegionOpen] = useState(false);
   const [districtOpen, setDistrictOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
 
+  const regionRef = useRef<HTMLDivElement>(null);
   const districtRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
+  useClickOutside(regionRef, () => setRegionOpen(false), regionOpen);
   useClickOutside(districtRef, () => setDistrictOpen(false), districtOpen);
   useClickOutside(statusRef, () => setStatusOpen(false), statusOpen);
   const pageSize = 15;
 
-  const districts = [
-    'Barcha tumanlar',
-    'Samarqand shahar',
-    'Samarqand tumani',
-    'Urgut tumani',
-    'Toyloq tumani',
-    'Oqdaryo tumani',
-    'Jomboy tumani',
-    'Ishtixon tumani',
-    'Payariq tumani',
-    'Kattaqo\'rg\'on tumani',
-    'Bulung\'ur tumani',
-    'Pastdarg\'om tumani',
-    'Narpay tumani',
-    'Qo\'shrabot tumani',
-    'Nurobod tumani'
-  ];
+  const districts = useMemo(() => {
+    return ['Barcha tumanlar', ...getDistrictsForRegion(selectedRegion)];
+  }, [selectedRegion]);
 
   const statuses = [
     'Barcha statuslar',
@@ -264,6 +258,59 @@ export default function ObjectsTableView({
               </button>
             )}
           </div>
+
+          {/* Region Selector */}
+          {onRegionChange && (
+            <div ref={regionRef} className="relative">
+              <button
+                onClick={() => { setRegionOpen(!regionOpen); setDistrictOpen(false); setStatusOpen(false); }}
+                className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl font-semibold text-slate-700 transition-colors cursor-pointer"
+              >
+                <span>{selectedRegion ? getRegionName(selectedRegion) : "🇺🇿 Barcha viloyatlar"}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+              {regionOpen && (
+                <div className="absolute left-0 mt-1.5 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-1.5 max-h-56 overflow-y-auto animate-in fade-in duration-150">
+                  <button
+                    onClick={() => {
+                      onRegionChange('');
+                      onDistrictChange('');
+                      setRegionOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 rounded-xl flex items-center justify-between text-xs font-medium cursor-pointer ${
+                      !selectedRegion
+                        ? 'bg-blue-50 text-blue-700 font-bold'
+                        : 'hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <span>🇺🇿 Barcha viloyatlar</span>
+                    {!selectedRegion && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                  </button>
+                  <div className="my-1 border-t border-slate-100"></div>
+                  {REGION_LIST.map(r => (
+                    <button
+                      key={r.soato}
+                      onClick={() => {
+                        onRegionChange(r.soato);
+                        onDistrictChange('');
+                        setRegionOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 rounded-xl flex items-center justify-between text-xs font-medium cursor-pointer ${
+                        selectedRegion === r.soato
+                          ? 'bg-blue-50 text-blue-700 font-bold'
+                          : 'hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <span>{r.name}</span>
+                      {selectedRegion === r.soato && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* District Selector */}
           <div ref={districtRef} className="relative">

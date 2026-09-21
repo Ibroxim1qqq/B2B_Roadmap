@@ -1,9 +1,12 @@
 'use client';
-import { MapPin, RefreshCw, Building, ChevronDown, Navigation, Check } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { MapPin, RefreshCw, Building, ChevronDown, Navigation, Check, Globe } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { REGION_LIST, getDistrictsForRegion, getRegionName } from '../../lib/regions';
 
 interface FilterToolbarProps {
+  selectedRegion: string;
+  onRegionChange: (regionSoato: string) => void;
   selectedDistrict: string;
   onDistrictChange: (district: string) => void;
   selectedStatus: string;
@@ -13,6 +16,8 @@ interface FilterToolbarProps {
 }
 
 export default function FilterToolbar({
+  selectedRegion,
+  onRegionChange,
   selectedDistrict,
   onDistrictChange,
   selectedStatus,
@@ -20,32 +25,21 @@ export default function FilterToolbar({
   onMyLocation,
   locating = false
 }: FilterToolbarProps) {
+  const [regionOpen, setRegionOpen] = useState(false);
   const [districtOpen, setDistrictOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
 
+  const regionRef = useRef<HTMLDivElement>(null);
   const districtRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
+  useClickOutside(regionRef, () => setRegionOpen(false), regionOpen);
   useClickOutside(districtRef, () => setDistrictOpen(false), districtOpen);
   useClickOutside(statusRef, () => setStatusOpen(false), statusOpen);
 
-  const districts = [
-    'Barcha tumanlar',
-    'Samarqand shahar',
-    'Samarqand tumani',
-    'Urgut tumani',
-    'Toyloq tumani',
-    'Oqdaryo tumani',
-    'Jomboy tumani',
-    'Ishtixon tumani',
-    'Payariq tumani',
-    'Kattaqo\'rg\'on tumani',
-    'Bulung\'ur tumani',
-    'Pastdarg\'om tumani',
-    'Narpay tumani',
-    'Qo\'shrabot tumani',
-    'Nurobod tumani'
-  ];
+  const districts = useMemo(() => {
+    return ['Barcha tumanlar', ...getDistrictsForRegion(selectedRegion)];
+  }, [selectedRegion]);
 
   const statuses = [
     'Barcha statuslar',
@@ -59,10 +53,65 @@ export default function FilterToolbar({
     <div className="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
       {/* Filters Pill Row */}
       <div className="flex flex-wrap items-center gap-2.5">
-        {/* Region (Fixed) */}
-        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs">
-          <MapPin className="w-3.5 h-3.5 text-blue-600" />
-          <span>Samarqand viloyati</span>
+        {/* Region Selector Dropdown */}
+        <div ref={regionRef} className="relative">
+          <button
+            onClick={() => { setRegionOpen(!regionOpen); setDistrictOpen(false); setStatusOpen(false); }}
+            className={`flex items-center gap-2 px-3.5 py-1.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors ${
+              selectedRegion
+                ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+            }`}
+          >
+            {selectedRegion ? <MapPin className="w-3.5 h-3.5 text-blue-600" /> : <Globe className="w-3.5 h-3.5 text-blue-600" />}
+            <span>{selectedRegion ? getRegionName(selectedRegion) : "Barcha viloyatlar"}</span>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+
+          {regionOpen && (
+            <div className="absolute top-full left-0 mt-1.5 w-60 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-50 max-h-72 overflow-y-auto">
+              <button
+                onClick={() => {
+                  onRegionChange('');
+                  onDistrictChange('');
+                  setRegionOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 text-xs rounded-lg flex items-center justify-between transition-colors ${
+                  !selectedRegion
+                    ? 'bg-blue-50 text-blue-600 font-semibold'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-blue-600" />
+                  <span>🇺🇿 Barcha viloyatlar</span>
+                </div>
+                {!selectedRegion && <Check className="w-3.5 h-3.5" />}
+              </button>
+              <div className="my-1 border-t border-slate-100"></div>
+              {REGION_LIST.map((r) => (
+                <button
+                  key={r.soato}
+                  onClick={() => {
+                    onRegionChange(r.soato);
+                    onDistrictChange('');
+                    setRegionOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 text-xs rounded-lg flex items-center justify-between transition-colors ${
+                    selectedRegion === r.soato
+                      ? 'bg-blue-50 text-blue-600 font-semibold'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{r.name}</span>
+                  </div>
+                  {selectedRegion === r.soato && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Category (Fixed) */}

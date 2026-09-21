@@ -1,5 +1,6 @@
 import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData } from './types';
 import realSheetsData from './real-sheets-data.json';
+import { getRegionName, getDistrictName, getRegionBySoato } from './regions';
 
 const SOATO_DISTRICT_MAP: Record<string, string> = {
   '1718401': 'Samarqand shahar',
@@ -23,7 +24,9 @@ const SOATO_DISTRICT_MAP: Record<string, string> = {
 function formatRowToMapObject(r: any): MapObject {
   const lat = parseFloat(r.latitude) || 39.6542;
   const lng = parseFloat(r.longitude) || 66.9597;
-  const district = SOATO_DISTRICT_MAP[r.district_soato] || 'Samarqand';
+  const regSoato = String(r.region_soato || (r.district_soato ? String(r.district_soato).substring(0, 4) : '1718'));
+  const regName = getRegionName(regSoato);
+  const district = getDistrictName(String(r.district_soato || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || (r.district_soato ? `Tuman (${r.district_soato})` : regName);
 
   const tjm = (r.tjm_name || '').trim();
   const phone = (r.phone || '').trim();
@@ -43,6 +46,8 @@ function formatRowToMapObject(r: any): MapObject {
     longitude: lng,
     status: r.status || 'Qurilish jarayonida',
     status_id: parseInt(r.status_id) || 1,
+    region_soato: regSoato,
+    region_name: regName,
     district_soato: r.district_soato || '1718401',
     district_name: district,
     sphere_name: "Ko'p xonadonli uy-joylar",
@@ -73,16 +78,19 @@ function formatRowToMapObject(r: any): MapObject {
 function formatRowToObjectDetail(r: any): ObjectDetail {
   const lat = parseFloat(r.latitude) || 39.6542;
   const lng = parseFloat(r.longitude) || 66.9597;
-  const district = SOATO_DISTRICT_MAP[r.district_soato] || 'Samarqand tumani';
+  const regSoato = String(r.region_soato || (r.district_soato ? String(r.district_soato).substring(0, 4) : '1718'));
+  const regName = getRegionName(regSoato);
+  const district = getDistrictName(String(r.district_soato || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || (r.district_soato ? `Tuman (${r.district_soato})` : regName);
 
   return {
     source: {
       source_id: String(r.source_id),
       object_name: r.object_name || '',
-      region_soato: r.region_soato || '1718',
+      region_soato: regSoato,
+      region_name: regName,
       district_soato: r.district_soato || '1718401',
       district_name: district,
-      address: r.address || 'Samarqand viloyati',
+      address: r.address || `${regName}`,
       latitude: lat,
       longitude: lng,
       status: r.status || 'Qurilish jarayonida',
