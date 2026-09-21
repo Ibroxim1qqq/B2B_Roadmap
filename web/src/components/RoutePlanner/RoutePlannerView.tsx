@@ -45,6 +45,14 @@ interface RoutePlannerViewProps {
 const REGISTON_LAT = 39.6542;
 const REGISTON_LNG = 66.9597;
 
+function getAccountRouteStorageKey(user?: UserProfile | null): string {
+  if (user) {
+    const accountId = user.user_id || user.id || user.login || 'default_user';
+    return `b2b_active_route_${accountId}`;
+  }
+  return 'b2b_active_route_guest';
+}
+
 export default function RoutePlannerView({
   objects,
   userLat,
@@ -65,6 +73,9 @@ export default function RoutePlannerView({
       if (u) setActiveUser(u);
     }
   }, [currentUser]);
+
+  // Route persistence per account
+  const [isStorageInitialized, setIsStorageInitialized] = useState(false);
 
   // Route saving & Saved routes modal state
   const [isSavingRoute, setIsSavingRoute] = useState(false);
@@ -171,6 +182,58 @@ export default function RoutePlannerView({
       setMatchedTJMs([]);
     }
   }, [startPoint?.lat, startPoint?.lng, endPoint?.lat, endPoint?.lng]);
+
+  // 1. Restore active route for this user account on mount or when account changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const user = activeUser || getCurrentUser();
+    const storageKey = getAccountRouteStorageKey(user);
+
+    try {
+      const savedRaw = localStorage.getItem(storageKey);
+      if (savedRaw) {
+        const saved = JSON.parse(savedRaw);
+        if (saved) {
+          if (saved.startPoint) {
+            setStartPoint(saved.startPoint);
+            setStartQuery(saved.startQuery || saved.startPoint.name || '');
+          }
+          if (saved.endPoint) {
+            setEndPoint(saved.endPoint);
+            setEndQuery(saved.endQuery || saved.endPoint.name || '');
+          }
+          if (saved.bufferRadius) {
+            setBufferRadius(saved.bufferRadius);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Faol marshrutni tiklashda xatolik:', e);
+    } finally {
+      setIsStorageInitialized(true);
+    }
+  }, [activeUser?.id, activeUser?.user_id, activeUser?.login]);
+
+  // 2. Automatically save active route to account storage whenever points or radius change
+  useEffect(() => {
+    if (!isStorageInitialized || typeof window === 'undefined') return;
+    const user = activeUser || getCurrentUser();
+    const storageKey = getAccountRouteStorageKey(user);
+
+    if (startPoint || endPoint) {
+      const payload = {
+        startPoint,
+        startQuery,
+        endPoint,
+        endQuery,
+        bufferRadius
+      };
+      localStorage.setItem(storageKey, JSON.stringify(payload));
+    } else {
+      localStorage.removeItem(storageKey);
+    }
+  }, [startPoint, startQuery, endPoint, endQuery, bufferRadius, isStorageInitialized, activeUser]);
+
 
   // Swap Point A and Point B
   const handleSwap = () => {
@@ -332,7 +395,7 @@ export default function RoutePlannerView({
     }
   };
 
-  // Clear / Reset all route points back to empty
+  // Clear / Reset all route points back to empty ("X" bosilganda)
   const handleClearRoute = () => {
     setStartPoint(null);
     setStartQuery('');
@@ -342,6 +405,13 @@ export default function RoutePlannerView({
     setMatchedTJMs([]);
     setPickingMode(null);
     setIsNavigating(false);
+
+    // Remove active route from user account storage
+    if (typeof window !== 'undefined') {
+      const user = activeUser || getCurrentUser();
+      const storageKey = getAccountRouteStorageKey(user);
+      localStorage.removeItem(storageKey);
+    }
   };
 
   // Enter Picking Mode
@@ -630,9 +700,13 @@ export default function RoutePlannerView({
                       setStartPoint(null);
                       setRouteResult(null);
                       setMatchedTJMs([]);
+                      if (!endPoint && typeof window !== 'undefined') {
+                        const user = activeUser || getCurrentUser();
+                        localStorage.removeItem(getAccountRouteStorageKey(user));
+                      }
                     }}
-                    className="text-slate-400 hover:text-slate-600 p-0.5"
-                    title="Tozalash"
+                    className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer transition-colors"
+                    title="A nuqtani bekor qilish (X)"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -756,9 +830,13 @@ export default function RoutePlannerView({
                       setEndPoint(null);
                       setRouteResult(null);
                       setMatchedTJMs([]);
+                      if (!startPoint && typeof window !== 'undefined') {
+                        const user = activeUser || getCurrentUser();
+                        localStorage.removeItem(getAccountRouteStorageKey(user));
+                      }
                     }}
-                    className="text-slate-400 hover:text-slate-600 p-0.5"
-                    title="Tozalash"
+                    className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer transition-colors"
+                    title="B nuqtani bekor qilish (X)"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -862,6 +940,23 @@ export default function RoutePlannerView({
         {/* Route Stats Summary Banner with Real In-Car Navigation Button */}
         {routeResult && (
           <div className="p-3 bg-blue-50/70 border-b border-blue-100 shrink-0 space-y-2.5">
+            {/* Active Route Persistent Indicator & Clear (X) Button */}
+            <div className="flex items-center justify-between pb-1.5 border-b border-blue-200/50">
+              <span className="text-[11px] font-bold text-blue-900 flex items-center gap-1.5">
+                <RouteIcon className="w-3.5 h-3.5 text-blue-600" />
+                <span>Faol yo&apos;nalish (Akkountda saqlangan)</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleClearRoute}
+                className="text-[11px] text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 px-2 py-0.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer border border-rose-200/80 bg-white shadow-2xs"
+                title="Yo'nalishni bekor qilish va tozalash (X)"
+              >
+                <X className="w-3 h-3 text-rose-600" />
+                <span>Bekor qilish (X)</span>
+              </button>
+            </div>
+
             {/* Success Alert when route saved to Google Sheets */}
             {saveSuccessMsg && (
               <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-1 shadow-2xs">
