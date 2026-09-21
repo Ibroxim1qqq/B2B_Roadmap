@@ -67,6 +67,7 @@ export default function RoutePlannerView({
 
   // Real-time In-Car Navigation mode (Yandex "Поехали" / Google Maps "Start")
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  const [showSidebarInNav, setShowSidebarInNav] = useState<boolean>(false);
 
   // 1. Automatically acquire user's live GPS location for Point A on mount
   useEffect(() => {
@@ -303,15 +304,16 @@ export default function RoutePlannerView({
       return;
     }
     setIsNavigating(true);
+    setShowSidebarInNav(false);
     setActiveMobileTab('map');
   };
 
   return (
     <div className="flex-1 flex flex-col md:flex-row h-full min-w-0 bg-slate-100 overflow-hidden">
-      {/* 1. Left Panel: Inputs & Route Results List (Hidden on mobile when in Map tab) */}
-      <div className={`w-full md:w-[420px] lg:w-[460px] h-full flex flex-col bg-white border-r border-slate-200 z-20 shrink-0 shadow-sm ${
+      {/* 1. Left Panel: Inputs & Route Results List */}
+      <div className={`w-full md:w-[420px] lg:w-[460px] h-full flex flex-col bg-white border-r border-slate-200 z-20 shrink-0 shadow-sm transition-all duration-200 ${
         activeMobileTab === 'map' ? 'hidden md:flex' : 'flex'
-      }`}>
+      } ${isNavigating && !showSidebarInNav ? 'hidden md:hidden' : ''}`}>
         {/* Top Header Card */}
         <div className="p-4 border-b border-slate-100 bg-white space-y-3 shrink-0">
           <div className="flex items-center justify-between">
@@ -749,6 +751,19 @@ export default function RoutePlannerView({
       <div className={`flex-1 h-full relative ${
         activeMobileTab === 'list' ? 'hidden md:block' : 'block'
       }`}>
+        {/* Toggle Left Sidebar when in full navigation mode */}
+        {isNavigating && (
+          <div className="hidden md:block absolute top-4 left-4 z-[400]">
+            <button
+              onClick={() => setShowSidebarInNav(!showSidebarInNav)}
+              className="px-3.5 py-2 bg-slate-950/90 hover:bg-slate-900 text-white rounded-2xl text-xs font-bold shadow-xl flex items-center gap-2 backdrop-blur-md cursor-pointer border border-white/15 transition-all"
+            >
+              <Layers className="w-4 h-4 text-blue-400" />
+              <span>{showSidebarInNav ? "Xaritani to'liq yoyish" : `TJM Ro'yxati (${matchedTJMs.length})`}</span>
+            </button>
+          </div>
+        )}
+
         <RoutePlannerMap
           startPoint={startPoint}
           endPoint={endPoint}
@@ -766,7 +781,10 @@ export default function RoutePlannerView({
           onSetPointFromObject={handleSetPointFromObject}
           onCancelPicking={() => setPickingMode(null)}
           isNavigating={isNavigating}
-          onStopNavigation={() => setIsNavigating(false)}
+          onStopNavigation={() => {
+            setIsNavigating(false);
+            setShowSidebarInNav(false);
+          }}
           onRecordVisit={onRecordVisit}
         />
 

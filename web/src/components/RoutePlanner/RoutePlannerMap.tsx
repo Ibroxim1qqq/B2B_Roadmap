@@ -10,7 +10,7 @@ import {
 import { 
   Crosshair, X, RotateCcw, 
   Locate, Phone, CheckCircle2, Navigation, Volume2, VolumeX,
-  Gauge, Compass, Play, Pause, Sparkles
+  Gauge, Compass, Play, Pause, Sparkles, Layers
 } from 'lucide-react';
 import { getCallUrl } from '../../lib/utils';
 
@@ -51,13 +51,13 @@ function playTJMAlertChime() {
     const ctx = new AudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
     osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
-    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.5);
   } catch (e) {
@@ -65,74 +65,96 @@ function playTJMAlertChime() {
   }
 }
 
-// Realistic 3D In-Car Navigation Marker Icon
-function createDriverNavIcon(bearing: number) {
+/**
+ * Yandex / Google Maps style 3D Navigation Arrow with floating speed badge
+ */
+function createYandexNavArrowIcon(bearing: number, speedKmh: number) {
   return L.divIcon({
-    className: 'leaflet-driver-nav-icon',
+    className: 'leaflet-yandex-arrow-marker',
     html: `
-      <div class="nav-marker-wrapper" style="position: relative; width: 50px; height: 50px;">
-        <!-- Pulsing radar glow -->
-        <div style="
+      <div style="position: relative; width: 68px; height: 68px; pointer-events: none;">
+        <!-- 1. Floating Speed Badge Directly Above the Arrow -->
+        <div class="nav-speed-bubble" style="
           position: absolute;
-          inset: 5px;
-          border-radius: 50%;
-          background: rgba(37, 99, 235, 0.25);
-          animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-          pointer-events: none;
-        "></div>
-
-        <!-- Direction light beam on road -->
-        <div style="
-          position: absolute;
-          top: -26px;
-          left: 7px;
-          width: 36px;
-          height: 32px;
-          background: linear-gradient(to top, rgba(59, 130, 246, 0.55), rgba(59, 130, 246, 0));
-          clip-path: polygon(25% 100%, 75% 100%, 100% 0%, 0% 0%);
-          pointer-events: none;
-          transform: rotate(${bearing}deg);
-          transform-origin: 18px 51px;
-        "></div>
-
-        <!-- 3D Sports Navigation Car -->
-        <div style="
-          width: 50px;
-          height: 50px;
-          transform: rotate(${bearing}deg);
-          transform-origin: 25px 25px;
-          transition: transform 0.15s ease-out;
+          top: -18px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #090d16;
+          color: #38bdf8;
+          border: 1.5px solid #0284c7;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+          padding: 2px 7px;
+          border-radius: 9999px;
+          font-size: 11px;
+          font-weight: 900;
+          font-family: ui-monospace, monospace;
+          white-space: nowrap;
+          z-index: 100;
+          display: flex;
+          align-items: center;
+          gap: 3px;
         ">
-          <svg width="50" height="50" viewBox="0 0 48 48" fill="none" style="filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));">
-            <!-- Tires -->
-            <rect x="6" y="9" width="4.5" height="9" rx="2" fill="#0f172a" />
-            <rect x="37.5" y="9" width="4.5" height="9" rx="2" fill="#0f172a" />
-            <rect x="6" y="30" width="4.5" height="9" rx="2" fill="#0f172a" />
-            <rect x="37.5" y="30" width="4.5" height="9" rx="2" fill="#0f172a" />
+          <span style="color: #22c55e; font-size: 8px;">●</span>
+          <span class="speed-val">${speedKmh}</span>
+          <span style="font-size: 9px; color: #94a3b8; font-weight: bold;">km/s</span>
+        </div>
 
-            <!-- Car Body -->
-            <rect x="8.5" y="7" width="31" height="35" rx="8" fill="#1e3a8a" />
-            <rect x="10" y="8" width="28" height="33" rx="7" fill="#2563eb" />
+        <!-- 2. Rotating Arrow Wrapper -->
+        <div class="nav-arrow-rotator" style="
+          width: 68px;
+          height: 68px;
+          transform: rotate(${bearing}deg);
+          transform-origin: 34px 34px;
+          transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1);
+        ">
+          <!-- Directional Light Beam ahead -->
+          <div style="
+            position: absolute;
+            top: -34px;
+            left: 14px;
+            width: 40px;
+            height: 44px;
+            background: linear-gradient(to top, rgba(56, 189, 248, 0.6), rgba(56, 189, 248, 0));
+            clip-path: polygon(25% 100%, 75% 100%, 100% 0%, 0% 0%);
+            pointer-events: none;
+          "></div>
 
-            <!-- Windshield -->
-            <path d="M13 16 L35 16 L31 22 L17 22 Z" fill="#93c5fd" opacity="0.95" />
-            <rect x="14" y="21" width="20" height="11" rx="3" fill="#1d4ed8" />
-            <rect x="16" y="23" width="16" height="7" rx="2" fill="#3b82f6" />
-            <path d="M15 33 L33 33 L35 37 L13 37 Z" fill="#93c5fd" opacity="0.95" />
+          <!-- Yandex/Google 3D Navigation Arrow SVG -->
+          <svg width="68" height="68" viewBox="0 0 64 64" fill="none" style="filter: drop-shadow(0 6px 16px rgba(2, 6, 23, 0.6));">
+            <!-- Pulsing Halo Circle -->
+            <circle cx="32" cy="32" r="28" fill="rgba(56, 189, 248, 0.15)" />
 
-            <!-- Headlights -->
-            <circle cx="12" cy="8.5" r="2.5" fill="#fef08a" />
-            <circle cx="36" cy="8.5" r="2.5" fill="#fef08a" />
+            <!-- Outer Sharp Border for high contrast -->
+            <path d="M32 4 L56 56 L32 43 L8 56 Z" fill="white" stroke="#090d16" stroke-width="2.2" stroke-linejoin="round"/>
 
-            <!-- Taillights -->
-            <rect x="11" y="40.5" width="6" height="1.8" rx="0.9" fill="#ef4444" />
-            <rect x="31" y="40.5" width="6" height="1.8" rx="0.9" fill="#ef4444" />
+            <!-- Left Wing (Cyan Gradient) -->
+            <path d="M32 7 L11 53 L32 42 Z" fill="url(#nav-grad-left)" />
+
+            <!-- Right Wing (Brighter Cyan Gradient) -->
+            <path d="M32 7 L53 53 L32 42 Z" fill="url(#nav-grad-right)" />
+
+            <!-- Center Spine Ridge -->
+            <line x1="32" y1="7" x2="32" y2="42" stroke="#e0f2fe" stroke-width="1.8" stroke-linecap="round"/>
+
+            <!-- Center GPS Core Dot -->
+            <circle cx="32" cy="33" r="3.5" fill="#ffffff" filter="drop-shadow(0 0 5px #38bdf8)" />
+
+            <defs>
+              <linearGradient id="nav-grad-left" x1="11" y1="7" x2="32" y2="53" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#0284c7" />
+                <stop offset="100%" stop-color="#0369a1" />
+              </linearGradient>
+              <linearGradient id="nav-grad-right" x1="53" y1="7" x2="32" y2="53" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#38bdf8" />
+                <stop offset="100%" stop-color="#0ea5e9" />
+              </linearGradient>
+            </defs>
           </svg>
         </div>
       </div>
     `,
-    iconSize: [50, 50],
-    iconAnchor: [25, 25]
+    iconSize: [68, 68],
+    iconAnchor: [34, 34]
   });
 }
 
@@ -178,7 +200,6 @@ export default function RoutePlannerMap({
   const watchIdRef = useRef<number | null>(null);
   const prevGpsPosRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
   const driverMarkerRef = useRef<L.Marker | null>(null);
-  const accuracyCircleRef = useRef<L.Circle | null>(null);
   const alertedIdsRef = useRef<Set<string>>(new Set());
 
   // Demo simulation refs for indoor testing
@@ -272,7 +293,26 @@ export default function RoutePlannerMap({
     };
   }, [pickingMode, onMapClick]);
 
-  // 4. Render Route, Buffer Corridor, and Static Markers
+  // 4. Zoom in closely to Street Level when Navigation Starts!
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isNavigating) return;
+
+    // Zoom in to level 17 (close street level with buildings and street names)
+    const targetCenter: [number, number] = driverPos 
+      ? driverPos 
+      : startPoint 
+        ? [startPoint.lat, startPoint.lng] 
+        : [39.6542, 66.9597];
+
+    map.setView(targetCenter, 17, {
+      animate: true,
+      duration: 0.8
+    });
+    setAutoFollow(true);
+  }, [isNavigating]);
+
+  // 5. Render Route, Buffer Corridor, and Static Markers
   useEffect(() => {
     const map = mapRef.current;
     const layerGroup = layerGroupRef.current;
@@ -333,7 +373,7 @@ export default function RoutePlannerMap({
       routeCoords.forEach(c => boundsPoints.push(c));
     }
 
-    // Point A (Start) - Draggable when not in active navigation
+    // Point A (Start) - Draggable when not navigating
     if (startPoint && !isNavigating) {
       const startIcon = L.divIcon({
         className: 'custom-start-marker',
@@ -374,7 +414,7 @@ export default function RoutePlannerMap({
       boundsPoints.push([startPoint.lat, startPoint.lng]);
     }
 
-    // Point B (End) - Draggable when not in active navigation
+    // Point B (End) - Draggable when not navigating
     if (endPoint) {
       const endIcon = L.divIcon({
         className: 'custom-end-marker',
@@ -424,7 +464,7 @@ export default function RoutePlannerMap({
 
       let bgColor = isVisited ? '#059669' : isSelected ? '#4f46e5' : '#2563eb';
       if (isApproaching) {
-        bgColor = '#f59e0b'; // Gold alert when passing
+        bgColor = '#f59e0b'; // Gold alert when approaching
       }
 
       const scale = isApproaching ? 'scale(1.4)' : isSelected ? 'scale(1.2)' : 'scale(1)';
@@ -513,7 +553,7 @@ export default function RoutePlannerMap({
     onDragEndPoint
   ]);
 
-  // 5. Update Driver Tracking state (GPS or Demo)
+  // 6. Update Driver Tracking state (GPS or Demo)
   const updateDriverPosition = useCallback((lat: number, lng: number, calculatedSpeed: number, calculatedBearing?: number) => {
     const map = mapRef.current;
     const navGroup = navLayerGroupRef.current;
@@ -525,31 +565,45 @@ export default function RoutePlannerMap({
     // Compute bearing if not supplied
     let brg = calculatedBearing;
     if (brg === undefined && prevGpsPosRef.current) {
-      brg = calculateBearing(prevGpsPosRef.current.lat, prevGpsPosRef.current.lng, lat, lng);
+      const dMeters = haversineMeters(prevGpsPosRef.current.lat, prevGpsPosRef.current.lng, lat, lng);
+      // Only update bearing if moved more than 1.5 meters to prevent jitter
+      if (dMeters >= 1.5) {
+        brg = calculateBearing(prevGpsPosRef.current.lat, prevGpsPosRef.current.lng, lat, lng);
+      } else {
+        brg = driverBearing;
+      }
     }
     if (brg !== undefined && !isNaN(brg)) {
       setDriverBearing(brg);
     }
 
-    // Render or update Driver Marker
+    // Render or update Yandex/Google Navigation Arrow Marker
     if (!driverMarkerRef.current) {
-      const carMarker = L.marker([lat, lng], {
-        icon: createDriverNavIcon(brg || 0),
+      const arrowMarker = L.marker([lat, lng], {
+        icon: createYandexNavArrowIcon(brg || 0, calculatedSpeed),
         zIndexOffset: 2000
       });
-      navGroup.addLayer(carMarker);
-      driverMarkerRef.current = carMarker;
+      navGroup.addLayer(arrowMarker);
+      driverMarkerRef.current = arrowMarker;
     } else {
       driverMarkerRef.current.setLatLng([lat, lng]);
-      const el = driverMarkerRef.current.getElement()?.querySelector('.nav-marker-wrapper > div:last-child') as HTMLElement;
-      if (el && brg !== undefined) {
-        el.style.transform = `rotate(${brg}deg)`;
+
+      // Rotate arrow
+      const rotatorEl = driverMarkerRef.current.getElement()?.querySelector('.nav-arrow-rotator') as HTMLElement;
+      if (rotatorEl && brg !== undefined) {
+        rotatorEl.style.transform = `rotate(${brg}deg)`;
+      }
+
+      // Update speed value inside floating speed bubble
+      const speedValEl = driverMarkerRef.current.getElement()?.querySelector('.speed-val') as HTMLElement;
+      if (speedValEl) {
+        speedValEl.textContent = String(calculatedSpeed);
       }
     }
 
-    // Auto-center camera on driver in navigation mode
+    // Auto-center camera on driver in street-level zoom
     if (autoFollow) {
-      map.panTo([lat, lng], { animate: true, duration: 0.4 });
+      map.panTo([lat, lng], { animate: true, duration: 0.35 });
     }
 
     // Calculate remaining distance to destination (Point B)
@@ -566,12 +620,12 @@ export default function RoutePlannerMap({
     for (const item of matchedTJMs) {
       const dist = haversineMeters(lat, lng, item.object.latitude, item.object.longitude);
       
-      // If within 120m, this is currently being approached/passed
+      // If within 120m, this is currently being approached
       if (dist <= 120 && (!passingTJM || dist < passingTJM.distanceMeters)) {
         passingTJM = { tjm: item, distanceMeters: Math.round(dist) };
       }
 
-      // Check upcoming (closest ahead)
+      // Upcoming closest ahead
       if (dist < minUpcomingDist) {
         minUpcomingDist = dist;
         closestTJM = { tjm: item, distanceMeters: Math.round(dist) };
@@ -591,9 +645,9 @@ export default function RoutePlannerMap({
         }
       }
     }
-  }, [autoFollow, endPoint, matchedTJMs, soundEnabled]);
+  }, [autoFollow, endPoint, matchedTJMs, soundEnabled, driverBearing]);
 
-  // 6. REAL IN-CAR GPS NAVIGATION (watchPosition)
+  // 7. REAL IN-CAR GPS NAVIGATION (watchPosition)
   useEffect(() => {
     if (!isNavigating || isDemoMode) {
       if (watchIdRef.current !== null && navigator.geolocation) {
@@ -603,11 +657,10 @@ export default function RoutePlannerMap({
       return;
     }
 
-    // Clean previous alerts
     alertedIdsRef.current.clear();
     setAutoFollow(true);
 
-    // Initial position: startPoint or live GPS
+    // Initial position
     if (startPoint) {
       updateDriverPosition(startPoint.lat, startPoint.lng, 0);
     }
@@ -617,7 +670,7 @@ export default function RoutePlannerMap({
       return;
     }
 
-    // Start watching real device GPS as car drives
+    // Start watching real device GPS as car moves
     const id = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude, speed, heading } = pos.coords;
@@ -630,7 +683,7 @@ export default function RoutePlannerMap({
         } else if (prevGpsPosRef.current) {
           const dMeters = haversineMeters(prevGpsPosRef.current.lat, prevGpsPosRef.current.lng, latitude, longitude);
           const dtSeconds = (now - prevGpsPosRef.current.time) / 1000;
-          if (dtSeconds > 0 && dMeters > 1) {
+          if (dtSeconds > 0 && dMeters > 1.5) {
             currentSpeed = Math.round((dMeters / dtSeconds) * 3.6);
           }
         }
@@ -660,7 +713,7 @@ export default function RoutePlannerMap({
     };
   }, [isNavigating, isDemoMode, startPoint, updateDriverPosition]);
 
-  // 7. OPTIONAL INDOOR TEST / DEMO SIMULATION
+  // 8. OPTIONAL INDOOR TEST / DEMO SIMULATION
   useEffect(() => {
     if (!isNavigating || !isDemoMode || routeCoords.length < 2) {
       if (demoAnimRef.current) {
@@ -671,7 +724,7 @@ export default function RoutePlannerMap({
     }
 
     demoLastTimeRef.current = performance.now();
-    const tripDurationMs = 28000; // ~28 seconds test drive
+    const tripDurationMs = 28000;
 
     const animateDemo = (now: number) => {
       if (!demoLastTimeRef.current) demoLastTimeRef.current = now;
@@ -682,7 +735,7 @@ export default function RoutePlannerMap({
       demoProgressRef.current = Math.min(1, demoProgressRef.current + deltaProg);
 
       const state = interpolateRoutePosition(routeCoords, cumulativeDists, demoProgressRef.current);
-      const simulatedSpeed = demoProgressRef.current >= 1 ? 0 : 45 + Math.round(Math.sin(now / 1000) * 8); // 40-50 km/h
+      const simulatedSpeed = demoProgressRef.current >= 1 ? 0 : 45 + Math.round(Math.sin(now / 1000) * 8); // 40-52 km/h
 
       updateDriverPosition(state.position[0], state.position[1], simulatedSpeed, state.bearing);
 
@@ -714,11 +767,11 @@ export default function RoutePlannerMap({
     }
   }, [isNavigating]);
 
-  // Re-center camera onto car
+  // Re-center camera onto car at close street level
   const handleRecenter = () => {
     setAutoFollow(true);
     if (mapRef.current && driverPos) {
-      mapRef.current.setView(driverPos, 16, { animate: true });
+      mapRef.current.setView(driverPos, 17, { animate: true });
     }
   };
 
@@ -899,7 +952,7 @@ export default function RoutePlannerMap({
                   <span>Signal</span>
                 </button>
 
-                {/* Recenter Camera */}
+                {/* Recenter Camera at Close Street Level */}
                 <button
                   type="button"
                   onClick={handleRecenter}
@@ -908,10 +961,10 @@ export default function RoutePlannerMap({
                       ? 'bg-blue-600/30 border-blue-500 text-blue-400' 
                       : 'bg-white/5 border-white/10 text-slate-400'
                   }`}
-                  title="Mashinani markazlashtirish"
+                  title="Mashinani markazlashtirish (Yaqinlashtirish)"
                 >
                   <Locate className="w-3.5 h-3.5" />
-                  <span>Kuzatish</span>
+                  <span>Kuzatish (17x)</span>
                 </button>
               </div>
 
