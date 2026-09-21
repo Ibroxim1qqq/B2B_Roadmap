@@ -160,6 +160,21 @@ function createYandexNavArrowIcon(bearing: number, speedKmh: number) {
   });
 }
 
+/**
+ * Custom SVG Location Pin Cursor for Point A (Emerald Green) and Point B (Rose Red)
+ * Hotspot is precisely at the bottom tip of the pin (19, 45).
+ */
+function getPinCursor(type: 'A' | 'B'): string {
+  const isA = type === 'A';
+  const mainColor = isA ? '#10b981' : '#ef4444';
+  const strokeInner = isA ? '#059669' : '#dc2626';
+  const textColor = isA ? '#047857' : '#b91c1c';
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="48" viewBox="0 0 38 48" fill="none"><ellipse cx="19" cy="45" rx="7" ry="2.5" fill="black" fill-opacity="0.35"/><path d="M19 45 C19 45 34 29 34 18 C34 9.16 27.28 2 19 2 C10.72 2 4 9.16 4 18 C4 29 19 45 19 45 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round"/><circle cx="19" cy="18" r="9" fill="#ffffff" stroke="${strokeInner}" stroke-width="1.5"/><text x="19" y="22.5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="900" fill="${textColor}" text-anchor="middle">${type}</text></svg>`;
+
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 19 45, crosshair`;
+}
+
 export default function RoutePlannerMap({
   startPoint,
   endPoint,
@@ -189,10 +204,38 @@ export default function RoutePlannerMap({
   const [mapType, setMapType] = useState<'map' | 'satellite'>('map');
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
+  // Active pick type: 'A' (green pin) or 'B' (red pin) or null
+  const activePickType: 'A' | 'B' | null = useMemo(() => {
+    if (isNavigating) return null;
+    if (pickingMode === 'A' || !startPoint) return 'A';
+    if (pickingMode === 'B' || (startPoint && !endPoint)) return 'B';
+    return null;
+  }, [isNavigating, pickingMode, startPoint, endPoint]);
+
+  // Mouse position tracking for floating label
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!activePickType) {
+      if (mousePos) setMousePos(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  }, [activePickType, mousePos]);
+
+  const handleMouseLeave = useCallback(() => {
+    setMousePos(null);
+  }, []);
+
   // Live Driver State (Real GPS)
   const [driverPos, setDriverPos] = useState<[number, number] | null>(null);
   const [driverBearing, setDriverBearing] = useState<number>(0);
   const [speedKmh, setSpeedKmh] = useState<number>(0);
+
   const [autoFollow, setAutoFollow] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [approachingTJM, setApproachingTJM] = useState<{ tjm: TJMAlongRoute; distanceMeters: number } | null>(null);
@@ -289,15 +332,18 @@ export default function RoutePlannerMap({
     map.on('click', handleMapClick);
 
     if (containerRef.current) {
-      containerRef.current.style.cursor = (!isNavigating && (!startPoint || !endPoint || pickingMode)) 
-        ? 'crosshair' 
-        : '';
+      if (activePickType) {
+        containerRef.current.style.cursor = getPinCursor(activePickType);
+      } else {
+        containerRef.current.style.cursor = '';
+      }
     }
 
     return () => {
       map.off('click', handleMapClick);
     };
-  }, [pickingMode, onMapClick, isNavigating, startPoint, endPoint]);
+  }, [activePickType, onMapClick, isNavigating]);
+
 
   // 4. Zoom in closely to Street Level when Navigation Starts!
   useEffect(() => {
@@ -841,38 +887,91 @@ export default function RoutePlannerMap({
   };
 
   return (
-    <div className="relative w-full h-full">
+    <div 
+      className={`relative w-full h-full select-none ${
+        activePickType === 'A' 
+          ? 'cursor-pin-A' 
+          : activePickType === 'B' 
+            ? 'cursor-pin-B' 
+            : ''
+      }`}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Global Scoped Cursor Rules for Leaflet Elements */}
+      <style>{`
+        .cursor-pin-A,
+        .cursor-pin-A *,
+        .cursor-pin-A .leaflet-container,
+        .cursor-pin-A .leaflet-grab,
+        .cursor-pin-A .leaflet-interactive {
+          cursor: ${getPinCursor('A')} !important;
+        }
+        .cursor-pin-B,
+        .cursor-pin-B *,
+        .cursor-pin-B .leaflet-container,
+        .cursor-pin-B .leaflet-grab,
+        .cursor-pin-B .leaflet-interactive {
+          cursor: ${getPinCursor('B')} !important;
+        }
+      `}</style>
+
       <div ref={containerRef} className="w-full h-full z-10" />
 
+      {/* Floating Mouse Follower Badge next to Cursor */}
+      {activePickType && mousePos && (
+        <div
+          className={`pointer-events-none absolute z-[600] px-2.5 py-1 rounded-full text-white text-[11px] font-black shadow-2xl border flex items-center gap-1.5 whitespace-nowrap transition-transform duration-75 select-none ${
+            activePickType === 'A'
+              ? 'bg-emerald-600/95 border-emerald-300 shadow-emerald-950/40'
+              : 'bg-rose-600/95 border-rose-300 shadow-rose-950/40'
+          }`}
+          style={{
+            left: Math.min(mousePos.x + 22, (containerRef.current?.clientWidth || 400) - 160),
+            top: Math.max(mousePos.y - 28, 16)
+          }}
+        >
+          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+          <span>{activePickType === 'A' ? "📍 A nuqtani tanlang" : "🏁 B nuqtani tanlang"}</span>
+        </div>
+      )}
+
       {/* 1. Point Picking Mode Banner */}
-      {pickingMode && (
+      {activePickType && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] max-w-md w-11/12 animate-in fade-in slide-in-from-top-4 duration-200">
-          <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-2xl shadow-2xl border border-white/10 flex items-center justify-between gap-3">
+          <div className={`p-3 rounded-2xl shadow-2xl border flex items-center justify-between gap-3 text-white backdrop-blur-md ${
+            activePickType === 'A'
+              ? 'bg-emerald-950/90 border-emerald-500/30'
+              : 'bg-rose-950/90 border-rose-500/30'
+          }`}>
             <div className="flex items-center gap-2.5 min-w-0">
               <span className={`w-3 h-3 rounded-full animate-ping shrink-0 ${
-                pickingMode === 'A' ? 'bg-emerald-400' : 'bg-rose-400'
+                activePickType === 'A' ? 'bg-emerald-400' : 'bg-rose-400'
               }`} />
               <div className="text-xs font-medium">
-                <span className="font-bold block text-white">
-                  {pickingMode === 'A' ? "📍 Boshlang'ich nuqtani (A) tanlang:" : "🏁 Borish manzilini (B) tanlang:"}
+                <span className="font-black block text-white flex items-center gap-1.5">
+                  <span>{activePickType === 'A' ? "📍 Yashil: Boshlang'ich (A) nuqtani tanlang:" : "🏁 Qizil: Borish manzilini (B) tanlang:"}</span>
                 </span>
                 <span className="text-slate-300 text-[11px]">
-                  Xaritada ixtiyoriy joyni yoki TJM obyektini bosing
+                  Xaritada ixtiyoriy joyni yoki TJM binosini bosing
                 </span>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={onCancelPicking}
-              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer shrink-0"
-              title="Bekor qilish"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {pickingMode && (
+              <button
+                type="button"
+                onClick={onCancelPicking}
+                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer shrink-0"
+                title="Bekor qilish"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       )}
+
 
       {/* 2. IN-CAR TURN-BY-TURN DRIVER HUD: TOP UPCOMING TJM CARD */}
       {isNavigating && (
