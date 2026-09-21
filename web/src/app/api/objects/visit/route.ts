@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { source_id, visited_by, lat_lng } = body;
+    const { source_id, visited_by, lat_lng, company_id, user_id } = body;
 
     if (!source_id) {
       return NextResponse.json({ success: false, error: 'source_id talab qilinadi' }, { status: 400 });
@@ -27,15 +27,20 @@ export async function POST(request: Request) {
     // 1. Immediately update in-memory cache
     dataCache.updateRow(String(source_id), visitData);
 
-    // 2. Direct Google Sheets API update
+    // 2. Multi-company visit update
     try {
-      await updateObjectInSheet(String(source_id), visitData);
+      if (company_id && company_id !== 'system') {
+        const { updateCompanyDataInSheet } = await import('@/lib/googleSheets');
+        await updateCompanyDataInSheet(company_id, user_id || visited_by || '', String(source_id), visitData);
+      } else {
+        await updateObjectInSheet(String(source_id), visitData);
+      }
 
       // Log to ActivityLog sheet
       await logActivity({
         action: 'VISIT',
         source_id: String(source_id),
-        user: visited_by || 'Field Sales',
+        user: `${visited_by || 'Field Sales'} (${company_id || 'Umumiy'})`,
         details: visitData,
         status: 'SUCCESS'
       });
@@ -44,7 +49,7 @@ export async function POST(request: Request) {
       await logActivity({
         action: 'VISIT',
         source_id: String(source_id),
-        user: visited_by || 'Field Sales',
+        user: `${visited_by || 'Field Sales'} (${company_id || 'Umumiy'})`,
         details: `Xatolik: ${sheetErr.message}`,
         status: 'FAILED'
       });

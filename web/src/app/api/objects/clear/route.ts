@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { source_id, user } = body;
+    const { source_id, user, company_id, user_id } = body;
 
     if (!source_id) {
       return NextResponse.json({ success: false, error: 'source_id talab qilinadi' }, { status: 400 });
@@ -24,19 +24,30 @@ export async function POST(request: Request) {
     // 1. Update in-memory cache
     dataCache.clearRowB2B(String(source_id), INTERNAL_COLUMNS);
 
-    // 2. Direct Google Sheets API update
+    // 2. Direct Google Sheets API update (Multi-company or Base)
     try {
-      await updateObjectInSheet(String(source_id), clearedFields);
+      if (company_id) {
+        const { updateCompanyDataInSheet } = await import('@/lib/googleSheets');
+        await updateCompanyDataInSheet(
+          company_id,
+          user_id || '',
+          String(source_id),
+          clearedFields
+        );
+      } else {
+        await updateObjectInSheet(String(source_id), clearedFields);
+      }
 
       // Log to ActivityLog sheet
       await logActivity({
         action: 'CLEAR',
         source_id: String(source_id),
         user: user || 'Menejer',
-        details: "Barcha B2B ma'lumotlari tozalandi",
+        details: company_id ? `Kompaniya [${company_id}] uchun B2B ma'lumotlari tozalandi` : "Barcha B2B ma'lumotlari tozalandi",
         status: 'SUCCESS'
       });
     } catch (sheetErr: any) {
+
       console.error('Google Sheets clear error:', sheetErr);
       await logActivity({
         action: 'CLEAR',

@@ -106,10 +106,23 @@ export interface VisitData {
   lat_lng?: string;
 }
 
+export interface Company {
+  company_id: string;
+  company_name: string;
+  status: 'active' | 'inactive';
+  created_at: string;
+  user_count?: number;
+  data_count?: number;
+}
+
 export interface UserProfile {
   id: string;
+  user_id?: string;
   name: string;
-  role: string;
+  role: 'superadmin' | 'company_admin' | 'manager' | string;
   phone?: string;
   avatarInitials: string;
+  company_id?: string;
+  company_name?: string;
+  login?: string;
 }

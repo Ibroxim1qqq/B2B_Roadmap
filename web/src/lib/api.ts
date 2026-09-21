@@ -130,9 +130,10 @@ function formatRowToObjectDetail(r: any): ObjectDetail {
 }
 
 export const api = {
-  getMarkers: async (): Promise<MapObject[]> => {
+  getMarkers: async (companyId?: string): Promise<MapObject[]> => {
     try {
-      const res = await fetch(`/api/objects?t=${Date.now()}`, { cache: 'no-store' });
+      const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
+      const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
@@ -145,10 +146,11 @@ export const api = {
     return (realSheetsData.rows as any[]).map(formatRowToMapObject);
   },
 
-  getObject: async (id: string): Promise<ObjectDetail> => {
+  getObject: async (id: string, companyId?: string): Promise<ObjectDetail> => {
     let rows = realSheetsData.rows as any[];
     try {
-      const res = await fetch(`/api/objects?t=${Date.now()}`, { cache: 'no-store' });
+      const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
+      const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
@@ -190,10 +192,11 @@ export const api = {
     ];
   },
 
-  getStats: async (): Promise<DashboardStats> => {
+  getStats: async (companyId?: string): Promise<DashboardStats> => {
     let rows = realSheetsData.rows as any[];
     try {
-      const res = await fetch('/api/objects', { cache: 'no-store' });
+      const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
+      const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) rows = json.data;
@@ -217,25 +220,26 @@ export const api = {
     };
   },
 
-  updateObject: async (id: string, data: Record<string, any>, user?: string): Promise<{ success: boolean; message?: string }> => {
+  updateObject: async (id: string, data: Record<string, any>, user?: string, companyId?: string, userId?: string): Promise<{ success: boolean; message?: string }> => {
     const res = await fetch('/api/objects/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source_id: id, data, user })
+      body: JSON.stringify({ source_id: id, data, user, company_id: companyId, user_id: userId })
     });
     return await res.json();
   },
 
-  clearObject: async (id: string, user?: string): Promise<{ success: boolean; message?: string }> => {
+  clearObject: async (id: string, user?: string, companyId?: string, userId?: string): Promise<{ success: boolean; message?: string }> => {
     const res = await fetch('/api/objects/clear', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source_id: id, user })
+      body: JSON.stringify({ source_id: id, user, company_id: companyId, user_id: userId })
     });
     return await res.json();
   },
 
-  recordVisit: async (data: VisitData): Promise<{ success: boolean; message?: string }> => {
+
+  recordVisit: async (data: VisitData & { company_id?: string; user_id?: string }): Promise<{ success: boolean; message?: string }> => {
     const res = await fetch('/api/objects/visit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -249,11 +253,11 @@ export const api = {
     return await res.json();
   },
 
-  createObject: async (data: Record<string, any>, user?: string): Promise<{ success: boolean; message?: string; data?: any }> => {
+  createObject: async (data: Record<string, any>, user?: string, companyId?: string, userId?: string): Promise<{ success: boolean; message?: string; data?: any }> => {
     const res = await fetch('/api/objects/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, user })
+      body: JSON.stringify({ ...data, user, company_id: companyId, user_id: userId })
     });
     return await res.json();
   },
@@ -270,6 +274,44 @@ export const api = {
       console.error('Failed to add custom field:', e);
       return { success: false };
     }
+  },
+
+  // Auth & Admin Multi-Company Methods
+  login: async (login: string, pass: string): Promise<{ success: boolean; user?: any; error?: string }> => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login, password: pass })
+    });
+    return await res.json();
+  },
+
+  getCompanies: async (): Promise<{ success: boolean; data: any[]; error?: string }> => {
+    const res = await fetch('/api/admin/companies', { cache: 'no-store' });
+    return await res.json();
+  },
+
+  createCompany: async (name: string, status?: string): Promise<{ success: boolean; data?: any; error?: string }> => {
+    const res = await fetch('/api/admin/companies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, status })
+    });
+    return await res.json();
+  },
+
+  getUsers: async (): Promise<{ success: boolean; data: any[]; error?: string }> => {
+    const res = await fetch('/api/admin/users', { cache: 'no-store' });
+    return await res.json();
+  },
+
+  createUser: async (user: { company_id: string; name: string; login: string; password: string; role: string }): Promise<{ success: boolean; data?: any; error?: string }> => {
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user)
+    });
+    return await res.json();
   },
 
   getDistricts: async () => {

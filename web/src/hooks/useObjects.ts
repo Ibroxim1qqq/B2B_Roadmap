@@ -1,8 +1,8 @@
-﻿import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../lib/api';
 import { MapObject } from '../lib/types';
 
-export function useObjects() {
+export function useObjects(companyId?: string) {
   const [markers, setMarkers] = useState<MapObject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -15,14 +15,14 @@ export function useObjects() {
   const fetchMarkers = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await api.getMarkers();
+      const data = await api.getMarkers(companyId);
       setMarkers(data);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [companyId]);
 
   useEffect(() => {
     fetchMarkers();

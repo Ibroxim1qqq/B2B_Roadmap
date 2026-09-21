@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useObjects } from '../hooks/useObjects';
 import { useLocation } from '../hooks/useLocation';
 import { useDistance } from '../hooks/useDistance';
@@ -16,7 +17,6 @@ import BottomSheet from '../components/UI/BottomSheet';
 import ObjectsTableView from '../components/ObjectsTable/ObjectsTableView';
 import DashboardView from '../components/Dashboard/DashboardView';
 import CustomFieldManager from '../components/CustomFields/CustomFieldManager';
-import { useRouter } from 'next/navigation';
 import { Building2, MapPin, CheckCircle2, Clock } from 'lucide-react';
 import MobileBottomNav from '../components/Navigation/MobileBottomNav';
 
@@ -48,8 +48,30 @@ const RoutePlannerView = dynamic(() => import('../components/RoutePlanner/RouteP
   )
 });
 
-export default function Home() {
-  const { markers, loading, error, refresh } = useObjects();
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryCompanyId = searchParams.get('company_id');
+
+  // User Authentication & Session
+  const [currentUser, setLocalCurrentUser] = useState<UserProfile | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    setLocalCurrentUser(user);
+    setAuthChecked(true);
+    if (!user) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  // Determine effective company ID (SuperAdmin can view as another company via ?company_id=...)
+  const effectiveCompanyId = (currentUser?.role === 'superadmin' && queryCompanyId) 
+    ? queryCompanyId 
+    : currentUser?.company_id;
+
+  const { markers, loading, error, refresh } = useObjects(effectiveCompanyId);
   const { location, getCurrentPosition } = useLocation();
 
   // Navigation & View States
@@ -70,20 +92,6 @@ export default function Home() {
   const [isEditing, setIsEditing] = useState(false);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
-  // User Authentication & Session
-  const [currentUser, setLocalCurrentUser] = useState<UserProfile | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    setLocalCurrentUser(user);
-    setAuthChecked(true);
-    if (!user) {
-      router.replace('/login');
-    }
-  }, [router]);
-
   const handleLogin = (user: UserProfile) => {
     saveCurrentUser(user);
     setLocalCurrentUser(user);
@@ -94,6 +102,7 @@ export default function Home() {
     setLocalCurrentUser(null);
     router.replace('/login');
   };
+
 
   // Real-time active filtering for region, search, district, and status
   const activeFilteredMarkers = useMemo(() => {
@@ -174,7 +183,7 @@ export default function Home() {
     setDetailLoading(true);
     setIsEditing(false);
     try {
-      const detail = await api.getObject(id);
+      const detail = await api.getObject(id, effectiveCompanyId);
       setObjectDetail(detail);
     } catch (err) {
       console.error(err);
@@ -201,9 +210,9 @@ export default function Home() {
     if (!selectedId) return;
     try {
       const userName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Menejer';
-      const res = await api.updateObject(selectedId, data, userName);
+      const res = await api.updateObject(selectedId, data, userName, effectiveCompanyId, currentUser?.user_id);
       if (res && res.success) {
-        const detail = await api.getObject(selectedId);
+        const detail = await api.getObject(selectedId, effectiveCompanyId);
         setObjectDetail(detail);
         setIsEditing(false);
         await refresh();
@@ -222,9 +231,9 @@ export default function Home() {
     if (!selectedId) return;
     try {
       const userName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Menejer';
-      const res = await api.clearObject(selectedId, userName);
+      const res = await api.clearObject(selectedId, userName, effectiveCompanyId, currentUser?.user_id);
       if (res && res.success) {
-        const detail = await api.getObject(selectedId);
+        const detail = await api.getObject(selectedId, effectiveCompanyId);
         setObjectDetail(detail);
         setIsEditing(false);
         await refresh();
@@ -245,12 +254,14 @@ export default function Home() {
       const res = await api.recordVisit({
         source_id: String(id),
         visited_by: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Menejer (Field Sales)',
-        lat_lng: location.lat && location.lng ? `${location.lat},${location.lng}` : undefined
+        lat_lng: location.lat && location.lng ? `${location.lat},${location.lng}` : undefined,
+        company_id: effectiveCompanyId,
+        user_id: currentUser?.user_id
       });
       if (res && res.success) {
         await refresh();
         if (selectedId === id) {
-          const detail = await api.getObject(id);
+          const detail = await api.getObject(id, effectiveCompanyId);
           setObjectDetail(detail);
         }
         alert("Tashrif muvaffaqiyatli saqlandi!");
@@ -272,7 +283,7 @@ export default function Home() {
   const handleCreateObject = async (newData: Record<string, any>) => {
     try {
       const userName = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Menejer';
-      const res = await api.createObject(newData, userName);
+      const res = await api.createObject(newData, userName, effectiveCompanyId, currentUser?.user_id);
       if (res && res.success) {
         await refresh();
         const newId = res.data?.source_id;
@@ -298,7 +309,7 @@ export default function Home() {
       if (res && res.success) {
         await refresh();
         if (selectedId) {
-          const detail = await api.getObject(selectedId);
+          const detail = await api.getObject(selectedId, effectiveCompanyId);
           setObjectDetail(detail);
         }
         alert(`Google Sheets bilan sinxronlandi! Jami: ${res.count || 0} ta obyekt`);
@@ -325,6 +336,21 @@ export default function Home() {
     return found?.distance;
   }, [selectedId, displayList]);
 
+  if (!authChecked) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-900">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
+          <p className="text-slate-400 text-sm font-medium">B2B Samarqand yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return null;
+  }
+
   if (error) {
     return (
       <div className="p-8 text-rose-600 text-center">
@@ -332,6 +358,7 @@ export default function Home() {
       </div>
     );
   }
+
 
   return (
     <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans">
@@ -360,8 +387,24 @@ export default function Home() {
           <main className="flex-1 flex flex-col overflow-y-auto bg-slate-100 min-w-0">
             {/* Map View: Kept mounted in DOM to prevent Leaflet container re-use crashes */}
             <div className={activeTab === 'map' ? 'flex flex-col flex-1 h-full min-w-0 overflow-hidden' : 'hidden'}>
+            {/* SuperAdmin View Indicator */}
+            {queryCompanyId && currentUser?.role === 'superadmin' && (
+              <div className="mx-5 mt-3 px-4 py-2 bg-amber-500 text-white rounded-xl flex items-center justify-between text-xs font-semibold shadow-xs shrink-0">
+                <div className="flex items-center gap-2">
+                  <span>🛡️ SuperAdmin: Siz hozirda <strong>[{queryCompanyId}]</strong> kompaniyasi ma'lumotlarini ko'rmoqdasiz</span>
+                </div>
+                <button
+                  onClick={() => router.push('/')}
+                  className="px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-white text-[11px] font-bold transition-all cursor-pointer"
+                >
+                  Standart holatga qaytish
+                </button>
+              </div>
+            )}
+
             {/* 1. 4 Summary Stat Cards at the Top */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-5 pt-4 pb-2 shrink-0">
+
               {/* Card 1: Jami TJM-lar */}
               <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -621,3 +664,21 @@ export default function Home() {
     </div>
   );
 }
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-screen w-screen flex items-center justify-center bg-slate-900">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
+            <p className="text-slate-400 text-sm font-medium">B2B Samarqand yuklanmoqda...</p>
+          </div>
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
+  );
+}
+

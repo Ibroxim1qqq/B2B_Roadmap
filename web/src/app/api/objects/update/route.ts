@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { source_id, data, user } = body;
+    const { source_id, data, user, company_id, user_id } = body;
 
     if (!source_id || !data) {
       return NextResponse.json({ success: false, error: 'source_id va data talab qilinadi' }, { status: 400 });
@@ -18,16 +18,21 @@ export async function POST(request: Request) {
     // 1. Immediately update in-memory cache
     dataCache.updateRow(String(source_id), data);
 
-    // 2. Direct Google Sheets API update (Permanent Source of Truth)
+    // 2. Multi-company update: write to Company_Data sheet if company_id is provided
     try {
-      await updateObjectInSheet(String(source_id), data);
+      if (company_id && company_id !== 'system') {
+        const { updateCompanyDataInSheet } = await import('@/lib/googleSheets');
+        await updateCompanyDataInSheet(company_id, user_id || user || '', String(source_id), data);
+      } else {
+        await updateObjectInSheet(String(source_id), data);
+      }
       
       // Log to ActivityLog sheet
       await logActivity({
         action: 'UPDATE',
         source_id: String(source_id),
         object_name: data.tjm_name || '',
-        user: user || 'Menejer',
+        user: `${user || 'Menejer'} (${company_id || 'Umumiy'})`,
         details: data,
         status: 'SUCCESS'
       });
@@ -37,7 +42,7 @@ export async function POST(request: Request) {
         action: 'UPDATE',
         source_id: String(source_id),
         object_name: data.tjm_name || '',
-        user: user || 'Menejer',
+        user: `${user || 'Menejer'} (${company_id || 'Umumiy'})`,
         details: `Xatolik: ${sheetErr.message}`,
         status: 'FAILED'
       });

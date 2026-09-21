@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { validateCredentials, setCurrentUser, getCurrentUser } from '../../lib/auth';
+import { api } from '../../lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,15 +13,21 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isShaking, setIsShaking] = useState(false);
 
-  // If already logged in, redirect to main page
+  const [loading, setLoading] = useState(false);
+
+  // If already logged in, redirect to appropriate page
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
-      router.replace('/');
+      if (user.role === 'superadmin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/');
+      }
     }
   }, [router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -33,14 +40,37 @@ export default function LoginPage() {
       return;
     }
 
-    const user = validateCredentials(login, password);
-    if (user) {
-      setCurrentUser(user);
-      router.replace('/');
-    } else {
-      setError("Login yoki parol noto'g'ri");
+    setLoading(true);
+    try {
+      // 1. Authenticate with Google Sheets / API
+      const res = await api.login(login.trim(), password);
+      if (res && res.success && res.user) {
+        setCurrentUser(res.user);
+        if (res.user.role === 'superadmin') {
+          router.replace('/admin');
+        } else {
+          router.replace('/');
+        }
+        return;
+      }
+
+      // 2. Fallback to local credential check
+      const localUser = validateCredentials(login, password);
+      if (localUser) {
+        setCurrentUser(localUser);
+        router.replace('/');
+        return;
+      }
+
+      setError(res?.error || "Login yoki parol noto'g'ri");
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 500);
+    } catch (err: any) {
+      setError(err?.message || "Tizimga kirishda xatolik yuz berdi");
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 500);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,11 +157,45 @@ export default function LoginPage() {
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                disabled={loading}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                <span>Kirish</span>
+                <span>{loading ? 'Kirilmoqda...' : 'Kirish'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+            </div>
+
+            {/* Quick Demo Logins */}
+            <div className="pt-3 border-t border-slate-100">
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">
+                Tezkor sinov hisoblari:
+              </p>
+              <div className="flex flex-col gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => { setLogin('admin'); setPassword('admin123'); }}
+                  className="w-full px-2.5 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 rounded-lg flex items-center justify-between text-[11px] text-slate-600 transition-colors cursor-pointer"
+                >
+                  <span className="font-semibold">🛡️ SuperAdmin (Admin Panel)</span>
+                  <span className="font-mono text-[10px] text-slate-400">admin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLogin('ibroxim'); setPassword('ibroxim2026'); }}
+                  className="w-full px-2.5 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 rounded-lg flex items-center justify-between text-[11px] text-slate-600 transition-colors cursor-pointer"
+                >
+                  <span className="font-semibold">🏢 Kompaniya Admin</span>
+                  <span className="font-mono text-[10px] text-slate-400">ibroxim</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLogin('menejer1'); setPassword('123456'); }}
+                  className="w-full px-2.5 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 rounded-lg flex items-center justify-between text-[11px] text-slate-600 transition-colors cursor-pointer"
+                >
+                  <span className="font-semibold">👤 Menejer (CRM)</span>
+                  <span className="font-mono text-[10px] text-slate-400">menejer1</span>
+                </button>
+              </div>
             </div>
           </form>
         </div>

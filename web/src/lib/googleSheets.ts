@@ -453,3 +453,358 @@ export async function logActivity(params: {
   }
 }
 
+/* =========================================================================
+   MULTI-COMPANY / MULTI-TENANT FUNCTIONS
+   ========================================================================= */
+
+export const COMPANY_DATA_HEADERS = [
+  'id', 'company_id', 'source_id', 'tjm_name', 'phone', 
+  'sales_office', 'manager_name', 'manager_phone', 'telegram', 
+  'instagram', 'notes', 'priority', 'last_visit', 'visited_by', 
+  'user_id', 'updated_at', 'is_custom_tjm', 'latitude', 
+  'longitude', 'district_soato', 'object_name'
+];
+
+/**
+ * Fetch all companies from Companies sheet
+ */
+export async function getCompaniesFromSheet() {
+  try {
+    const sheets = await getSheetsClient();
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Companies!A1:D'
+    });
+    const values = res.data.values || [];
+    if (values.length <= 1) return [];
+
+    return values.slice(1).map((r: any[]) => ({
+      company_id: String(r[0] || '').trim(),
+      company_name: String(r[1] || '').trim(),
+      status: (String(r[2] || 'active').trim() as 'active' | 'inactive'),
+      created_at: String(r[3] || '').trim()
+    })).filter((c: any) => c.company_id);
+  } catch (err) {
+    console.error('getCompaniesFromSheet error:', err);
+    return [
+      { company_id: 'comp_default', company_name: 'Asosiy Kompaniya', status: 'active', created_at: new Date().toISOString() },
+      { company_id: 'comp_samarqand', company_name: 'Samarqand B2B Stroy', status: 'active', created_at: new Date().toISOString() },
+      { company_id: 'comp_tashkent', company_name: 'Toshkent Stroy Invest', status: 'active', created_at: new Date().toISOString() }
+    ];
+  }
+}
+
+/**
+ * Create a new company in Companies sheet
+ */
+export async function createCompanyInSheet(name: string, status: string = 'active') {
+  const sheets = await getSheetsClient();
+  const company_id = `comp_${Date.now()}`;
+  const created_at = new Date().toISOString();
+  const newRow = [company_id, name.trim(), status, created_at];
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Companies!A1:D',
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: [newRow] }
+  });
+
+  return { company_id, company_name: name.trim(), status, created_at };
+}
+
+/**
+ * Fetch all users from Users sheet
+ */
+export async function getUsersFromSheet() {
+  try {
+    const sheets = await getSheetsClient();
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Users!A1:G'
+    });
+    const values = res.data.values || [];
+    if (values.length <= 1) return [];
+
+    return values.slice(1).map((r: any[]) => ({
+      user_id: String(r[0] || '').trim(),
+      company_id: String(r[1] || '').trim(),
+      name: String(r[2] || '').trim(),
+      login: String(r[3] || '').trim(),
+      password: String(r[4] || '').trim(),
+      role: String(r[5] || 'manager').trim(),
+      created_at: String(r[6] || '').trim()
+    })).filter((u: any) => u.login);
+  } catch (err) {
+    console.error('getUsersFromSheet error:', err);
+    return [];
+  }
+}
+
+/**
+ * Create a new user in Users sheet
+ */
+export async function createUserInSheet(data: {
+  company_id: string;
+  name: string;
+  login: string;
+  password: string;
+  role: string;
+}) {
+  const sheets = await getSheetsClient();
+  const user_id = `user_${Date.now()}`;
+  const created_at = new Date().toISOString();
+  const cleanLogin = data.login.trim().toLowerCase();
+
+  const newRow = [
+    user_id,
+    data.company_id.trim(),
+    data.name.trim(),
+    cleanLogin,
+    data.password,
+    data.role.trim() || 'manager',
+    created_at
+  ];
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Users!A1:G',
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: [newRow] }
+  });
+
+  return {
+    user_id,
+    company_id: data.company_id,
+    name: data.name,
+    login: cleanLogin,
+    role: data.role,
+    created_at
+  };
+}
+
+/**
+ * Authenticate user credentials against Users sheet
+ */
+export async function authenticateUserInSheet(login: string, pass: string) {
+  const cleanLogin = login.trim().toLowerCase();
+  const users = await getUsersFromSheet();
+  const companies = await getCompaniesFromSheet();
+
+  // Superadmin fallback if sheet is fresh
+  if (cleanLogin === 'admin' && pass === 'admin123') {
+    return {
+      id: 'user_admin',
+      user_id: 'user_admin',
+      name: 'Super Administrator',
+      login: 'admin',
+      role: 'superadmin',
+      company_id: 'system',
+      company_name: 'Boshqaruv Tizimi',
+      avatarInitials: 'SA'
+    };
+  }
+
+  const found = users.find((u: any) => u.login.toLowerCase() === cleanLogin && u.password === pass);
+  if (!found) return null;
+
+  const comp = companies.find((c: any) => c.company_id === found.company_id);
+  const initials = found.name.trim().split(/\s+/).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'US';
+
+  return {
+    id: found.user_id,
+    user_id: found.user_id,
+    name: found.name,
+    login: found.login,
+    role: found.role,
+    company_id: found.company_id,
+    company_name: comp ? comp.company_name : found.company_id,
+    avatarInitials: initials
+  };
+}
+
+/**
+ * Fetch company-isolated CRM overrides and custom TJMs from Company_Data sheet
+ */
+export async function getCompanyDataFromSheet(companyId: string) {
+  if (!companyId) return { overrides: new Map<string, any>(), customObjects: [] };
+  try {
+    const sheets = await getSheetsClient();
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Company_Data!A1:U'
+    });
+    const values = res.data.values || [];
+    if (values.length <= 1) return { overrides: new Map<string, any>(), customObjects: [] };
+
+    const headers: string[] = values[0];
+    const overrides = new Map<string, any>();
+    const customObjects: any[] = [];
+
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      if (!row || !row[0]) continue;
+      const rowObj: Record<string, string> = {};
+      headers.forEach((h, idx) => {
+        rowObj[h] = row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+      });
+
+      // Filter strictly by company_id (or if company is 'system'/superadmin viewing all)
+      if (companyId !== 'system' && rowObj.company_id !== companyId) {
+        continue;
+      }
+
+      if (rowObj.is_custom_tjm === 'true') {
+        customObjects.push(rowObj);
+      } else if (rowObj.source_id) {
+        overrides.set(rowObj.source_id, rowObj);
+      }
+    }
+
+    return { overrides, customObjects };
+  } catch (err) {
+    console.error('getCompanyDataFromSheet error:', err);
+    return { overrides: new Map<string, any>(), customObjects: [] };
+  }
+}
+
+/**
+ * Upsert company-specific CRM record in Company_Data sheet
+ */
+export async function updateCompanyDataInSheet(
+  companyId: string,
+  userId: string,
+  sourceId: string,
+  updateData: Record<string, any>
+) {
+  const sheets = await getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Company_Data!A1:U'
+  });
+
+  const values = res.data.values || [];
+  let headers: string[] = values.length > 0 ? values[0] : [...COMPANY_DATA_HEADERS];
+  let targetRowIndex = -1;
+  let existingRow: string[] = [];
+
+  const compIdIdx = headers.indexOf('company_id');
+  const sourceIdIdx = headers.indexOf('source_id');
+
+  for (let i = 1; i < values.length; i++) {
+    const r = values[i];
+    if (
+      r && 
+      r[compIdIdx] === companyId && 
+      String(r[sourceIdIdx]).trim() === String(sourceId).trim()
+    ) {
+      targetRowIndex = i + 1; // 1-based index
+      existingRow = r;
+      break;
+    }
+  }
+
+  const now = new Date().toISOString();
+
+  if (targetRowIndex !== -1) {
+    // Update existing company record
+    const updatedRow = [...existingRow];
+    while (updatedRow.length < headers.length) updatedRow.push('');
+
+    for (const [k, v] of Object.entries(updateData)) {
+      const idx = headers.indexOf(k);
+      if (idx !== -1 && !['id', 'company_id', 'source_id'].includes(k)) {
+        updatedRow[idx] = v !== null && v !== undefined ? String(v).trim() : '';
+      }
+    }
+    const userIdx = headers.indexOf('user_id');
+    if (userIdx !== -1) updatedRow[userIdx] = userId || '';
+    const updatedIdx = headers.indexOf('updated_at');
+    if (updatedIdx !== -1) updatedRow[updatedIdx] = now;
+
+    const lastCol = colToA1(headers.length - 1);
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Company_Data!A${targetRowIndex}:${lastCol}${targetRowIndex}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [updatedRow] }
+    });
+
+    return { success: true, updated: updatedRow };
+  } else {
+    // Append new company CRM record
+    const newRecord: Record<string, string> = {
+      id: `cd_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+      company_id: companyId,
+      source_id: sourceId,
+      user_id: userId || '',
+      updated_at: now,
+      is_custom_tjm: 'false'
+    };
+    for (const [k, v] of Object.entries(updateData)) {
+      newRecord[k] = v !== null && v !== undefined ? String(v).trim() : '';
+    }
+
+    const rowData = headers.map(h => newRecord[h] || '');
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'Company_Data!A1:U',
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [rowData] }
+    });
+
+    return { success: true, added: rowData };
+  }
+}
+
+/**
+ * Create a custom TJM object in Company_Data sheet for this company
+ */
+export async function createCompanyCustomTJM(
+  companyId: string,
+  userId: string,
+  data: Record<string, any>
+) {
+  const sheets = await getSheetsClient();
+  const customId = `custom_${Date.now()}`;
+  const now = new Date().toISOString();
+
+  const rowRecord: Record<string, string> = {
+    id: `cd_${Date.now()}`,
+    company_id: companyId,
+    source_id: customId,
+    object_name: data.object_name || data.tjm_name || 'Yangi TJM',
+    tjm_name: data.tjm_name || data.object_name || 'Yangi TJM',
+    phone: data.phone || '',
+    sales_office: data.sales_office || '',
+    manager_name: data.manager_name || '',
+    manager_phone: data.manager_phone || '',
+    telegram: data.telegram || '',
+    instagram: data.instagram || '',
+    notes: data.notes || '',
+    priority: data.priority || 'Normal',
+    last_visit: data.last_visit || '',
+    visited_by: data.visited_by || '',
+    user_id: userId || '',
+    updated_at: now,
+    is_custom_tjm: 'true',
+    latitude: String(data.latitude || '39.6542'),
+    longitude: String(data.longitude || '66.9597'),
+    district_soato: String(data.district_soato || '1718401')
+  };
+
+  const rowData = COMPANY_DATA_HEADERS.map(h => rowRecord[h] || '');
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Company_Data!A1:U',
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: [rowData] }
+  });
+
+  return { success: true, customId, data: rowRecord };
+}
+

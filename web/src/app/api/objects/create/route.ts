@@ -67,16 +67,27 @@ export async function POST(request: Request) {
     // 1. Immediately update in-memory cache
     dataCache.appendRow(newObjectRecord);
 
-    // 2. Direct Google Sheets API append
+    // 2. Multi-company create: if company_id provided, create company custom TJM in Company_Data
     try {
-      await createObjectInSheet(newObjectRecord);
+      if (body.company_id && body.company_id !== 'system') {
+        const { createCompanyCustomTJM } = await import('@/lib/googleSheets');
+        await createCompanyCustomTJM(body.company_id, body.user_id || body.user || '', {
+          ...body,
+          latitude: lat,
+          longitude: lng,
+          object_name: name,
+          tjm_name: name
+        });
+      } else {
+        await createObjectInSheet(newObjectRecord);
+      }
 
       // Log to ActivityLog sheet
       await logActivity({
         action: 'CREATE',
         source_id: String(source_id),
         object_name: name,
-        user: body.user || 'Menejer',
+        user: `${body.user || 'Menejer'} (${body.company_id || 'Umumiy'})`,
         details: { object_name: name, address: newObjectRecord.address, district_soato: newObjectRecord.district_soato },
         status: 'SUCCESS'
       });
@@ -86,7 +97,7 @@ export async function POST(request: Request) {
         action: 'CREATE',
         source_id: String(source_id),
         object_name: name,
-        user: body.user || 'Menejer',
+        user: `${body.user || 'Menejer'} (${body.company_id || 'Umumiy'})`,
         details: `Xatolik: ${sheetErr.message}`,
         status: 'FAILED'
       });
