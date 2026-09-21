@@ -9,8 +9,7 @@ import {
 import { 
   Navigation, MapPin, ArrowDownUp, Search, Compass, 
   CheckCircle2, Clock, Phone, ChevronRight, Eye, Layers, 
-  Route as RouteIcon, Sparkles, Check, Crosshair, X, LocateFixed,
-  Play, Pause
+  Route as RouteIcon, Sparkles, Check, Crosshair, X, LocateFixed
 } from 'lucide-react';
 import { getCallUrl } from '../../lib/utils';
 
@@ -65,11 +64,12 @@ export default function RoutePlannerView({
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [matchedTJMs, setMatchedTJMs] = useState<TJMAlongRoute[]>([]);
   const [activeMobileTab, setActiveMobileTab] = useState<'list' | 'map'>('list');
-  const [isDriving, setIsDriving] = useState(false);
+
+  // Real-time In-Car Navigation mode (Yandex "Поехали" / Google Maps "Start")
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
 
   // 1. Automatically acquire user's live GPS location for Point A on mount
   useEffect(() => {
-    // If parent already gave userLat/userLng, use it directly
     if (userLat && userLng) {
       setStartPoint({
         lat: userLat,
@@ -89,7 +89,6 @@ export default function RoutePlannerView({
         },
         (err) => {
           console.warn('Geolocation error or denied:', err);
-          // Fallback to central Samarkand point if location not granted
           if (!startPoint) {
             setStartPoint({
               lat: 39.6542,
@@ -136,11 +135,10 @@ export default function RoutePlannerView({
     ).slice(0, 8);
   }, [objects, endQuery]);
 
-  // Calculate Route
+  // Calculate Route (Displays route without auto-playing any video)
   const handleCalculateRoute = useCallback(async (
     customStart = startPoint,
-    customEnd = endPoint,
-    startDrive = false
+    customEnd = endPoint
   ) => {
     if (!customStart || !customEnd) return;
 
@@ -158,11 +156,6 @@ export default function RoutePlannerView({
       // Find TJMs along this route within the selected radius
       const found = findTJMsAlongRoute(objects, res.coordinates, bufferRadius);
       setMatchedTJMs(found);
-
-      if (startDrive) {
-        setActiveMobileTab('map');
-        setIsDriving(true);
-      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -178,10 +171,10 @@ export default function RoutePlannerView({
     }
   }, [bufferRadius, routeResult, objects]);
 
-  // Trigger calculation when start or end points change initially
+  // Trigger calculation when start or end points change
   useEffect(() => {
     if (startPoint && endPoint) {
-      handleCalculateRoute(startPoint, endPoint, false);
+      handleCalculateRoute(startPoint, endPoint);
     }
   }, [startPoint?.lat, startPoint?.lng, endPoint?.lat, endPoint?.lng]);
 
@@ -230,7 +223,6 @@ export default function RoutePlannerView({
 
   // Handle map click picking
   const handleMapClick = (lat: number, lng: number) => {
-    // Find if click is near any existing object (within 60 meters)
     const nearby = objects.find(o => {
       if (!o.latitude || !o.longitude) return false;
       const dLat = (o.latitude - lat) * 111000;
@@ -255,7 +247,7 @@ export default function RoutePlannerView({
     }
   };
 
-  // Handle setting point directly from an object (popup or list)
+  // Handle setting point directly from an object
   const handleSetPointFromObject = (obj: MapObject, pointType: 'A' | 'B') => {
     const pt = {
       lat: obj.latitude,
@@ -296,7 +288,7 @@ export default function RoutePlannerView({
     setEndQuery(pt.name);
   };
 
-  // Enter Picking Mode (activates map on mobile too)
+  // Enter Picking Mode
   const triggerPickingMode = (mode: 'A' | 'B') => {
     setPickingMode(mode);
     setIsStartOpen(false);
@@ -304,9 +296,19 @@ export default function RoutePlannerView({
     setActiveMobileTab('map');
   };
 
+  // Start Real In-Car Live Navigation Mode
+  const handleStartInCarNavigation = () => {
+    if (!startPoint || !endPoint) {
+      alert("Iltimos, boshlang'ich va borish manzilini tanlang!");
+      return;
+    }
+    setIsNavigating(true);
+    setActiveMobileTab('map');
+  };
+
   return (
     <div className="flex-1 flex flex-col md:flex-row h-full min-w-0 bg-slate-100 overflow-hidden">
-      {/* 1. Left Panel: Inputs & Route Results List */}
+      {/* 1. Left Panel: Inputs & Route Results List (Hidden on mobile when in Map tab) */}
       <div className={`w-full md:w-[420px] lg:w-[460px] h-full flex flex-col bg-white border-r border-slate-200 z-20 shrink-0 shadow-sm ${
         activeMobileTab === 'map' ? 'hidden md:flex' : 'flex'
       }`}>
@@ -566,19 +568,19 @@ export default function RoutePlannerView({
 
               <button
                 type="button"
-                onClick={() => handleCalculateRoute(startPoint, endPoint, true)}
+                onClick={() => handleCalculateRoute(startPoint, endPoint)}
                 disabled={calculating || !startPoint || !endPoint}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer ml-auto"
-                title="Marshrutni hisoblash va mashinada ko'rish"
+                title="Marshrutni hisoblash"
               >
-                <Navigation className="w-3.5 h-3.5" />
-                <span>{calculating ? 'Hisoblanmoqda...' : 'Marshrut (Yurish 🚗)'}</span>
+                <RouteIcon className="w-3.5 h-3.5" />
+                <span>{calculating ? 'Hisoblanmoqda...' : 'Marshrut'}</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Route Stats Summary Banner */}
+        {/* Route Stats Summary Banner with Real In-Car Navigation Button */}
         {routeResult && (
           <div className="p-3 bg-blue-50/70 border-b border-blue-100 shrink-0 space-y-2.5">
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -602,30 +604,14 @@ export default function RoutePlannerView({
               </div>
             </div>
 
-            {/* Mashinada harakatlanish tugmasi */}
+            {/* In-Car Live Navigation Button (Yandex "Поехали" / Google Maps "Start") */}
             <button
               type="button"
-              onClick={() => {
-                setActiveMobileTab('map');
-                setIsDriving(!isDriving);
-              }}
-              className={`w-full py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer ${
-                isDriving
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25'
-                  : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/25'
-              }`}
+              onClick={handleStartInCarNavigation}
+              className="w-full py-3 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2.5 transition-all shadow-md bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-600/30 active:scale-[0.98] cursor-pointer"
             >
-              {isDriving ? (
-                <>
-                  <Pause className="w-4 h-4 fill-white" />
-                  <span>Harakatni to'xtatib turish (Pauza)</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-sm">🚗</span>
-                  <span>Mashinada harakatlanishni boshlash (Ketdik!)</span>
-                </>
-              )}
+              <Navigation className="w-4 h-4 fill-white" />
+              <span className="text-sm">Boshlash (Navigatsiya 🧭)</span>
             </button>
           </div>
         )}
@@ -759,7 +745,7 @@ export default function RoutePlannerView({
         </div>
       </div>
 
-      {/* 2. Right Panel: Interactive Route Map */}
+      {/* 2. Right Panel: Interactive Route Map & In-Car Driver View */}
       <div className={`flex-1 h-full relative ${
         activeMobileTab === 'list' ? 'hidden md:block' : 'block'
       }`}>
@@ -779,8 +765,8 @@ export default function RoutePlannerView({
           onDragEndPoint={handleDragEndPoint}
           onSetPointFromObject={handleSetPointFromObject}
           onCancelPicking={() => setPickingMode(null)}
-          isDriving={isDriving}
-          setIsDriving={setIsDriving}
+          isNavigating={isNavigating}
+          onStopNavigation={() => setIsNavigating(false)}
           onRecordVisit={onRecordVisit}
         />
 
