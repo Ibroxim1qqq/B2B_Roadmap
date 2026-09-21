@@ -39,6 +39,7 @@ interface RoutePlannerMapProps {
   onSetPointFromObject: (obj: MapObject, pointType: 'A' | 'B') => void;
   onCancelPicking: () => void;
   onClearRoute?: () => void;
+  onStartNavigation?: () => void;
   isNavigating?: boolean;
   onStopNavigation?: () => void;
   onRecordVisit?: (id: string) => Promise<void>;
@@ -176,6 +177,7 @@ export default function RoutePlannerMap({
   onSetPointFromObject,
   onCancelPicking,
   onClearRoute,
+  onStartNavigation,
   isNavigating = false,
   onStopNavigation,
   onRecordVisit
@@ -305,9 +307,11 @@ export default function RoutePlannerMap({
     // Zoom in to level 17 (close street level with buildings and street names)
     const targetCenter: [number, number] = driverPos 
       ? driverPos 
-      : startPoint 
-        ? [startPoint.lat, startPoint.lng] 
-        : [39.6542, 66.9597];
+      : routeCoords.length > 0 
+        ? routeCoords[0]
+        : startPoint 
+          ? [startPoint.lat, startPoint.lng] 
+          : [39.6542, 66.9597];
 
     map.setView(targetCenter, 17, {
       animate: true,
@@ -414,8 +418,8 @@ export default function RoutePlannerMap({
       routeCoords.forEach(c => boundsPoints.push(c));
     }
 
-    // Point A (Start) - Draggable when not navigating
-    if (startPoint && !isNavigating) {
+    // Point A (Start) - Visible always, Draggable when not navigating
+    if (startPoint) {
       const startIcon = L.divIcon({
         className: 'custom-start-marker',
         html: `
@@ -442,7 +446,7 @@ export default function RoutePlannerMap({
 
       const startMarker = L.marker([startPoint.lat, startPoint.lng], {
         icon: startIcon,
-        draggable: true,
+        draggable: !isNavigating,
         title: "Boshlanish nuqtasi (A)"
       });
 
@@ -717,10 +721,14 @@ export default function RoutePlannerMap({
     alertedIdsRef.current.clear();
     setAutoFollow(true);
 
-    // Initial position
-    if (startPoint) {
-      updateDriverPosition(startPoint.lat, startPoint.lng, 0);
-    }
+    // Initial position: start from where the route starts (user's current location)
+    const initialPos: [number, number] = (routeCoords.length > 0)
+      ? routeCoords[0]
+      : startPoint 
+        ? [startPoint.lat, startPoint.lng]
+        : [39.6542, 66.9597];
+
+    updateDriverPosition(initialPos[0], initialPos[1], 0);
 
     if (!navigator.geolocation) {
       alert("Qurilmangizda geolokatsiya (GPS) qo'llab-quvvatlanmaydi.");
@@ -1102,6 +1110,17 @@ export default function RoutePlannerMap({
                   {matchedTJMs.length} ta TJM yo'l bo'yida
                 </p>
               </div>
+              {onStartNavigation && (
+                <button
+                  type="button"
+                  onClick={onStartNavigation}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/30 flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
+                  title="Turgan joyingizdan boshlab yo'l ko'rsatish"
+                >
+                  <Navigation className="w-3.5 h-3.5 fill-white" />
+                  <span>Boshlash</span>
+                </button>
+              )}
               {onClearRoute && (
                 <button
                   type="button"

@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { MapObject } from '../../lib/types';
 import { 
-  calculateOSRMRoute, findTJMsAlongRoute, RouteResult, TJMAlongRoute, 
+  calculateOSRMRoute, calculateOSRMRouteMulti, findTJMsAlongRoute, RouteResult, TJMAlongRoute, 
   formatDistance, formatDuration, haversineMeters 
 } from '../../lib/routeUtils';
 import { 
@@ -324,12 +324,87 @@ export default function RoutePlannerView({
     setActiveMobileTab('map');
   };
 
-  // Start Real In-Car Live Navigation Mode
-  const handleStartInCarNavigation = () => {
-    if (!startPoint || !endPoint) {
-      alert("Iltimos, avval borish manzilini (B nuqta) tanlang!");
+  // Start Real In-Car Live Navigation Mode: Routes from User's Current Location to A and B!
+  const handleStartInCarNavigation = async () => {
+    if (!startPoint && !endPoint) {
+      alert("Iltimos, avval xaritadan borish manzilini tanlang!");
       return;
     }
+
+    setCalculating(true);
+
+    // 1. Get user's current GPS position
+    const getUserLocation = (): Promise<{ lat: number; lng: number } | null> => {
+      return new Promise((resolve) => {
+        if (typeof window !== 'undefined' && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => {
+              if (userLat && userLng) {
+                resolve({ lat: userLat, lng: userLng });
+              } else {
+                resolve(null);
+              }
+            },
+            { enableHighAccuracy: true, timeout: 5000 }
+          );
+        } else if (userLat && userLng) {
+          resolve({ lat: userLat, lng: userLng });
+        } else {
+          resolve(null);
+        }
+      });
+    };
+
+    const myLoc = await getUserLocation();
+    const targetRef = startPoint || endPoint;
+
+    // Build multi-stop waypoints: [My Current Location] -> [Point A] -> [Point B]
+    const waypoints: { lat: number; lng: number }[] = [];
+
+    if (myLoc && targetRef) {
+      const distToTarget = haversineMeters(myLoc.lat, myLoc.lng, targetRef.lat, targetRef.lng);
+      if (distToTarget <= 80000) {
+        // Real user in Samarkand: start from their real GPS!
+        waypoints.push(myLoc);
+      } else if (startPoint) {
+        // Testing outside Samarkand (desktop): simulate starting ~700m before Point A
+        waypoints.push({
+          lat: startPoint.lat - 0.005,
+          lng: startPoint.lng - 0.005
+        });
+      }
+    } else if (startPoint) {
+      // Fallback if no geolocation
+      waypoints.push({
+        lat: startPoint.lat - 0.005,
+        lng: startPoint.lng - 0.005
+      });
+    }
+
+    if (startPoint) {
+      // Avoid duplicate waypoint if already standing right at Point A
+      if (waypoints.length === 0 || haversineMeters(waypoints[0].lat, waypoints[0].lng, startPoint.lat, startPoint.lng) > 30) {
+        waypoints.push({ lat: startPoint.lat, lng: startPoint.lng });
+      }
+    }
+
+    if (endPoint) {
+      waypoints.push({ lat: endPoint.lat, lng: endPoint.lng });
+    }
+
+    if (waypoints.length >= 2) {
+      try {
+        const res = await calculateOSRMRouteMulti(waypoints);
+        setRouteResult(res);
+        const matched = findTJMsAlongRoute(objects, res.coordinates, bufferRadius);
+        setMatchedTJMs(matched);
+      } catch (err) {
+        console.error('Multi-point navigation routing failed:', err);
+      }
+    }
+
+    setCalculating(false);
     setIsNavigating(true);
     setShowSidebarInNav(false);
     setActiveMobileTab('map');
@@ -684,7 +759,7 @@ export default function RoutePlannerView({
               className="w-full py-3 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2.5 transition-all shadow-md bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-600/30 active:scale-[0.98] cursor-pointer"
             >
               <Navigation className="w-4 h-4 fill-white" />
-              <span className="text-sm">Boshlash (Navigatsiya 🧭)</span>
+              <span className="text-sm">Boshlash (Men turgan joydan A va B ga) 🧭</span>
             </button>
           </div>
         )}
@@ -909,6 +984,7 @@ export default function RoutePlannerView({
           onSetPointFromObject={handleSetPointFromObject}
           onCancelPicking={() => setPickingMode(null)}
           onClearRoute={handleClearRoute}
+          onStartNavigation={handleStartInCarNavigation}
           isNavigating={isNavigating}
           onStopNavigation={() => {
             setIsNavigating(false);

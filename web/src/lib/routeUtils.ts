@@ -112,6 +112,66 @@ export async function calculateOSRMRoute(
 }
 
 /**
+ * Fetch real driving route through multiple waypoints from OSRM
+ * Coordinates: Array of { lat: number, lng: number }
+ */
+export async function calculateOSRMRouteMulti(
+  points: { lat: number; lng: number }[]
+): Promise<RouteResult> {
+  if (points.length < 2) {
+    return { distanceMeters: 0, durationSeconds: 0, coordinates: [] };
+  }
+  if (points.length === 2) {
+    return calculateOSRMRoute(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
+  }
+
+  try {
+    const coordsStr = points.map(p => `${p.lng},${p.lat}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('OSRM API returned error');
+
+    const data = await res.json();
+    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+      const primary = data.routes[0];
+      const coords: [number, number][] = primary.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+
+      return {
+        distanceMeters: primary.distance || 0,
+        durationSeconds: primary.duration || 0,
+        coordinates: coords
+      };
+    }
+  } catch (err) {
+    console.warn('OSRM multi-route calculation failed, using pairwise fallback:', err);
+  }
+
+  // Fallback: pairwise connection
+  let allCoords: [number, number][] = [];
+  let totalDist = 0;
+  let totalDur = 0;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const res = await calculateOSRMRoute(p1.lat, p1.lng, p2.lat, p2.lng);
+    totalDist += res.distanceMeters;
+    totalDur += res.durationSeconds;
+    if (i === 0) {
+      allCoords = res.coordinates;
+    } else {
+      allCoords = allCoords.concat(res.coordinates.slice(1));
+    }
+  }
+
+  return {
+    distanceMeters: totalDist,
+    durationSeconds: totalDur,
+    coordinates: allCoords
+  };
+}
+
+/**
  * Find all TJMs within bufferRadius of the route polyline and order them by progress along route
  */
 export function findTJMsAlongRoute(
