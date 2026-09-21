@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Building2, Lock, User, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { validateCredentials, setCurrentUser, getCurrentUser } from '../../lib/auth';
 import { api } from '../../lib/api';
 
@@ -166,37 +166,9 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Quick Demo Logins */}
-            <div className="pt-3 border-t border-slate-100">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">
-                Tezkor sinov hisoblari:
-              </p>
-              <div className="flex flex-col gap-1.5 text-xs">
-                <button
-                  type="button"
-                  onClick={() => { setLogin('admin'); setPassword('admin123'); }}
-                  className="w-full px-2.5 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 rounded-lg flex items-center justify-between text-[11px] text-slate-600 transition-colors cursor-pointer"
-                >
-                  <span className="font-semibold">🛡️ SuperAdmin (Admin Panel)</span>
-                  <span className="font-mono text-[10px] text-slate-400">admin</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setLogin('ibroxim'); setPassword('ibroxim2026'); }}
-                  className="w-full px-2.5 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 rounded-lg flex items-center justify-between text-[11px] text-slate-600 transition-colors cursor-pointer"
-                >
-                  <span className="font-semibold">🏢 Kompaniya Admin</span>
-                  <span className="font-mono text-[10px] text-slate-400">ibroxim</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setLogin('menejer1'); setPassword('123456'); }}
-                  className="w-full px-2.5 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 rounded-lg flex items-center justify-between text-[11px] text-slate-600 transition-colors cursor-pointer"
-                >
-                  <span className="font-semibold">👤 Menejer (CRM)</span>
-                  <span className="font-mono text-[10px] text-slate-400">menejer1</span>
-                </button>
-              </div>
+            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 text-center pt-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Xavfsiz va himoyalangan tizim</span>
             </div>
           </form>
         </div>
