@@ -345,6 +345,39 @@ export default function RoutePlannerMap({
             }
           });
 
+          const popupContent = `
+            <div style="font-family: sans-serif; min-width: 170px; font-size: 12px;">
+              <div style="font-weight: bold; color: #1e293b; margin-bottom: 4px;">${obj.tjm_name || obj.object_name}</div>
+              <div style="color: #64748b; font-size: 11px; margin-bottom: 6px;">${obj.district_name || 'Samarqand'}</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px;">
+                <button id="btn-pick-a-${obj.source_id}" style="padding: 5px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
+                  🟢 A: Boshlash
+                </button>
+                <button id="btn-pick-b-${obj.source_id}" style="padding: 5px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
+                  🔴 B: Borish
+                </button>
+              </div>
+            </div>
+          `;
+
+          smallDot.bindPopup(popupContent);
+          smallDot.on('popupopen', () => {
+            const btnA = document.getElementById(`btn-pick-a-${obj.source_id}`);
+            const btnB = document.getElementById(`btn-pick-b-${obj.source_id}`);
+            if (btnA) {
+              btnA.onclick = () => {
+                onSetPointFromObject(obj, 'A');
+                map.closePopup();
+              };
+            }
+            if (btnB) {
+              btnB.onclick = () => {
+                onSetPointFromObject(obj, 'B');
+                map.closePopup();
+              };
+            }
+          });
+
           layerGroup.addLayer(smallDot);
         }
       });
@@ -528,12 +561,14 @@ export default function RoutePlannerMap({
       boundsPoints.push([obj.latitude, obj.longitude]);
     });
 
-    // Fit map bounds initially when NOT in active navigation
-    if (boundsPoints.length > 0 && !pickingMode && !isNavigating) {
-      map.fitBounds(L.latLngBounds(boundsPoints), {
+    // Fit map bounds to route when calculated, or keep centered on Samarkand
+    if (routeCoords.length > 1 && !pickingMode && !isNavigating) {
+      map.fitBounds(L.latLngBounds(routeCoords), {
         padding: [60, 60],
         maxZoom: 16
       });
+    } else if (routeCoords.length <= 1 && !isNavigating && !pickingMode) {
+      map.setView([39.6542, 66.9597], 13);
     }
   }, [
     routeCoords, 

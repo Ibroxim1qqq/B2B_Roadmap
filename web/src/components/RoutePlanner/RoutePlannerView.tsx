@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { MapObject } from '../../lib/types';
 import { 
   calculateOSRMRoute, findTJMsAlongRoute, RouteResult, TJMAlongRoute, 
-  formatDistance, formatDuration 
+  formatDistance, formatDuration, haversineMeters 
 } from '../../lib/routeUtils';
 import { 
   Navigation, MapPin, ArrowDownUp, Search, Compass, 
@@ -35,6 +35,9 @@ interface RoutePlannerViewProps {
   onRecordVisit?: (id: string) => Promise<void>;
 }
 
+const REGISTON_LAT = 39.6542;
+const REGISTON_LNG = 66.9597;
+
 export default function RoutePlannerView({
   objects,
   userLat,
@@ -47,6 +50,8 @@ export default function RoutePlannerView({
   const [startQuery, setStartQuery] = useState('');
   const [endQuery, setEndQuery] = useState('');
   const [startPoint, setStartPoint] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  
+  // DEFAULT: Destination (Point B) is completely empty! No TJM is auto-selected!
   const [endPoint, setEndPoint] = useState<{ lat: number; lng: number; name: string } | null>(null);
   
   const [isStartOpen, setIsStartOpen] = useState(false);
@@ -59,7 +64,7 @@ export default function RoutePlannerView({
   const [bufferRadius, setBufferRadius] = useState<number>(200);
   const [showAllMarkers, setShowAllMarkers] = useState<boolean>(false);
 
-  // Calculation state
+  // Calculation state - Starts as null!
   const [calculating, setCalculating] = useState(false);
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [matchedTJMs, setMatchedTJMs] = useState<TJMAlongRoute[]>([]);
@@ -69,51 +74,57 @@ export default function RoutePlannerView({
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const [showSidebarInNav, setShowSidebarInNav] = useState<boolean>(false);
 
-  // 1. Automatically acquire user's live GPS location for Point A on mount
+  // 1. Initialize Start Point:
+  // If user GPS is in Samarkand region (< 80km), use GPS.
+  // Otherwise, default to Samarqand markazi (Registon) so it doesn't cross the country.
+  // NO destination TJM is auto-selected!
   useEffect(() => {
+    if (startPoint) return;
+
+    const applyLocation = (lat: number, lng: number) => {
+      const dKm = haversineMeters(lat, lng, REGISTON_LAT, REGISTON_LNG) / 1000;
+      if (dKm <= 80) {
+        setStartPoint({
+          lat,
+          lng,
+          name: 'Mening joriy joylashuvim (GPS)'
+        });
+        setStartQuery('Mening joriy joylashuvim (GPS)');
+      } else {
+        // Outside Samarkand: default to central Samarkand
+        setStartPoint({
+          lat: REGISTON_LAT,
+          lng: REGISTON_LNG,
+          name: 'Samarqand markazi (Registon)'
+        });
+        setStartQuery('Samarqand markazi (Registon)');
+      }
+    };
+
     if (userLat && userLng) {
-      setStartPoint({
-        lat: userLat,
-        lng: userLng,
-        name: 'Mening joriy joylashuvim (GPS)'
-      });
-      setStartQuery('Mening joriy joylashuvim (GPS)');
+      applyLocation(userLat, userLng);
     } else if (typeof window !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        (pos) => applyLocation(pos.coords.latitude, pos.coords.longitude),
+        () => {
           setStartPoint({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            name: 'Mening joriy joylashuvim (GPS)'
+            lat: REGISTON_LAT,
+            lng: REGISTON_LNG,
+            name: 'Samarqand markazi (Registon)'
           });
-          setStartQuery('Mening joriy joylashuvim (GPS)');
+          setStartQuery('Samarqand markazi (Registon)');
         },
-        (err) => {
-          console.warn('Geolocation error or denied:', err);
-          if (!startPoint) {
-            setStartPoint({
-              lat: 39.6542,
-              lng: 66.9597,
-              name: 'Samarqand markazi (Registon)'
-            });
-            setStartQuery('Samarqand markazi (Registon)');
-          }
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
+        { enableHighAccuracy: true, timeout: 6000 }
       );
-    }
-
-    // Default destination: target first or prominent object if none selected
-    if (!endPoint && objects.length > 1) {
-      const target = objects[5] || objects[1];
-      setEndPoint({
-        lat: target.latitude,
-        lng: target.longitude,
-        name: target.tjm_name || target.object_name
+    } else {
+      setStartPoint({
+        lat: REGISTON_LAT,
+        lng: REGISTON_LNG,
+        name: 'Samarqand markazi (Registon)'
       });
-      setEndQuery(target.tjm_name || target.object_name);
+      setStartQuery('Samarqand markazi (Registon)');
     }
-  }, [userLat, userLng, objects]);
+  }, [userLat, userLng]);
 
   // Filtered dropdown suggestions
   const startSuggestions = useMemo(() => {
@@ -136,7 +147,7 @@ export default function RoutePlannerView({
     ).slice(0, 8);
   }, [objects, endQuery]);
 
-  // Calculate Route (Displays route without auto-playing any video)
+  // Calculate Route
   const handleCalculateRoute = useCallback(async (
     customStart = startPoint,
     customEnd = endPoint
@@ -172,10 +183,13 @@ export default function RoutePlannerView({
     }
   }, [bufferRadius, routeResult, objects]);
 
-  // Trigger calculation when start or end points change
+  // Trigger calculation when both start and end points exist and change
   useEffect(() => {
     if (startPoint && endPoint) {
       handleCalculateRoute(startPoint, endPoint);
+    } else {
+      setRouteResult(null);
+      setMatchedTJMs([]);
     }
   }, [startPoint?.lat, startPoint?.lng, endPoint?.lat, endPoint?.lng]);
 
@@ -220,6 +234,18 @@ export default function RoutePlannerView({
         { enableHighAccuracy: true, timeout: 8000 }
       );
     }
+  };
+
+  // Set Start Point to Registon Center
+  const handleUseRegiston = () => {
+    const pt = {
+      lat: REGISTON_LAT,
+      lng: REGISTON_LNG,
+      name: 'Samarqand markazi (Registon)'
+    };
+    setStartPoint(pt);
+    setStartQuery(pt.name);
+    setIsStartOpen(false);
   };
 
   // Handle map click picking
@@ -300,7 +326,7 @@ export default function RoutePlannerView({
   // Start Real In-Car Live Navigation Mode
   const handleStartInCarNavigation = () => {
     if (!startPoint || !endPoint) {
-      alert("Iltimos, boshlang'ich va borish manzilini tanlang!");
+      alert("Iltimos, avval borish manzilini (B nuqta) tanlang!");
       return;
     }
     setIsNavigating(true);
@@ -363,7 +389,7 @@ export default function RoutePlannerView({
                 
                 <input
                   type="text"
-                  placeholder="Boshlanish manzili (Hozirgi turgan joyingiz)..."
+                  placeholder="Boshlanish joyi (Qayerdan?)..."
                   value={startQuery}
                   onFocus={() => setIsStartOpen(true)}
                   onChange={(e) => {
@@ -392,7 +418,7 @@ export default function RoutePlannerView({
                   type="button"
                   onClick={handleUseMyLocation}
                   className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200/80 px-2 py-1 rounded-lg border border-emerald-300 flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
-                  title="Hozirgi GPS joylashuvimni olish"
+                  title="Mening GPS joylashuvim"
                 >
                   <LocateFixed className="w-3 h-3 text-emerald-600" />
                   <span className="hidden sm:inline">GPS</span>
@@ -424,6 +450,14 @@ export default function RoutePlannerView({
                   >
                     <LocateFixed className="w-3.5 h-3.5 text-emerald-600" />
                     <span>📍 Mening joriy joylashuvim (GPS)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleUseRegiston}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-blue-50 text-blue-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
+                  >
+                    <span>🏛️ Samarqand markazi (Registon)</span>
                   </button>
 
                   <button
@@ -465,7 +499,7 @@ export default function RoutePlannerView({
               </button>
             </div>
 
-            {/* Point B (Destination) */}
+            {/* Point B (Destination) - COMPLETELY EMPTY BY DEFAULT */}
             <div className="relative">
               <div className={`flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-2 text-xs transition-all ${
                 pickingMode === 'B' 
@@ -548,6 +582,24 @@ export default function RoutePlannerView({
               )}
             </div>
 
+            {/* Quick Suggestions below B when empty */}
+            {!endPoint && objects.length > 0 && (
+              <div className="pt-0.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <span className="text-[10px] text-slate-400 font-bold shrink-0">Misol:</span>
+                {objects.slice(0, 3).map(obj => (
+                  <button
+                    key={obj.source_id}
+                    type="button"
+                    onClick={() => handleSetPointFromObject(obj, 'B')}
+                    className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 text-[10px] font-semibold truncate max-w-[130px] shrink-0 border border-slate-200/80 transition-colors cursor-pointer"
+                    title={obj.tjm_name || obj.object_name}
+                  >
+                    {obj.tjm_name || obj.object_name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Radius and Action Controls */}
             <div className="pt-2 flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1">
@@ -618,133 +670,186 @@ export default function RoutePlannerView({
           </div>
         )}
 
-        {/* Matched TJMs List Header */}
-        <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs shrink-0">
-          <span className="font-bold text-slate-700 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Yo'l bo'yidagi TJM-lar ({matchedTJMs.length})</span>
-          </span>
-          <label className="flex items-center gap-1.5 text-[11px] text-slate-500 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showAllMarkers}
-              onChange={(e) => setShowAllMarkers(e.target.checked)}
-              className="rounded text-blue-600 focus:ring-blue-500"
-            />
-            <span>Boshqalarni ham ko'rsatish</span>
-          </label>
-        </div>
-
-        {/* Scrollable List of TJMs along Route */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-          {matchedTJMs.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 space-y-2">
-              <Compass className="w-8 h-8 mx-auto text-slate-300" />
-              <p className="text-xs font-medium">
-                Tanlangan marshrutdan {bufferRadius} metr radiusda TJM topilmadi.
-              </p>
-              <p className="text-[11px] text-slate-400">
-                Radiusni 500 metrga oshirib ko'ring yoki boshqa manzilni tanlang.
-              </p>
+        {/* Matched TJMs List or Empty Onboarding View */}
+        {!routeResult ? (
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/40 border border-blue-100 rounded-2xl p-4 text-center space-y-2">
+              <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center mx-auto shadow-md shadow-blue-500/20">
+                <Compass className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">Qayerga bormoqchisiz?</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Borish manzilini (B nuqta) qidiruv orqali kiriting yoki xaritadagi istalgan binoni bosing.
+                </p>
+              </div>
             </div>
-          ) : (
-            matchedTJMs.map((item) => {
-              const { object: obj, orderNumber, distFromRoadMeters, distAlongRouteMeters } = item;
-              const isSelected = selectedId === obj.source_id;
-              const isVisited = Boolean(obj.is_visited || obj.last_visit);
 
-              return (
-                <div
-                  key={obj.source_id}
-                  onClick={() => onSelectObject(obj.source_id)}
-                  className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-blue-50/80 border-blue-400 shadow-sm ring-2 ring-blue-500/10'
-                      : 'bg-white hover:bg-slate-50/90 border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Order Number Badge */}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs text-white shrink-0 shadow-2xs ${
-                      isVisited ? 'bg-emerald-600' : 'bg-blue-600'
-                    }`}>
-                      #{orderNumber}
-                    </div>
-
+            {/* Samarqanddagi mavjud TJM-lar */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Samarqanddagi obyektlar:</span>
+              </p>
+              <div className="space-y-2">
+                {objects.slice(0, 6).map((obj) => (
+                  <div
+                    key={obj.source_id}
+                    onClick={() => onSelectObject(obj.source_id)}
+                    className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-xs transition-all flex items-center justify-between gap-2 cursor-pointer"
+                  >
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <h3 className="font-bold text-xs text-slate-900 truncate">
-                          {obj.tjm_name || obj.object_name}
-                        </h3>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                          isVisited 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      <h4 className="text-xs font-bold text-slate-900 truncate">
+                        {obj.tjm_name || obj.object_name}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{obj.district_name || 'Samarqand'}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSetPointFromObject(obj, 'B');
+                      }}
+                      className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl text-[10px] font-bold border border-blue-200 transition-colors shrink-0 cursor-pointer"
+                    >
+                      B qilib tanlash →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Matched TJMs List Header */}
+            <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs shrink-0">
+              <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Yo'l bo'yidagi TJM-lar ({matchedTJMs.length})</span>
+              </span>
+              <label className="flex items-center gap-1.5 text-[11px] text-slate-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showAllMarkers}
+                  onChange={(e) => setShowAllMarkers(e.target.checked)}
+                  className="rounded text-blue-600 focus:ring-blue-500"
+                />
+                <span>Boshqalarni ham ko'rsatish</span>
+              </label>
+            </div>
+
+            {/* Scrollable List of TJMs along Route */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+              {matchedTJMs.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 space-y-2">
+                  <Compass className="w-8 h-8 mx-auto text-slate-300" />
+                  <p className="text-xs font-medium">
+                    Tanlangan marshrutdan {bufferRadius} metr radiusda TJM topilmadi.
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Radiusni 500 metrga oshirib ko'ring yoki boshqa manzilni tanlang.
+                  </p>
+                </div>
+              ) : (
+                matchedTJMs.map((item) => {
+                  const { object: obj, orderNumber, distFromRoadMeters, distAlongRouteMeters } = item;
+                  const isSelected = selectedId === obj.source_id;
+                  const isVisited = Boolean(obj.is_visited || obj.last_visit);
+
+                  return (
+                    <div
+                      key={obj.source_id}
+                      onClick={() => onSelectObject(obj.source_id)}
+                      className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-50/80 border-blue-400 shadow-sm ring-2 ring-blue-500/10'
+                          : 'bg-white hover:bg-slate-50/90 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Order Number Badge */}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs text-white shrink-0 shadow-2xs ${
+                          isVisited ? 'bg-emerald-600' : 'bg-blue-600'
                         }`}>
-                          {isVisited ? 'Borilgan' : 'Borilmagan'}
-                        </span>
-                      </div>
+                          #{orderNumber}
+                        </div>
 
-                      {/* Distance Badges */}
-                      <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px]">
-                        <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
-                          Yo'l boshidan: {formatDistance(distAlongRouteMeters)}
-                        </span>
-                        <span className="text-slate-500">
-                          Yo'ldan: <b className="text-slate-700">{distFromRoadMeters} m</b>
-                        </span>
-                      </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <h3 className="font-bold text-xs text-slate-900 truncate">
+                              {obj.tjm_name || obj.object_name}
+                            </h3>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                              isVisited 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}>
+                              {isVisited ? 'Borilgan' : 'Borilmagan'}
+                            </span>
+                          </div>
 
-                      {/* Contact & Action Row */}
-                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                        {obj.phone ? (
-                          <a
-                            href={getCallUrl(obj.phone)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-[11px] font-bold text-emerald-700 hover:underline flex items-center gap-1"
-                          >
-                            <Phone className="w-3 h-3 text-emerald-600" />
-                            <span>{obj.phone}</span>
-                          </a>
-                        ) : (
-                          <span className="text-[11px] text-slate-400 italic">Telefon kiritilmagan</span>
-                        )}
+                          {/* Distance Badges */}
+                          <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px]">
+                            <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                              Yo'l boshidan: {formatDistance(distAlongRouteMeters)}
+                            </span>
+                            <span className="text-slate-500">
+                              Yo'ldan: <b className="text-slate-700">{distFromRoadMeters} m</b>
+                            </span>
+                          </div>
 
-                        <div className="flex items-center gap-1">
-                          {onRecordVisit && !isVisited && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onRecordVisit(obj.source_id);
-                              }}
-                              className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                            >
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              <span>Tashrif</span>
-                            </button>
-                          )}
+                          {/* Contact & Action Row */}
+                          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                            {obj.phone ? (
+                              <a
+                                href={getCallUrl(obj.phone)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[11px] font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                              >
+                                <Phone className="w-3 h-3 text-emerald-600" />
+                                <span>{obj.phone}</span>
+                              </a>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic">Telefon kiritilmagan</span>
+                            )}
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectObject(obj.source_id);
-                            }}
-                            className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                            title="Batafsil ma'lumot"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
+                            <div className="flex items-center gap-1">
+                              {onRecordVisit && !isVisited && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRecordVisit(obj.source_id);
+                                  }}
+                                  className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                                >
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span>Tashrif</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectObject(obj.source_id);
+                                }}
+                                className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                title="Batafsil ma'lumot"
+                              >
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* 2. Right Panel: Interactive Route Map & In-Car Driver View */}
@@ -773,7 +878,7 @@ export default function RoutePlannerView({
           allObjects={objects}
           selectedTJMId={selectedId}
           onSelectTJM={onSelectObject}
-          showAllMarkers={showAllMarkers}
+          showAllMarkers={showAllMarkers || !routeResult}
           pickingMode={pickingMode}
           onMapClick={handleMapClick}
           onDragStartPoint={handleDragStartPoint}
