@@ -58,9 +58,10 @@ export default function Navbar({
           <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shadow-blue-500/20">
             <Building2 className="w-4 h-4" />
           </div>
-          <span className="font-black text-slate-900 text-sm tracking-wider">B2B</span>
+          <span className="font-black text-slate-900 text-sm tracking-wider">B2B MAP</span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
         </div>
+
 
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-blue-600 shrink-0">

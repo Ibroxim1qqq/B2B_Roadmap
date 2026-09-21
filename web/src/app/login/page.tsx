@@ -96,12 +96,13 @@ export default function LoginPage() {
             </div>
 
             <h1 className="text-2xl font-black tracking-tight">
-              B2B Samarqand
+              B2B MAP
             </h1>
             <p className="text-blue-200 text-sm mt-1">
-              CRM & Monitoring Platformasi
+              Qurilish Obyektlari & Monitoring Platformasi
             </p>
           </div>
+
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -202,9 +203,10 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-400 mt-4">
-          © 2025 B2B Samarqand. Barcha huquqlar himoyalangan.
+          © 2025 B2B MAP. Barcha huquqlar himoyalangan.
         </p>
       </div>
     </div>
   );
 }
+

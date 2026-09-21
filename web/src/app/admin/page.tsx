@@ -190,11 +190,12 @@ export default function AdminPage() {
           </div>
           <div>
             <h1 className="text-base font-black tracking-tight leading-tight flex items-center gap-2">
-              <span>B2B Samarqand</span>
+              <span>B2B MAP</span>
               <span className="text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/30">
                 SuperAdmin
               </span>
             </h1>
+
             <p className="text-[11px] text-slate-400 leading-tight">
               Tizim va Multi-Kompaniyalarni boshqarish markazi
             </p>

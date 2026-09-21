@@ -36,9 +36,10 @@ export default function LeftSidebar({
           <div className="flex items-center gap-2 min-w-0 animate-in fade-in duration-200">
             <span className="font-black text-slate-900 text-lg tracking-wider">B2B</span>
             <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-1.5 py-0.5 rounded-md border border-blue-200">
-              CRM
+              MAP
             </span>
           </div>
+
         )}
       </div>
 

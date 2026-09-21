@@ -5,9 +5,10 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'B2B Samarqand Construction Map | Shaffof Qurilish CRM',
-  description: 'Samarqand viloyatidagi barcha 388 ta qurilish obyektlari xaritasi va B2B savdo CRM platformasi',
+  title: 'B2B MAP | O\'zbekiston Qurilish Obyektlari Xaritasi',
+  description: 'O\'zbekiston bo\'yicha barcha ko\'p xonadonli uy-joylar va qurilish obyektlari xaritasi platformasi',
 };
+
 
 export default function RootLayout({
   children,

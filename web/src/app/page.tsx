@@ -341,8 +341,9 @@ function HomeContent() {
       <div className="h-screen w-screen flex items-center justify-center bg-slate-900">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
-          <p className="text-slate-400 text-sm font-medium">B2B Samarqand yuklanmoqda...</p>
+          <p className="text-slate-400 text-sm font-medium">B2B MAP yuklanmoqda...</p>
         </div>
+
       </div>
     );
   }
@@ -672,8 +673,9 @@ export default function Home() {
         <div className="h-screen w-screen flex items-center justify-center bg-slate-900">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
-            <p className="text-slate-400 text-sm font-medium">B2B Samarqand yuklanmoqda...</p>
+            <p className="text-slate-400 text-sm font-medium">B2B MAP yuklanmoqda...</p>
           </div>
+
         </div>
       }
     >
