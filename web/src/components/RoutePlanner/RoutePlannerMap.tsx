@@ -38,6 +38,7 @@ interface RoutePlannerMapProps {
   onDragEndPoint: (lat: number, lng: number) => void;
   onSetPointFromObject: (obj: MapObject, pointType: 'A' | 'B') => void;
   onCancelPicking: () => void;
+  onClearRoute?: () => void;
   isNavigating?: boolean;
   onStopNavigation?: () => void;
   onRecordVisit?: (id: string) => Promise<void>;
@@ -174,6 +175,7 @@ export default function RoutePlannerMap({
   onDragEndPoint,
   onSetPointFromObject,
   onCancelPicking,
+  onClearRoute,
   isNavigating = false,
   onStopNavigation,
   onRecordVisit
@@ -271,13 +273,13 @@ export default function RoutePlannerMap({
     }
   }, [mapType]);
 
-  // 3. Map Click Event when Picking Mode is Active
+  // 3. Map Click Event: 1st click = Point A, 2nd click = Point B
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const handleMapClick = (e: L.LeafletMouseEvent) => {
-      if (pickingMode) {
+      if (!isNavigating) {
         onMapClick(e.latlng.lat, e.latlng.lng);
       }
     };
@@ -285,13 +287,15 @@ export default function RoutePlannerMap({
     map.on('click', handleMapClick);
 
     if (containerRef.current) {
-      containerRef.current.style.cursor = pickingMode ? 'crosshair' : '';
+      containerRef.current.style.cursor = (!isNavigating && (!startPoint || !endPoint || pickingMode)) 
+        ? 'crosshair' 
+        : '';
     }
 
     return () => {
       map.off('click', handleMapClick);
     };
-  }, [pickingMode, onMapClick]);
+  }, [pickingMode, onMapClick, isNavigating, startPoint, endPoint]);
 
   // 4. Zoom in closely to Street Level when Navigation Starts!
   useEffect(() => {
@@ -340,6 +344,10 @@ export default function RoutePlannerMap({
             L.DomEvent.stopPropagation(e);
             if (pickingMode) {
               onSetPointFromObject(obj, pickingMode);
+            } else if (!startPoint) {
+              onSetPointFromObject(obj, 'A');
+            } else if (!endPoint) {
+              onSetPointFromObject(obj, 'B');
             } else {
               onSelectTJM(obj.source_id);
             }
@@ -443,6 +451,14 @@ export default function RoutePlannerMap({
         onDragStartPoint(pos.lat, pos.lng);
       });
 
+      startMarker.bindPopup(`
+        <div style="font-family: sans-serif; font-size: 12px; min-width: 150px;">
+          <div style="font-weight: bold; color: #059669; font-size: 13px;">🟢 Boshlanish nuqtasi (A)</div>
+          <div style="color: #334155; font-weight: 600; margin-top: 4px;">${startPoint.name}</div>
+          <div style="color: #94a3b8; font-size: 10px; margin-top: 4px;">📍 Joyini o'zgartirish uchun sudrang</div>
+        </div>
+      `);
+
       layerGroup.addLayer(startMarker);
       boundsPoints.push([startPoint.lat, startPoint.lng]);
     }
@@ -483,6 +499,14 @@ export default function RoutePlannerMap({
         const pos = e.target.getLatLng();
         onDragEndPoint(pos.lat, pos.lng);
       });
+
+      endMarker.bindPopup(`
+        <div style="font-family: sans-serif; font-size: 12px; min-width: 150px;">
+          <div style="font-weight: bold; color: #dc2626; font-size: 13px;">🔴 Borish manzili (B)</div>
+          <div style="color: #334155; font-weight: 600; margin-top: 4px;">${endPoint.name}</div>
+          <div style="color: #94a3b8; font-size: 10px; margin-top: 4px;">📍 Joyini o'zgartirish uchun sudrang</div>
+        </div>
+      `);
 
       layerGroup.addLayer(endMarker);
       boundsPoints.push([endPoint.lat, endPoint.lng]);
@@ -561,14 +585,12 @@ export default function RoutePlannerMap({
       boundsPoints.push([obj.latitude, obj.longitude]);
     });
 
-    // Fit map bounds to route when calculated, or keep centered on Samarkand
+    // Fit map bounds to route when calculated
     if (routeCoords.length > 1 && !pickingMode && !isNavigating) {
       map.fitBounds(L.latLngBounds(routeCoords), {
         padding: [60, 60],
         maxZoom: 16
       });
-    } else if (routeCoords.length <= 1 && !isNavigating && !pickingMode) {
-      map.setView([39.6542, 66.9597], 13);
     }
   }, [
     routeCoords, 
@@ -1020,6 +1042,79 @@ export default function RoutePlannerMap({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 5. Top Guidance Banner for 2-Click Setup (A then B) */}
+      {!isNavigating && (
+        <div className="absolute top-4 left-4 sm:left-1/2 sm:-translate-x-1/2 z-[400] max-w-[calc(100%-170px)] sm:max-w-md pointer-events-auto">
+          {!startPoint && (
+            <div className="bg-white/95 backdrop-blur-md border border-emerald-400 px-3.5 py-2 rounded-2xl shadow-lg flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2">
+              <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                A
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black text-slate-800 leading-tight">
+                  1-bosqich: Boshlanish (A) nuqtasini bosing
+                </p>
+                <p className="text-[10px] text-slate-500 truncate">
+                  Xaritadan yoki istalgan TJM ustiga bosing
+                </p>
+              </div>
+            </div>
+          )}
+
+          {startPoint && !endPoint && (
+            <div className="bg-white/95 backdrop-blur-md border border-rose-400 px-3.5 py-2 rounded-2xl shadow-lg flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2">
+              <span className="w-6 h-6 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                B
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black text-slate-800 leading-tight">
+                  2-bosqich: Borish (B) manzilini bosing
+                </p>
+                <p className="text-[10px] text-slate-500 truncate">
+                  Xaritadan ikkinchi nuqtani bosing
+                </p>
+              </div>
+              {onClearRoute && (
+                <button
+                  type="button"
+                  onClick={onClearRoute}
+                  className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer shrink-0"
+                >
+                  Bekor qilish
+                </button>
+              )}
+            </div>
+          )}
+
+          {startPoint && endPoint && (
+            <div className="bg-white/95 backdrop-blur-md border border-blue-200 px-3.5 py-2 rounded-2xl shadow-lg flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2">
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                ✓
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black text-slate-900 leading-tight">
+                  Marshrut: {formatDistance(totalDistance)}
+                </p>
+                <p className="text-[10px] text-emerald-600 font-semibold truncate">
+                  {matchedTJMs.length} ta TJM yo'l bo'yida
+                </p>
+              </div>
+              {onClearRoute && (
+                <button
+                  type="button"
+                  onClick={onClearRoute}
+                  className="px-2.5 py-1 rounded-xl text-[11px] font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                  title="Nuqtalarni tozalash"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Qayta</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

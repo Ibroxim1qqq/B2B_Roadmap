@@ -9,7 +9,7 @@ import {
 import { 
   Navigation, MapPin, ArrowDownUp, Search, Compass, 
   CheckCircle2, Clock, Phone, ChevronRight, Eye, Layers, 
-  Route as RouteIcon, Sparkles, Check, Crosshair, X, LocateFixed
+  Route as RouteIcon, Sparkles, Check, Crosshair, X, LocateFixed, RotateCcw
 } from 'lucide-react';
 import { getCallUrl } from '../../lib/utils';
 
@@ -74,57 +74,8 @@ export default function RoutePlannerView({
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const [showSidebarInNav, setShowSidebarInNav] = useState<boolean>(false);
 
-  // 1. Initialize Start Point:
-  // If user GPS is in Samarkand region (< 80km), use GPS.
-  // Otherwise, default to Samarqand markazi (Registon) so it doesn't cross the country.
-  // NO destination TJM is auto-selected!
-  useEffect(() => {
-    if (startPoint) return;
-
-    const applyLocation = (lat: number, lng: number) => {
-      const dKm = haversineMeters(lat, lng, REGISTON_LAT, REGISTON_LNG) / 1000;
-      if (dKm <= 80) {
-        setStartPoint({
-          lat,
-          lng,
-          name: 'Mening joriy joylashuvim (GPS)'
-        });
-        setStartQuery('Mening joriy joylashuvim (GPS)');
-      } else {
-        // Outside Samarkand: default to central Samarkand
-        setStartPoint({
-          lat: REGISTON_LAT,
-          lng: REGISTON_LNG,
-          name: 'Samarqand markazi (Registon)'
-        });
-        setStartQuery('Samarqand markazi (Registon)');
-      }
-    };
-
-    if (userLat && userLng) {
-      applyLocation(userLat, userLng);
-    } else if (typeof window !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => applyLocation(pos.coords.latitude, pos.coords.longitude),
-        () => {
-          setStartPoint({
-            lat: REGISTON_LAT,
-            lng: REGISTON_LNG,
-            name: 'Samarqand markazi (Registon)'
-          });
-          setStartQuery('Samarqand markazi (Registon)');
-        },
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
-    } else {
-      setStartPoint({
-        lat: REGISTON_LAT,
-        lng: REGISTON_LNG,
-        name: 'Samarqand markazi (Registon)'
-      });
-      setStartQuery('Samarqand markazi (Registon)');
-    }
-  }, [userLat, userLng]);
+  // Default: Start Point and End Point are BOTH null initially!
+  // First click on map selects Point A, second click selects Point B!
 
   // Filtered dropdown suggestions
   const startSuggestions = useMemo(() => {
@@ -248,7 +199,7 @@ export default function RoutePlannerView({
     setIsStartOpen(false);
   };
 
-  // Handle map click picking
+  // Handle map click picking (1st click = Point A, 2nd click = Point B)
   const handleMapClick = (lat: number, lng: number) => {
     const nearby = objects.find(o => {
       if (!o.latitude || !o.longitude) return false;
@@ -266,11 +217,37 @@ export default function RoutePlannerView({
       setStartPoint(pt);
       setStartQuery(pointName);
       setPickingMode(null);
+      if (endPoint) {
+        handleCalculateRoute(pt, endPoint);
+      }
     } else if (pickingMode === 'B') {
       const pt = { lat, lng, name: pointName };
       setEndPoint(pt);
       setEndQuery(pointName);
       setPickingMode(null);
+      if (startPoint) {
+        handleCalculateRoute(startPoint, pt);
+      }
+    } else {
+      // Natural 2-click workflow:
+      if (!startPoint) {
+        // 1-bosqich: A nuqta belgilanadi va A iconi chiqadi!
+        const pt = { lat, lng, name: pointName };
+        setStartPoint(pt);
+        setStartQuery(pointName);
+      } else if (!endPoint) {
+        // 2-bosqich: B nuqta belgilanadi, B iconi chiqadi va marshrut hisoblanadi!
+        const pt = { lat, lng, name: pointName };
+        setEndPoint(pt);
+        setEndQuery(pointName);
+        handleCalculateRoute(startPoint, pt);
+      } else {
+        // Ikkala nuqta ham mavjud bo'lsa: borish manzilini yangilash
+        const pt = { lat, lng, name: pointName };
+        setEndPoint(pt);
+        setEndQuery(pointName);
+        handleCalculateRoute(startPoint, pt);
+      }
     }
   };
 
@@ -286,10 +263,16 @@ export default function RoutePlannerView({
       setStartPoint(pt);
       setStartQuery(pt.name);
       setPickingMode(null);
+      if (endPoint) {
+        handleCalculateRoute(pt, endPoint);
+      }
     } else {
       setEndPoint(pt);
       setEndQuery(pt.name);
       setPickingMode(null);
+      if (startPoint) {
+        handleCalculateRoute(startPoint, pt);
+      }
     }
   };
 
@@ -302,6 +285,9 @@ export default function RoutePlannerView({
     };
     setStartPoint(pt);
     setStartQuery(pt.name);
+    if (endPoint) {
+      handleCalculateRoute(pt, endPoint);
+    }
   };
 
   // Handle Dragging Pin B
@@ -313,6 +299,21 @@ export default function RoutePlannerView({
     };
     setEndPoint(pt);
     setEndQuery(pt.name);
+    if (startPoint) {
+      handleCalculateRoute(startPoint, pt);
+    }
+  };
+
+  // Clear / Reset all route points back to empty
+  const handleClearRoute = () => {
+    setStartPoint(null);
+    setStartQuery('');
+    setEndPoint(null);
+    setEndQuery('');
+    setRouteResult(null);
+    setMatchedTJMs([]);
+    setPickingMode(null);
+    setIsNavigating(false);
   };
 
   // Enter Picking Mode
@@ -405,6 +406,8 @@ export default function RoutePlannerView({
                     onClick={() => {
                       setStartQuery('');
                       setStartPoint(null);
+                      setRouteResult(null);
+                      setMatchedTJMs([]);
                     }}
                     className="text-slate-400 hover:text-slate-600 p-0.5"
                     title="Tozalash"
@@ -528,6 +531,8 @@ export default function RoutePlannerView({
                     onClick={() => {
                       setEndQuery('');
                       setEndPoint(null);
+                      setRouteResult(null);
+                      setMatchedTJMs([]);
                     }}
                     className="text-slate-400 hover:text-slate-600 p-0.5"
                     title="Tozalash"
@@ -620,16 +625,30 @@ export default function RoutePlannerView({
                 ))}
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleCalculateRoute(startPoint, endPoint)}
-                disabled={calculating || !startPoint || !endPoint}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer ml-auto"
-                title="Marshrutni hisoblash"
-              >
-                <RouteIcon className="w-3.5 h-3.5" />
-                <span>{calculating ? 'Hisoblanmoqda...' : 'Marshrut'}</span>
-              </button>
+              <div className="flex items-center gap-1.5 ml-auto">
+                {(startPoint || endPoint) && (
+                  <button
+                    type="button"
+                    onClick={handleClearRoute}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Barcha nuqtalarni tozalash"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Tozalash</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleCalculateRoute(startPoint, endPoint)}
+                  disabled={calculating || !startPoint || !endPoint}
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                  title="Marshrutni hisoblash"
+                >
+                  <RouteIcon className="w-3.5 h-3.5" />
+                  <span>{calculating ? 'Hisoblanmoqda...' : 'Marshrut'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -678,9 +697,13 @@ export default function RoutePlannerView({
                 <Compass className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-black text-slate-900">Qayerga bormoqchisiz?</h3>
+                <h3 className="text-sm font-black text-slate-900">
+                  {!startPoint ? "1-qadam: Boshlanish nuqtasini belgilang" : "2-qadam: Borish manzilini belgilang"}
+                </h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  Borish manzilini (B nuqta) qidiruv orqali kiriting yoki xaritadagi istalgan binoni bosing.
+                  {!startPoint 
+                    ? "Xaritada istalgan joyni yoki TJM-ni bosing (A nuqta belgilanadi), yoki [GPS] tugmasini bosing."
+                    : "Xaritada ikkinchi nuqtani bosing (B nuqta belgilanadi va marshrut avtomatik hisoblanadi)."}
                 </p>
               </div>
             </div>
@@ -885,6 +908,7 @@ export default function RoutePlannerView({
           onDragEndPoint={handleDragEndPoint}
           onSetPointFromObject={handleSetPointFromObject}
           onCancelPicking={() => setPickingMode(null)}
+          onClearRoute={handleClearRoute}
           isNavigating={isNavigating}
           onStopNavigation={() => {
             setIsNavigating(false);
