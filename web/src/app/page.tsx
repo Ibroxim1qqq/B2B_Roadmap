@@ -385,7 +385,7 @@ function HomeContent() {
 
         {/* Workspace Body (Center Canvas + Right Panel) */}
         <div className="flex-1 flex overflow-hidden min-h-0 relative">
-          <main className="flex-1 flex flex-col overflow-y-auto bg-slate-100 min-w-0">
+          <main className="flex-1 flex flex-col overflow-y-auto bg-slate-100 min-w-0 pb-16 lg:pb-0">
             {/* Map View: Kept mounted in DOM to prevent Leaflet container re-use crashes */}
             <div className={activeTab === 'map' ? 'flex flex-col flex-1 h-full min-w-0 overflow-hidden' : 'hidden'}>
             {/* SuperAdmin View Indicator */}

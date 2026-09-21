@@ -10,7 +10,7 @@ out/
 dist/
 coverage/
 .agents/
-tests/
+/tests/
 __pycache__/
 *.pyc
 scraper/.env
