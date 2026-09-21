@@ -497,6 +497,8 @@ function HomeContent() {
               onSelectObject={handleSelectObject}
               selectedId={selectedId}
               onRecordVisit={handleRecordVisitForId}
+              currentUser={currentUser}
+              companyId={effectiveCompanyId}
             />
           )}
 

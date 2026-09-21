@@ -126,3 +126,25 @@ export interface UserProfile {
   company_name?: string;
   login?: string;
 }
+
+export interface SavedRoute {
+  id: string;
+  company_id: string;
+  user_id?: string;
+  user_name?: string;
+  start_name: string;
+  start_lat: number;
+  start_lng: number;
+  end_name: string;
+  end_lat: number;
+  end_lng: number;
+  distance_km: number;
+  duration_min: number;
+  tjm_count: number;
+  tjm_list: string;
+  buffer_radius_m: number;
+  notes?: string;
+  status?: string;
+  created_at: string;
+}
+

@@ -1,4 +1,4 @@
-import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData } from './types';
+import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute } from './types';
 import realSheetsData from './real-sheets-data.json';
 import { getRegionName, getDistrictName, getRegionBySoato } from './regions';
 
@@ -316,5 +316,22 @@ export const api = {
 
   getDistricts: async () => {
     return Object.entries(SOATO_DISTRICT_MAP).map(([id, name]) => ({ id, name }));
+  },
+
+  // Routes Management in Google Sheets
+  saveRoute: async (routeData: Partial<SavedRoute> & { tjm_list?: string }): Promise<{ success: boolean; routeId?: string; data?: any; error?: string }> => {
+    const res = await fetch('/api/routes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(routeData)
+    });
+    return await res.json();
+  },
+
+  getSavedRoutes: async (companyId?: string): Promise<{ success: boolean; data: SavedRoute[]; count?: number; error?: string }> => {
+    const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
+    const res = await fetch(`/api/routes${q}`, { cache: 'no-store' });
+    return await res.json();
   }
 };
+

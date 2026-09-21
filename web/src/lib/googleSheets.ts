@@ -808,3 +808,135 @@ export async function createCompanyCustomTJM(
   return { success: true, customId, data: rowRecord };
 }
 
+/* =========================================================================
+   ROUTES / NAVIGATOR TRIP STORAGE
+   ========================================================================= */
+
+export const ROUTE_HEADERS = [
+  'id', 'company_id', 'user_id', 'user_name',
+  'start_name', 'start_lat', 'start_lng',
+  'end_name', 'end_lat', 'end_lng',
+  'distance_km', 'duration_min', 'tjm_count', 'tjm_list',
+  'buffer_radius_m', 'notes', 'status', 'created_at'
+];
+
+/**
+ * Save planned route to Routes sheet in Google Sheets
+ */
+export async function saveRouteToSheet(routeData: {
+  company_id: string;
+  user_id?: string;
+  user_name?: string;
+  start_name: string;
+  start_lat: number;
+  start_lng: number;
+  end_name: string;
+  end_lat: number;
+  end_lng: number;
+  distance_km: number;
+  duration_min: number;
+  tjm_count: number;
+  tjm_list: string;
+  buffer_radius_m: number;
+  notes?: string;
+  status?: string;
+}) {
+  const sheets = await getSheetsClient();
+  const routeId = `route_${Date.now()}`;
+  const now = new Date().toISOString();
+
+  const record: Record<string, string> = {
+    id: routeId,
+    company_id: routeData.company_id || 'comp_default',
+    user_id: routeData.user_id || '',
+    user_name: routeData.user_name || 'Menejer',
+    start_name: routeData.start_name || '',
+    start_lat: String(routeData.start_lat || ''),
+    start_lng: String(routeData.start_lng || ''),
+    end_name: routeData.end_name || '',
+    end_lat: String(routeData.end_lat || ''),
+    end_lng: String(routeData.end_lng || ''),
+    distance_km: String(routeData.distance_km || 0),
+    duration_min: String(routeData.duration_min || 0),
+    tjm_count: String(routeData.tjm_count || 0),
+    tjm_list: routeData.tjm_list || '',
+    buffer_radius_m: String(routeData.buffer_radius_m || 200),
+    notes: routeData.notes || '',
+    status: routeData.status || 'Rejalashtirilgan',
+    created_at: now
+  };
+
+  const rowData = ROUTE_HEADERS.map(h => record[h] || '');
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Routes!A1:R',
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: [rowData] }
+  });
+
+  return { success: true, routeId, data: record };
+}
+
+/**
+ * Fetch saved routes from Routes sheet in Google Sheets
+ */
+export async function getRoutesFromSheet(companyId?: string) {
+  try {
+    const sheets = await getSheetsClient();
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Routes!A1:R'
+    });
+
+    const values = res.data.values || [];
+    if (values.length <= 1) return [];
+
+    const headers: string[] = values[0];
+    const routes: any[] = [];
+
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      if (!row || !row[0]) continue;
+
+      const obj: Record<string, any> = {};
+      headers.forEach((h, idx) => {
+        obj[h] = row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+      });
+
+      // Filter by company_id if specified (superadmin 'system' can see all)
+      if (companyId && companyId !== 'system' && obj.company_id && obj.company_id !== companyId) {
+        continue;
+      }
+
+      routes.push({
+        id: obj.id,
+        company_id: obj.company_id,
+        user_id: obj.user_id,
+        user_name: obj.user_name,
+        start_name: obj.start_name,
+        start_lat: parseFloat(obj.start_lat) || 0,
+        start_lng: parseFloat(obj.start_lng) || 0,
+        end_name: obj.end_name,
+        end_lat: parseFloat(obj.end_lat) || 0,
+        end_lng: parseFloat(obj.end_lng) || 0,
+        distance_km: parseFloat(obj.distance_km) || 0,
+        duration_min: parseFloat(obj.duration_min) || 0,
+        tjm_count: parseInt(obj.tjm_count) || 0,
+        tjm_list: obj.tjm_list,
+        buffer_radius_m: parseInt(obj.buffer_radius_m) || 200,
+        notes: obj.notes,
+        status: obj.status,
+        created_at: obj.created_at
+      });
+    }
+
+    return routes.reverse(); // newest first
+  } catch (err) {
+    console.error('getRoutesFromSheet error:', err);
+    return [];
+  }
+}
+
+

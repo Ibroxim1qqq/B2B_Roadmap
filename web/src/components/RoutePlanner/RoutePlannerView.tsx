@@ -1,7 +1,9 @@
 'use client';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { MapObject } from '../../lib/types';
+import { MapObject, UserProfile, SavedRoute } from '../../lib/types';
+import { api } from '../../lib/api';
+import { getCurrentUser } from '../../lib/auth';
 import { 
   calculateOSRMRoute, calculateOSRMRouteMulti, findTJMsAlongRoute, RouteResult, TJMAlongRoute, 
   formatDistance, formatDuration, haversineMeters 
@@ -9,7 +11,8 @@ import {
 import { 
   Navigation, MapPin, ArrowDownUp, Search, Compass,
   CheckCircle2, Clock, Phone, ChevronRight, Eye, Layers, 
-  Route as RouteIcon, Sparkles, Check, Crosshair, X, LocateFixed, RotateCcw
+  Route as RouteIcon, Sparkles, Check, Crosshair, X, LocateFixed, RotateCcw,
+  BookmarkCheck, Bookmark, Calendar, Building2, User, Loader2
 } from 'lucide-react';
 
 
@@ -35,6 +38,8 @@ interface RoutePlannerViewProps {
   onSelectObject: (id: string) => void;
   selectedId: string | null;
   onRecordVisit?: (id: string) => Promise<void>;
+  currentUser?: UserProfile | null;
+  companyId?: string;
 }
 
 const REGISTON_LAT = 39.6542;
@@ -46,8 +51,29 @@ export default function RoutePlannerView({
   userLng,
   onSelectObject,
   selectedId,
-  onRecordVisit
+  onRecordVisit,
+  currentUser,
+  companyId
 }: RoutePlannerViewProps) {
+  // Multi-Company User Context
+  const [activeUser, setActiveUser] = useState<UserProfile | null>(currentUser || null);
+  useEffect(() => {
+    if (currentUser) {
+      setActiveUser(currentUser);
+    } else {
+      const u = getCurrentUser();
+      if (u) setActiveUser(u);
+    }
+  }, [currentUser]);
+
+  // Route saving & Saved routes modal state
+  const [isSavingRoute, setIsSavingRoute] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [showSavedRoutesModal, setShowSavedRoutesModal] = useState(false);
+  const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
+  const [loadingSavedRoutes, setLoadingSavedRoutes] = useState(false);
+  const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
+
   // Point A (Start) & Point B (End)
   const [startQuery, setStartQuery] = useState('');
   const [endQuery, setEndQuery] = useState('');
@@ -412,6 +438,113 @@ export default function RoutePlannerView({
     setActiveMobileTab('map');
   };
 
+  // Fetch saved routes from Google Sheets
+  const fetchSavedRoutes = useCallback(async () => {
+    setLoadingSavedRoutes(true);
+    try {
+      const user = activeUser || getCurrentUser();
+      const compId = companyId || user?.company_id;
+      const res = await api.getSavedRoutes(compId);
+      if (res.success && Array.isArray(res.data)) {
+        setSavedRoutes(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching saved routes:', err);
+    } finally {
+      setLoadingSavedRoutes(false);
+    }
+  }, [activeUser, companyId]);
+
+  useEffect(() => {
+    if (showSavedRoutesModal) {
+      fetchSavedRoutes();
+    }
+  }, [showSavedRoutesModal, fetchSavedRoutes]);
+
+  // Save current route to Google Sheets (Routes sheet)
+  const handleSaveRouteToSheets = async () => {
+    if (!startPoint || !endPoint || !routeResult) {
+      alert('Iltimos, avval marshrutni tanlang (A va B nuqtalar)');
+      return;
+    }
+
+    setIsSavingRoute(true);
+    setSaveSuccessMsg(null);
+
+    try {
+      const user = activeUser || getCurrentUser();
+      const compId = companyId || user?.company_id || 'comp_default';
+      const uId = user?.user_id || user?.id || '';
+      const uName = user?.name || 'Menejer';
+
+      // Format TJMs list into string
+      const tjmListString = matchedTJMs.map(t => 
+        `#${t.orderNumber} ${t.object.tjm_name || t.object.object_name} (${t.object.district_name || ''})`
+      ).join(' | ');
+
+      const distKm = Math.round((routeResult.distanceMeters / 1000) * 10) / 10;
+      const durMin = Math.round(routeResult.durationSeconds / 60);
+
+      const routePayload: Partial<SavedRoute> & { tjm_list: string } = {
+        company_id: compId,
+        user_id: uId,
+        user_name: uName,
+        start_name: startPoint.name || 'A nuqta',
+        start_lat: startPoint.lat,
+        start_lng: startPoint.lng,
+        end_name: endPoint.name || 'B nuqta',
+        end_lat: endPoint.lat,
+        end_lng: endPoint.lng,
+        distance_km: distKm,
+        duration_min: durMin,
+        tjm_count: matchedTJMs.length,
+        tjm_list: tjmListString,
+        buffer_radius_m: bufferRadius,
+        notes: `${matchedTJMs.length} ta TJM topildi. Qidiruv radiusi: ${bufferRadius}m`,
+        status: 'Rejalashtirilgan'
+      };
+
+      const res = await api.saveRoute(routePayload);
+      if (res.success) {
+        setSaveSuccessMsg(`Marshrut Google Sheets (Routes) jadvaliga saqlandi! (${matchedTJMs.length} ta TJM)`);
+        setTimeout(() => setSaveSuccessMsg(null), 5000);
+      } else {
+        alert('Marshrutni saqlashda xatolik: ' + (res.error || 'Noma\'lum xatolik'));
+      }
+    } catch (e: any) {
+      console.error('Error saving route:', e);
+      alert('Marshrutni saqlashda xatolik: ' + e.message);
+    } finally {
+      setIsSavingRoute(false);
+    }
+  };
+
+  // Load a saved route from Google Sheets into the planner
+  const handleLoadSavedRoute = (route: SavedRoute) => {
+    const startPt = {
+      lat: route.start_lat,
+      lng: route.start_lng,
+      name: route.start_name
+    };
+    const endPt = {
+      lat: route.end_lat,
+      lng: route.end_lng,
+      name: route.end_name
+    };
+
+    setStartPoint(startPt);
+    setStartQuery(route.start_name);
+    setEndPoint(endPt);
+    setEndQuery(route.end_name);
+
+    if (route.buffer_radius_m) {
+      setBufferRadius(route.buffer_radius_m);
+    }
+
+    setShowSavedRoutesModal(false);
+    handleCalculateRoute(startPt, endPt);
+  };
+
   return (
     <div className="flex-1 flex flex-col md:flex-row h-full min-w-0 bg-slate-100 overflow-hidden">
       {/* 1. Left Panel: Inputs & Route Results List */}
@@ -428,27 +561,39 @@ export default function RoutePlannerView({
               <div>
                 <h2 className="text-base font-black text-slate-900 leading-tight">Navigator</h2>
               </div>
-
             </div>
 
-            {/* Mobile Tab Switcher */}
-            <div className="flex md:hidden bg-slate-100 p-1 rounded-xl text-xs font-bold">
+            <div className="flex items-center gap-2">
+              {/* Saved Routes Modal Trigger */}
               <button
-                onClick={() => setActiveMobileTab('list')}
-                className={`px-3 py-1 rounded-lg transition-colors ${
-                  activeMobileTab === 'list' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
-                }`}
+                type="button"
+                onClick={() => setShowSavedRoutesModal(true)}
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer shadow-2xs"
+                title="Google Sheets'da saqlangan marshrutlar"
               >
-                Ro'yxat
+                <Bookmark className="w-3.5 h-3.5 text-blue-600" />
+                <span>Saqlanganlar</span>
               </button>
-              <button
-                onClick={() => setActiveMobileTab('map')}
-                className={`px-3 py-1 rounded-lg transition-colors ${
-                  activeMobileTab === 'map' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
-                }`}
-              >
-                Xarita
-              </button>
+
+              {/* Mobile Tab Switcher */}
+              <div className="flex md:hidden bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                <button
+                  onClick={() => setActiveMobileTab('list')}
+                  className={`px-3 py-1 rounded-lg transition-colors ${
+                    activeMobileTab === 'list' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
+                  }`}
+                >
+                  Ro'yxat
+                </button>
+                <button
+                  onClick={() => setActiveMobileTab('map')}
+                  className={`px-3 py-1 rounded-lg transition-colors ${
+                    activeMobileTab === 'map' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
+                  }`}
+                >
+                  Xarita
+                </button>
+              </div>
             </div>
           </div>
 
@@ -717,6 +862,14 @@ export default function RoutePlannerView({
         {/* Route Stats Summary Banner with Real In-Car Navigation Button */}
         {routeResult && (
           <div className="p-3 bg-blue-50/70 border-b border-blue-100 shrink-0 space-y-2.5">
+            {/* Success Alert when route saved to Google Sheets */}
+            {saveSuccessMsg && (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-1 shadow-2xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="flex-1 leading-snug">{saveSuccessMsg}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-white p-2 rounded-xl border border-blue-100/80 shadow-2xs">
                 <p className="text-[10px] text-slate-400 font-semibold uppercase">Masofa</p>
@@ -738,15 +891,38 @@ export default function RoutePlannerView({
               </div>
             </div>
 
-            {/* In-Car Live Navigation Button (Yandex "Поехали" / Google Maps "Start") */}
-            <button
-              type="button"
-              onClick={handleStartInCarNavigation}
-              className="w-full py-3 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2.5 transition-all shadow-md bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-600/30 active:scale-[0.98] cursor-pointer"
-            >
-              <Navigation className="w-4 h-4 fill-white" />
-              <span className="text-sm">Boshlash (Men turgan joydan A va B ga) 🧭</span>
-            </button>
+            {/* Action Buttons: Save to Google Sheets & Live Navigation */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleSaveRouteToSheets}
+                disabled={isSavingRoute}
+                className="py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 active:scale-[0.98] cursor-pointer disabled:opacity-60"
+                title="Google Sheets (Routes) jadvaliga saqlash"
+              >
+                {isSavingRoute ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+                    <span>Saqlanmoqda...</span>
+                  </>
+                ) : (
+                  <>
+                    <BookmarkCheck className="w-4 h-4 text-emerald-600" />
+                    <span>Saqlash</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleStartInCarNavigation}
+                className="py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-md bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-600/30 active:scale-[0.98] cursor-pointer"
+                title="Jonli haydovchi navigator rejimini ishga tushirish"
+              >
+                <Navigation className="w-3.5 h-3.5 fill-white" />
+                <span>Boshlash 🧭</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -988,6 +1164,163 @@ export default function RoutePlannerView({
           </button>
         </div>
       </div>
+
+      {/* 3. Saved Routes Modal (Google Sheets Routes) */}
+      {showSavedRoutesModal && (
+        <div 
+          className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSavedRoutesModal(false);
+          }}
+        >
+          <div className="bg-white w-full max-w-2xl max-h-[85vh] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <BookmarkCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 leading-tight">
+                    Saqlangan Marshrutlar (Google Sheets)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Google Sheets &quot;Routes&quot; varag&apos;ida saqlangan marshrutlar
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={fetchSavedRoutes}
+                  disabled={loadingSavedRoutes}
+                  className="p-2 hover:bg-slate-200/70 rounded-xl text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                  title="Yangilash"
+                >
+                  <RotateCcw className={`w-4 h-4 ${loadingSavedRoutes ? 'animate-spin' : ''}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSavedRoutesModal(false)}
+                  className="p-2 hover:bg-slate-200/70 rounded-xl text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                  title="Yopish"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {loadingSavedRoutes ? (
+                <div className="py-16 text-center text-slate-400 space-y-2">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" />
+                  <p className="text-xs font-semibold">Google Sheets&apos;dan yuklanmoqda...</p>
+                </div>
+              ) : savedRoutes.length === 0 ? (
+                <div className="py-16 text-center text-slate-400 space-y-2">
+                  <Compass className="w-10 h-10 mx-auto text-slate-300" />
+                  <p className="text-sm font-bold text-slate-700">Hozircha saqlangan marshrutlar yo&apos;q</p>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    A va B nuqtalarni xaritadan tanlang va &quot;Saqlash&quot; tugmasi orqali marshrutni Google Sheets jadvaliga kiriting.
+                  </p>
+                </div>
+              ) : (
+                savedRoutes.map((rt) => {
+                  const isExpanded = expandedRouteId === rt.id;
+                  return (
+                    <div
+                      key={rt.id}
+                      className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-xs transition-all space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1 min-w-0 flex-1">
+                          {/* A & B Points */}
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                            <span className="w-4 h-4 rounded-full bg-emerald-500 text-white font-black text-[9px] flex items-center justify-center shrink-0">
+                              A
+                            </span>
+                            <span className="truncate">{rt.start_name}</span>
+                            <span className="text-slate-400">➔</span>
+                            <span className="w-4 h-4 rounded-full bg-rose-500 text-white font-black text-[9px] flex items-center justify-center shrink-0">
+                              B
+                            </span>
+                            <span className="truncate">{rt.end_name}</span>
+                          </div>
+
+                          {/* Meta: User & Date */}
+                          <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium">
+                            {rt.user_name && (
+                              <span className="flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                {rt.user_name}
+                              </span>
+                            )}
+                            {rt.created_at && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(rt.created_at).toLocaleDateString('uz-UZ', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            )}
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold">
+                              {rt.status || 'Rejalashtirilgan'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Load Route Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleLoadSavedRoute(rt)}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs shadow-blue-500/20 transition-all cursor-pointer"
+                          title="Ushbu marshrutni xaritaga yuklash"
+                        >
+                          <RouteIcon className="w-3.5 h-3.5" />
+                          <span>Ochish</span>
+                        </button>
+                      </div>
+
+                      {/* Route metrics badge row */}
+                      <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100 flex-wrap">
+                        <span>📏 {rt.distance_km} km</span>
+                        <span className="text-slate-300">•</span>
+                        <span>⏱️ {rt.duration_min} daq</span>
+                        <span className="text-slate-300">•</span>
+                        <span className="text-emerald-700 font-bold">🏢 {rt.tjm_count} ta TJM</span>
+                        <span className="text-slate-300">•</span>
+                        <span className="text-slate-400">Radius: {rt.buffer_radius_m || 200}m</span>
+
+                        {rt.tjm_list && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedRouteId(isExpanded ? null : rt.id)}
+                            className="ml-auto text-[10px] text-blue-600 hover:underline cursor-pointer"
+                          >
+                            {isExpanded ? "TJM ro'yxatini yashirish" : "TJM ro'yxatini ko'rish"}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Expanded TJMs list */}
+                      {isExpanded && rt.tjm_list && (
+                        <div className="p-2.5 bg-slate-50/80 rounded-xl text-xs text-slate-700 border border-slate-200/80 max-h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                          {rt.tjm_list}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
