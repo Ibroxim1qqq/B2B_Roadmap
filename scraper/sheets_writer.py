@@ -120,3 +120,33 @@ def log_sync(spreadsheet, stats):
         worksheet.append_row([timestamp, stats['total'], stats['added'], stats['updated'], stats['failed']])
     except Exception as e:
         logger.error(f"Failed to write to SyncLog: {e}")
+
+def create_notifications_sheet(spreadsheet):
+    """Create Notifications tab if it doesn't exist"""
+    try:
+        worksheet = spreadsheet.worksheet("Notifications")
+    except gspread.exceptions.WorksheetNotFound:
+        worksheet = spreadsheet.add_worksheet(title="Notifications", rows=1000, cols=8)
+        worksheet.update('A1', [['id', 'timestamp', 'title', 'summary', 'new_count', 'by_region_json', 'new_objects_json']])
+        logger.info("Created Notifications sheet")
+
+def log_notification(spreadsheet, notif_data):
+    """Save a weekly sync notification to the Notifications sheet"""
+    try:
+        create_notifications_sheet(spreadsheet)
+        worksheet = spreadsheet.worksheet("Notifications")
+        import json
+        row = [
+            str(notif_data.get('id', '')),
+            str(notif_data.get('timestamp', datetime.datetime.now().isoformat())),
+            str(notif_data.get('title', '')),
+            str(notif_data.get('summary', '')),
+            str(notif_data.get('new_count', 0)),
+            json.dumps(notif_data.get('by_region', {}), ensure_ascii=False),
+            json.dumps(notif_data.get('new_objects', []), ensure_ascii=False)
+        ]
+        worksheet.append_row(row, value_input_option='USER_ENTERED')
+        logger.info(f"Notification logged to Notifications sheet: {notif_data.get('id')}")
+    except Exception as e:
+        logger.error(f"Failed to log notification: {e}")
+

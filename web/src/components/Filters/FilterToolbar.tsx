@@ -1,5 +1,5 @@
 'use client';
-import { MapPin, RefreshCw, Building, ChevronDown, Navigation, Check, Globe } from 'lucide-react';
+import { MapPin, RefreshCw, Building, ChevronDown, Navigation, Check, Globe, Sparkles } from 'lucide-react';
 import { useState, useRef, useMemo } from 'react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { REGION_LIST, getDistrictsForRegion, getRegionName } from '../../lib/regions';
@@ -13,6 +13,9 @@ interface FilterToolbarProps {
   onStatusChange: (status: string) => void;
   onMyLocation: () => void;
   locating?: boolean;
+  filterOnlyNew?: boolean;
+  onToggleOnlyNew?: () => void;
+  newObjectsCount?: number;
 }
 
 export default function FilterToolbar({
@@ -23,7 +26,10 @@ export default function FilterToolbar({
   selectedStatus,
   onStatusChange,
   onMyLocation,
-  locating = false
+  locating = false,
+  filterOnlyNew = false,
+  onToggleOnlyNew,
+  newObjectsCount = 0
 }: FilterToolbarProps) {
   const [regionOpen, setRegionOpen] = useState(false);
   const [districtOpen, setDistrictOpen] = useState(false);
@@ -198,6 +204,28 @@ export default function FilterToolbar({
             </div>
           )}
         </div>
+
+        {/* Yangi qo'shilganlar Filter Button */}
+        {onToggleOnlyNew && (
+          <button
+            type="button"
+            onClick={onToggleOnlyNew}
+            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer ${
+              filterOnlyNew
+                ? 'bg-amber-500 border-amber-600 text-white shadow-xs'
+                : 'bg-white border-slate-200 hover:border-amber-300 text-slate-700 hover:text-amber-700'
+            }`}
+            title="Haftalik yangilanishda yangi qo'shilgan binolar"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${filterOnlyNew ? 'text-white' : 'text-amber-500'}`} />
+            <span>Yangi qo'shilganlar</span>
+            {newObjectsCount > 0 && (
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${filterOnlyNew ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-800'}`}>
+                {newObjectsCount}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Locate Me Action Button */}

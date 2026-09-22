@@ -7,6 +7,7 @@ import './tier2-boundaries.test.ts';
 import './tier3-combinations.test.ts';
 import './tier4-scenarios.test.ts';
 import './tier5-routes-and-sheets.test.ts';
+import './tier6-weekly-sync-and-notifications.test.ts';
 
 // --- CLI Parsing ---
 const args = process.argv.slice(2);
@@ -101,7 +102,7 @@ async function runTests(): Promise<void> {
 
   // Tier breakdown
   console.log(dim('\nBreakdown by Tier:'));
-  for (let t = 1; t <= 4; t++) {
+  for (let t = 1; t <= 6; t++) {
     const tierResults = results.filter((r) => r.test.metadata.tier === t);
     if (tierResults.length > 0) {
       const p = tierResults.filter((r) => r.passed).length;
@@ -113,7 +114,7 @@ async function runTests(): Promise<void> {
 
   // Milestone breakdown
   console.log(dim('\nBreakdown by Milestone:'));
-  for (let m = 1; m <= 4; m++) {
+  for (let m = 1; m <= 6; m++) {
     const mResults = results.filter((r) => r.test.metadata.milestone === m);
     if (mResults.length > 0) {
       const p = mResults.filter((r) => r.passed).length;

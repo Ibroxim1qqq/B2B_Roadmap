@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { 
   Building2, Users, Shield, Plus, ArrowLeft, LogOut, CheckCircle2, 
   ExternalLink, Search, RefreshCw, KeyRound, UserCheck, Eye, Layers, 
-  AlertCircle, X, ChevronRight, UserPlus, Building
+  AlertCircle, X, ChevronRight, UserPlus, Building, Sparkles
 } from 'lucide-react';
 import { getCurrentUser, logout } from '../../lib/auth';
 import { api } from '../../lib/api';
@@ -43,6 +43,24 @@ export default function AdminPage() {
   // Filters
   const [companySearch, setCompanySearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
+  const [syncingScraper, setSyncingScraper] = useState(false);
+
+  const handleTriggerWeeklySync = async () => {
+    if (!confirm("O'zbekiston bo'ylab ko'p qavatli uy-joylarni avtomatik skanerlash va yangilarini bazaga qo'shishni fonda boshlaysizmi?")) return;
+    setSyncingScraper(true);
+    try {
+      const res = await api.triggerWeeklySync();
+      if (res && res.success) {
+        alert(res.message || "Haftalik skaner muvaffaqiyatli ishga tushirildi!");
+      } else {
+        alert("Xatolik: " + (res?.error || 'Skanerni ishga tushirib bo\'lmadi'));
+      }
+    } catch (e: any) {
+      alert("Xatolik: " + (e.message || ''));
+    } finally {
+      setSyncingScraper(false);
+    }
+  };
 
   // Auth Guard
   useEffect(() => {
@@ -211,6 +229,17 @@ export default function AdminPage() {
             <Building2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Xaritaga o'tish</span>
           </Link>
+
+          {/* Haftalik Skaner Button */}
+          <button
+            onClick={handleTriggerWeeklySync}
+            disabled={syncingScraper}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+            title="O'zbekiston bo'ylab yangi ko'p qavatli uylarni avtomatik skanerlash"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${syncingScraper ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{syncingScraper ? 'Skanerlanmoqda...' : 'Haftalik Skaner'}</span>
+          </button>
 
           {/* Sync Button */}
           <button

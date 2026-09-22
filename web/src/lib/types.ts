@@ -148,3 +148,32 @@ export interface SavedRoute {
   created_at: string;
 }
 
+export interface NewBuildingItem {
+  source_id: string;
+  object_name: string;
+  region_soato: string;
+  region_name?: string;
+  district_soato: string;
+  district_name?: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  floors?: string;
+  apartment_count?: string;
+  customer?: string;
+  builder?: string;
+  created_at?: string;
+}
+
+export interface WeeklySyncNotification {
+  id: string;
+  title: string;
+  summary: string;
+  timestamp: string;
+  new_count: number;
+  by_region: Record<string, number>;
+  new_objects: NewBuildingItem[];
+  is_read?: boolean;
+}
+
+

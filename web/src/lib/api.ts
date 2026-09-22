@@ -1,4 +1,4 @@
-import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute } from './types';
+import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute, WeeklySyncNotification } from './types';
 import realSheetsData from './real-sheets-data.json';
 import { getRegionName, getDistrictName, getRegionBySoato } from './regions';
 
@@ -332,6 +332,26 @@ export const api = {
     const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
     const res = await fetch(`/api/routes${q}`, { cache: 'no-store' });
     return await res.json();
+  },
+
+  // Notifications and Weekly Sync
+  getNotifications: async (): Promise<{ success: boolean; data: WeeklySyncNotification[]; count?: number; error?: string }> => {
+    try {
+      const res = await fetch(`/api/notifications?t=${Date.now()}`, { cache: 'no-store' });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, data: [], error: e.message };
+    }
+  },
+
+  triggerWeeklySync: async (): Promise<{ success: boolean; message?: string; error?: string }> => {
+    try {
+      const res = await fetch('/api/cron/weekly-sync', { method: 'POST' });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
   }
 };
+
 

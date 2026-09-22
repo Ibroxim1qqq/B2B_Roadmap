@@ -6,7 +6,7 @@ import { useObjects } from '../hooks/useObjects';
 import { useLocation } from '../hooks/useLocation';
 import { useDistance } from '../hooks/useDistance';
 import { api } from '../lib/api';
-import { ObjectDetail, CustomField, MapObject, UserProfile } from '../lib/types';
+import { ObjectDetail, CustomField, MapObject, UserProfile, WeeklySyncNotification, NewBuildingItem } from '../lib/types';
 import { getCurrentUser, setCurrentUser as saveCurrentUser, logout as authLogout } from '../lib/auth';
 import Navbar from '../components/Header/Navbar';
 import LeftSidebar from '../components/Sidebar/LeftSidebar';
@@ -17,10 +17,14 @@ import BottomSheet from '../components/UI/BottomSheet';
 import ObjectsTableView from '../components/ObjectsTable/ObjectsTableView';
 import DashboardView from '../components/Dashboard/DashboardView';
 import CustomFieldManager from '../components/CustomFields/CustomFieldManager';
-import { Building2, MapPin, CheckCircle2, Clock } from 'lucide-react';
+import { Building2, MapPin, CheckCircle2, Clock, Bell } from 'lucide-react';
 import MobileBottomNav from '../components/Navigation/MobileBottomNav';
 
 const CreateObjectModal = dynamic(() => import('../components/ObjectPanel/CreateObjectModal'), { 
+  ssr: false 
+});
+
+const NotificationDrawer = dynamic(() => import('../components/Notifications/NotificationDrawer'), { 
   ssr: false 
 });
 
@@ -92,6 +96,62 @@ function HomeContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
+  // Notifications State (Weekly Sync)
+  const [notifications, setNotifications] = useState<WeeklySyncNotification[]>([]);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [showNotifToast, setShowNotifToast] = useState(false);
+  const [filterOnlyNew, setFilterOnlyNew] = useState(false);
+
+  useEffect(() => {
+    async function loadNotifications() {
+      try {
+        const res = await api.getNotifications();
+        if (res.success && Array.isArray(res.data)) {
+          setNotifications(res.data);
+          const userId = currentUser?.id || currentUser?.user_id || 'guest';
+          const readKey = `b2b_read_notifs_${userId}`;
+          const readIds: string[] = JSON.parse(localStorage.getItem(readKey) || '[]');
+          const unread = res.data.filter(n => !readIds.includes(n.id));
+          const totalNew = unread.reduce((acc, curr) => acc + (curr.new_count || (curr.new_objects?.length || 1)), 0);
+          setUnreadNotifCount(totalNew);
+          if (totalNew > 0) {
+            setShowNotifToast(true);
+          }
+        }
+      } catch (err) {
+        console.warn('Notifications load error:', err);
+      }
+    }
+    loadNotifications();
+  }, [currentUser]);
+
+  const newObjectIds = useMemo(() => {
+    const ids = new Set<string>();
+    notifications.forEach(n => {
+      (n.new_objects || []).forEach(o => ids.add(String(o.source_id)));
+    });
+    return ids;
+  }, [notifications]);
+
+  const handleMarkAllAsRead = () => {
+    const userId = currentUser?.id || currentUser?.user_id || 'guest';
+    const allIds = notifications.map(n => n.id);
+    localStorage.setItem(`b2b_read_notifs_${userId}`, JSON.stringify(allIds));
+    setUnreadNotifCount(0);
+    setShowNotifToast(false);
+  };
+
+  const handleSelectNewBuilding = (building: NewBuildingItem) => {
+    setActiveTab('map');
+    if (building.region_soato) {
+      setSelectedRegion(building.region_soato);
+    }
+    setSelectedDistrict('');
+    setSelectedStatus('Barcha statuslar');
+    setSelectedId(String(building.source_id));
+  };
+
   const handleLogin = (user: UserProfile) => {
     saveCurrentUser(user);
     setLocalCurrentUser(user);
@@ -107,6 +167,11 @@ function HomeContent() {
   // Real-time active filtering for region, search, district, and status
   const activeFilteredMarkers = useMemo(() => {
     return markers.filter(m => {
+      // 0. Only New Filter
+      if (filterOnlyNew && !newObjectIds.has(String(m.source_id))) {
+        return false;
+      }
+
       // 0. Region Filter
       if (selectedRegion && m.region_soato !== selectedRegion) {
         return false;
@@ -381,6 +446,8 @@ function HomeContent() {
           onOpenCreate={() => setIsCreateOpen(true)}
           currentUser={currentUser}
           onLogout={handleLogout}
+          onOpenNotifications={() => setIsNotificationOpen(true)}
+          unreadNotificationCount={unreadNotifCount}
         />
 
         {/* Workspace Body (Center Canvas + Right Panel) */}
@@ -472,6 +539,9 @@ function HomeContent() {
               onStatusChange={setSelectedStatus}
               onMyLocation={handleLocateMe}
               locating={locating}
+              filterOnlyNew={filterOnlyNew}
+              onToggleOnlyNew={() => setFilterOnlyNew(!filterOnlyNew)}
+              newObjectsCount={newObjectIds.size}
             />
 
             {/* 3. Fullscreen Map Area */}
@@ -663,6 +733,60 @@ function HomeContent() {
       <MobileBottomNav
         activeTab={activeTab}
         onTabChange={handleTabChange}
+      />
+
+      {/* Floating Notification Toast for Weekly Sync */}
+      {showNotifToast && unreadNotifCount > 0 && (
+        <div className="fixed bottom-20 lg:bottom-6 right-6 z-[1500] max-w-sm bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700/80 flex items-start gap-3 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs shadow-blue-500/30">
+            <Bell className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider">Haftalik yangilanish</span>
+              <button 
+                type="button"
+                onClick={() => setShowNotifToast(false)}
+                className="text-slate-400 hover:text-white transition-colors text-xs leading-none p-1 cursor-pointer"
+                title="Yopish"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs font-semibold text-slate-100 mt-1">
+              O'zbekiston bo'ylab <strong>{unreadNotifCount} ta</strong> yangi ko'p qavatli bino qo'shildi!
+            </p>
+            <div className="flex items-center gap-2 mt-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNotifToast(false);
+                  setIsNotificationOpen(true);
+                }}
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer shadow-xs"
+              >
+                Ko'rish
+              </button>
+              <button
+                type="button"
+                onClick={handleMarkAllAsRead}
+                className="px-2.5 py-1 text-slate-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+              >
+                O'qilgan deb belgilash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Weekly Sync Notification Drawer */}
+      <NotificationDrawer
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        notifications={notifications}
+        onSelectBuilding={handleSelectNewBuilding}
+        onMarkAllAsRead={handleMarkAllAsRead}
+        unreadCount={unreadNotifCount}
       />
     </div>
   );

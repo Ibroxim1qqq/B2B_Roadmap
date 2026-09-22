@@ -1,0 +1,81 @@
+[
+  {
+    "id": "notif_2026_w38",
+    "title": "Haftalik yangilanish: O'zbekiston bo'ylab 12 ta yangi ko'p qavatli bino aniqlandi",
+    "summary": "O'zbekiston bo'ylab ko'p xonadonli uy-joylar monitoringi bo'yicha 12 ta yangi obyekt aniqlanib, bazaga muvaffaqiyatli kiritildi.",
+    "timestamp": "2026-09-22T08:00:00.000Z",
+    "new_count": 12,
+    "by_region": {
+      "1718": 4,
+      "1726": 5,
+      "1706": 2,
+      "1730": 1
+    },
+    "new_objects": [
+      {
+        "source_id": "89012",
+        "object_name": "Samarqand shahar Mirzo Ulug'bek ko'chasida 16 qavatli zamonaviy ko'p xonadonli turar-joy majmuasi",
+        "region_soato": "1718",
+        "region_name": "Samarqand viloyati",
+        "district_soato": "1718401",
+        "district_name": "Samarqand shahar",
+        "address": "Samarqand sh., Mirzo Ulug'bek ko'chasi 45-uy",
+        "latitude": 39.6542,
+        "longitude": 66.9597,
+        "floors": "16",
+        "apartment_count": "180",
+        "customer": "SAMARQAND MODERN CITY MCHJ",
+        "builder": "ORIENT STRUKTUR BUILDING",
+        "created_at": "2026-09-22T06:30:00.000Z"
+      },
+      {
+        "source_id": "89013",
+        "object_name": "Toshkent shahri Chilonzor tumani 12-mavzeda 12 qavatli ko'p xonadonli turar-joy binosi",
+        "region_soato": "1726",
+        "region_name": "Toshkent shahri",
+        "district_soato": "1726262",
+        "district_name": "Chilonzor tumani",
+        "address": "Toshkent sh., Chilonzor tumani, 12-mavze",
+        "latitude": 41.2785,
+        "longitude": 69.2012,
+        "floors": "12",
+        "apartment_count": "96",
+        "customer": "CHILONZOR INVEST GRAND MCHJ",
+        "builder": "TASHKENT PREMIER BUILD",
+        "created_at": "2026-09-22T07:15:00.000Z"
+      },
+      {
+        "source_id": "89014",
+        "object_name": "Samarqand tumani Quyi Turk hududida 9 qavatli 2 blokli turar-joy kompleksi",
+        "region_soato": "1718",
+        "region_name": "Samarqand viloyati",
+        "district_soato": "1718235",
+        "district_name": "Samarqand tumani",
+        "address": "Samarqand t., Quyi Turk mahallasi",
+        "latitude": 39.6105,
+        "longitude": 66.9124,
+        "floors": "9",
+        "apartment_count": "72",
+        "customer": "TURK ESTATE CONSTRUCT MCHJ",
+        "builder": "REGISTON LUX STROY",
+        "created_at": "2026-09-22T07:45:00.000Z"
+      },
+      {
+        "source_id": "89015",
+        "object_name": "Buxoro shahri Ibn Sino ko'chasida 10 qavatli turar-joy va savdo majmuasi",
+        "region_soato": "1706",
+        "region_name": "Buxoro viloyati",
+        "district_soato": "1706401",
+        "district_name": "Buxoro shahar",
+        "address": "Buxoro sh., Ibn Sino ko'chasi 18",
+        "latitude": 39.7747,
+        "longitude": 64.4286,
+        "floors": "10",
+        "apartment_count": "110",
+        "customer": "BUKHARA GOLDEN TOWER MCHJ",
+        "builder": "ARK BUILDING GROUP",
+        "created_at": "2026-09-22T08:00:00.000Z"
+      }
+    ]
+  }
+]

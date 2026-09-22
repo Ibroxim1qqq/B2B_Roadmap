@@ -1,4 +1,4 @@
-import { Building2, RefreshCw, Plus, LogOut, ChevronDown, UserCheck, ChevronRight, Map, Navigation, BarChart3, SlidersHorizontal, Shield } from 'lucide-react';
+import { Building2, RefreshCw, Plus, LogOut, ChevronDown, UserCheck, ChevronRight, Map, Navigation, BarChart3, SlidersHorizontal, Shield, Bell } from 'lucide-react';
 import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { UserProfile } from '../../lib/types';
@@ -11,6 +11,8 @@ interface NavbarProps {
   onOpenCreate?: () => void;
   currentUser?: UserProfile | null;
   onLogout?: () => void;
+  onOpenNotifications?: () => void;
+  unreadNotificationCount?: number;
 }
 
 const TAB_INFO: Record<string, { title: string; icon: any }> = {
@@ -27,7 +29,9 @@ export default function Navbar({
   syncing = false,
   onOpenCreate,
   currentUser,
-  onLogout
+  onLogout,
+  onOpenNotifications,
+  unreadNotificationCount = 0
 }: NavbarProps) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -119,6 +123,22 @@ export default function Navbar({
           <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
           <span className="hidden sm:inline">{syncing ? 'Sinxronlanmoqda...' : 'Sinxronlash'}</span>
         </button>
+
+        {/* Notifications Bell button */}
+        {onOpenNotifications && (
+          <button
+            onClick={onOpenNotifications}
+            className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border border-slate-200 hover:border-blue-200 transition-all cursor-pointer"
+            title="Bildirishnomalar va yangi TJM-lar"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-xs animate-pulse">
+                {unreadNotificationCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* User Pill with Dropdown */}
         <div ref={dropdownRef} className="relative pl-1 sm:pl-2 border-l border-slate-200">

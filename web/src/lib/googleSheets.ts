@@ -939,4 +939,137 @@ export async function getRoutesFromSheet(companyId?: string) {
   }
 }
 
+export const NOTIFICATION_HEADERS = [
+  'id', 'timestamp', 'title', 'summary', 'new_count', 'by_region_json', 'new_objects_json'
+];
+
+/**
+ * Ensure Notifications tab exists in Google Sheets
+ */
+export async function ensureNotificationsSheet(sheets: any) {
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+    const exists = meta.data.sheets?.some((s: any) => s.properties?.title === 'Notifications');
+    if (!exists) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        requestBody: {
+          requests: [{
+            addSheet: { properties: { title: 'Notifications' } }
+          }]
+        }
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: 'Notifications!A1:G1',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [NOTIFICATION_HEADERS] }
+      });
+    }
+  } catch (e) {
+    console.error('ensureNotificationsSheet error:', e);
+  }
+}
+
+/**
+ * Save notification report to Google Sheets Notifications sheet
+ */
+export async function saveNotificationToSheet(notif: any) {
+  try {
+    const sheets = await getSheetsClient();
+    await ensureNotificationsSheet(sheets);
+    const row = [
+      notif.id || `notif_${Date.now()}`,
+      notif.timestamp || new Date().toISOString(),
+      notif.title || '',
+      notif.summary || '',
+      String(notif.new_count || 0),
+      typeof notif.by_region === 'string' ? notif.by_region : JSON.stringify(notif.by_region || {}),
+      typeof notif.new_objects === 'string' ? notif.new_objects : JSON.stringify(notif.new_objects || [])
+    ];
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'Notifications!A1:G',
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [row] }
+    });
+
+    return { success: true, id: row[0] };
+  } catch (e: any) {
+    console.error('saveNotificationToSheet error:', e);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * Fetch notifications from Google Sheets Notifications sheet (with local JSON fallback)
+ */
+export async function getNotificationsFromSheet(): Promise<any[]> {
+  const notifsCachePath = path.join(process.cwd(), 'src', 'lib', 'notifications.json');
+  try {
+    const sheets = await getSheetsClient();
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Notifications!A1:G'
+    });
+    const values = res.data.values || [];
+    if (values.length > 1) {
+      const headers: string[] = values[0];
+      const notifications: any[] = [];
+
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        if (!row || !row[0]) continue;
+        const obj: Record<string, any> = {};
+        headers.forEach((h, idx) => {
+          obj[h] = row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+        });
+
+        let byRegion = {};
+        let newObjects = [];
+        try {
+          byRegion = obj.by_region_json ? JSON.parse(obj.by_region_json) : {};
+        } catch (e) {}
+        try {
+          newObjects = obj.new_objects_json ? JSON.parse(obj.new_objects_json) : [];
+        } catch (e) {}
+
+        notifications.push({
+          id: obj.id,
+          timestamp: obj.timestamp,
+          title: obj.title,
+          summary: obj.summary,
+          new_count: parseInt(obj.new_count) || newObjects.length,
+          by_region: byRegion,
+          new_objects: newObjects
+        });
+      }
+
+      const sorted = notifications.reverse();
+      // Cache locally
+      try {
+        fs.writeFileSync(notifsCachePath, JSON.stringify(sorted, null, 2), 'utf-8');
+      } catch (e) {}
+
+      return sorted;
+    }
+  } catch (err) {
+    console.warn('Google Sheets notifications fetch failed, attempting local fallback:', err);
+  }
+
+  // Fallback to local file if sheets call fails or has no rows
+  if (fs.existsSync(notifsCachePath)) {
+    try {
+      const raw = fs.readFileSync(notifsCachePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {}
+  }
+
+  return [];
+}
+
+
 
