@@ -23,6 +23,7 @@ interface MapContainerProps {
   userLat?: number | null;
   userLng?: number | null;
   selectedRegion?: string;
+  focusTarget?: { lat: number; lng: number; zoom?: number; timestamp?: number } | null;
 }
 
 function escapeHtml(str: string): string {
@@ -33,12 +34,21 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
-export default function MapContainer({ markers, onSelect, selectedId, userLat, userLng, selectedRegion }: MapContainerProps) {
+export default function MapContainer({ 
+  markers, 
+  onSelect, 
+  selectedId, 
+  userLat, 
+  userLng, 
+  selectedRegion,
+  focusTarget 
+}: MapContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const layerRef = useRef<any>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
+  const markerMapRef = useRef<Map<string, L.Marker>>(new Map());
   const [mapType, setMapType] = useState<'map' | 'satellite'>('map');
 
   // Pin icons differentiated by CRM status (Visited: Green, Filled: Blue, Empty: Amber, Paused: Slate)
@@ -270,6 +280,7 @@ export default function MapContainer({ markers, onSelect, selectedId, userLat, u
         onSelect(marker.source_id);
       });
 
+      markerMapRef.current.set(String(marker.source_id), leafletMarker);
       layer.addLayer(leafletMarker);
     });
 
@@ -277,14 +288,51 @@ export default function MapContainer({ markers, onSelect, selectedId, userLat, u
     layerRef.current = layer;
   }, [markers, selectedId, onSelect, createPinIcon, createClusterCustomIcon]);
 
-  // 4. Focus / Fly to Selected Object
+  // 3b. Invalidate size whenever container geometry changes (drawer toggle, responsive layout)
+  useEffect(() => {
+    if (!containerRef.current || !mapRef.current) return;
+    const map = mapRef.current;
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // 4a. Direct Focus Target (e.g. from Notifications "Xaritada ko'rish")
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focusTarget) return;
+    map.flyTo([focusTarget.lat, focusTarget.lng], focusTarget.zoom || 16, { duration: 1.2 });
+
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+      if (selectedId) {
+        const m = markerMapRef.current.get(String(selectedId));
+        if (m) {
+          m.openPopup();
+        }
+      }
+    }, 1300);
+    return () => clearTimeout(timer);
+  }, [focusTarget, selectedId]);
+
+  // 4b. Focus / Fly to Selected Object
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedId) return;
-    const found = markers.find(m => m.source_id === selectedId);
+    const found = markers.find(m => String(m.source_id) === String(selectedId));
     if (found && found.latitude && found.longitude) {
-      map.flyTo([found.latitude, found.longitude], 15, { duration: 1 });
+      map.flyTo([found.latitude, found.longitude], 16, { duration: 1.2 });
     }
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+      const m = markerMapRef.current.get(String(selectedId));
+      if (m) {
+        m.openPopup();
+      }
+    }, 1300);
+    return () => clearTimeout(timer);
   }, [selectedId, markers]);
 
   // 5. User Location Marker
@@ -305,19 +353,26 @@ export default function MapContainer({ markers, onSelect, selectedId, userLat, u
     }
   }, [userLat, userLng]);
 
-  // 6. Fly to Selected Region
+  // 6. Fly to Selected Region (only when not viewing a specific object)
+  const prevRegionRef = useRef<string | undefined>(selectedRegion);
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (selectedRegion) {
-      const reg = getRegionBySoato(selectedRegion);
-      if (reg) {
-        map.flyTo(reg.center, reg.zoom, { duration: 1.2 });
+    if (prevRegionRef.current !== selectedRegion) {
+      prevRegionRef.current = selectedRegion;
+      // Do not override fly-to if user is focusing on a specific building
+      if (selectedId || focusTarget) return;
+
+      if (selectedRegion) {
+        const reg = getRegionBySoato(selectedRegion);
+        if (reg) {
+          map.flyTo(reg.center, reg.zoom, { duration: 1.2 });
+        }
+      } else {
+        map.flyTo(UZBEKISTAN_CENTER, UZBEKISTAN_ZOOM, { duration: 1.2 });
       }
-    } else {
-      map.flyTo(UZBEKISTAN_CENTER, UZBEKISTAN_ZOOM, { duration: 1.2 });
     }
-  }, [selectedRegion]);
+  }, [selectedRegion, selectedId, focusTarget]);
 
   // 7. Invalidate size on resize
   useEffect(() => {

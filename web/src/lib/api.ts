@@ -129,6 +129,104 @@ function formatRowToObjectDetail(r: any): ObjectDetail {
   };
 }
 
+export function formatBuildingItemToObjectDetail(b: any): ObjectDetail {
+  const lat = parseFloat(b.latitude) || 39.6542;
+  const lng = parseFloat(b.longitude) || 66.9597;
+  const regSoato = String(b.region_soato || '1718');
+  const regName = b.region_name || getRegionName(regSoato) || 'O\'zbekiston';
+  const district = b.district_name || getDistrictName(String(b.district_soato || ''), regSoato) || regName;
+
+  return {
+    source: {
+      source_id: String(b.source_id),
+      object_name: b.object_name || 'Yangi qurilish obyekti',
+      region_soato: regSoato,
+      region_name: regName,
+      district_soato: b.district_soato || '',
+      district_name: district,
+      address: b.address || `${regName}`,
+      latitude: lat,
+      longitude: lng,
+      status: 'Qurilish jarayonida',
+      status_id: 1,
+      sphere_id: '57',
+      sphere_name: "Ko'p xonadonli uy-joylar",
+      customer: b.customer || '—',
+      designer: '—',
+      builder: b.builder || '—',
+      difficulty: 'II-toifa',
+      floors: (b.floors && b.floors !== '0') ? String(b.floors).trim() : '—',
+      apartment_count: b.apartment_count ? String(b.apartment_count).trim() : '0',
+      area: (b.apartment_count && b.apartment_count !== '0') ? `${b.apartment_count} xonadon` : '—',
+      block_count: '1',
+      deadline: '—',
+      created_at: b.created_at || '',
+      task_id: '',
+      passport_url: '',
+      source_url: `https://dshk.shaffofqurilish.uz/object/${b.source_id}`,
+      image_url: ''
+    },
+    internal: {
+      tjm_name: '',
+      phone: '',
+      sales_office: '',
+      manager_name: '',
+      manager_phone: '',
+      telegram: '',
+      instagram: '',
+      notes: 'Yangi haftalik monitoring orqali aniqlangan',
+      priority: 'Yuqori',
+      last_visit: '',
+      visited_by: '',
+      visit_lat_lng: ''
+    }
+  };
+}
+
+export function formatBuildingItemToMapObject(b: any): MapObject {
+  const lat = parseFloat(b.latitude) || 39.6542;
+  const lng = parseFloat(b.longitude) || 66.9597;
+  const regSoato = String(b.region_soato || '1718');
+  const regName = b.region_name || getRegionName(regSoato) || 'O\'zbekiston';
+  const district = b.district_name || getDistrictName(String(b.district_soato || ''), regSoato) || regName;
+
+  return {
+    source_id: String(b.source_id),
+    object_name: b.object_name || 'Yangi qurilish obyekti',
+    tjm_name: '',
+    latitude: lat,
+    longitude: lng,
+    status: 'Qurilish jarayonida',
+    status_id: 1,
+    region_soato: regSoato,
+    region_name: regName,
+    district_soato: b.district_soato || '',
+    district_name: district,
+    sphere_name: "Ko'p xonadonli uy-joylar",
+    phone: '',
+    sales_office: '',
+    manager_name: '',
+    manager_phone: '',
+    floors: (b.floors && b.floors !== '0') ? String(b.floors).trim() : '—',
+    apartment_count: b.apartment_count ? String(b.apartment_count).trim() : '0',
+    area: (b.apartment_count && b.apartment_count !== '0') ? `${b.apartment_count} xonadon` : '—',
+    image_url: '',
+    has_internal: false,
+    is_fully_filled: false,
+    is_visited: false,
+    last_visit: '',
+    visited_by: '',
+    builder: b.builder || '—',
+    customer: b.customer || '—',
+    address: b.address || '',
+    deadline: '—',
+    telegram: '',
+    instagram: '',
+    priority: 'Yuqori',
+    notes: 'Yangi haftalik monitoring'
+  };
+}
+
 export const api = {
   getMarkers: async (companyId?: string): Promise<MapObject[]> => {
     try {
@@ -159,10 +257,28 @@ export const api = {
       }
     } catch (e) {}
 
-    const idx = rows.findIndex((r: any) => String(r.source_id).trim() === String(id).trim());
+    const cleanId = String(id).trim();
+    const idx = rows.findIndex((r: any) => String(r.source_id).trim() === cleanId);
     if (idx !== -1) {
       return formatRowToObjectDetail(rows[idx]);
     }
+
+    // Check notifications for newly scraped buildings
+    try {
+      const notifsRes = await fetch(`/api/notifications?t=${Date.now()}`, { cache: 'no-store' });
+      if (notifsRes.ok) {
+        const notifs = await notifsRes.json();
+        if (notifs && notifs.data && Array.isArray(notifs.data)) {
+          for (const notif of notifs.data) {
+            const foundInNotif = (notif.new_objects || []).find((b: any) => String(b.source_id).trim() === cleanId);
+            if (foundInNotif) {
+              return formatBuildingItemToObjectDetail(foundInNotif);
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
     return formatRowToObjectDetail(rows[0]);
   },
 

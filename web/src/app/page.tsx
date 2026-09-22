@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useObjects } from '../hooks/useObjects';
 import { useLocation } from '../hooks/useLocation';
 import { useDistance } from '../hooks/useDistance';
-import { api } from '../lib/api';
+import { api, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject } from '../lib/api';
 import { ObjectDetail, CustomField, MapObject, UserProfile, WeeklySyncNotification, NewBuildingItem } from '../lib/types';
 import { getCurrentUser, setCurrentUser as saveCurrentUser, logout as authLogout } from '../lib/auth';
 import Navbar from '../components/Header/Navbar';
@@ -40,13 +40,13 @@ const DynamicMap = dynamic(() => import('../components/Map/MapContainer'), {
   )
 });
 
-const RoutePlannerView = dynamic(() => import('../components/RoutePlanner/RoutePlannerView'), {
+const RoutePlannerView = dynamic(() => import('../components/RoutePlanner/RoutePlannerView'), { 
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-slate-100">
-      <div className="text-slate-500 font-semibold text-xs flex items-center gap-2">
-        <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
-        <span>Yo'l-yo'lakay navigator yuklanmoqda...</span>
+    <div className="w-full h-full flex items-center justify-center bg-slate-100 p-8">
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-6 h-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+        <span className="text-xs font-semibold text-slate-500">Navigator yuklanmoqda...</span>
       </div>
     </div>
   )
@@ -63,10 +63,11 @@ function HomeContent() {
 
   useEffect(() => {
     const user = getCurrentUser();
-    setLocalCurrentUser(user);
-    setAuthChecked(true);
     if (!user) {
       router.replace('/login');
+    } else {
+      setLocalCurrentUser(user);
+      setAuthChecked(true);
     }
   }, [router]);
 
@@ -95,6 +96,7 @@ function HomeContent() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [focusTarget, setFocusTarget] = useState<{ lat: number; lng: number; zoom?: number; timestamp: number } | null>(null);
 
   // Notifications State (Weekly Sync)
   const [notifications, setNotifications] = useState<WeeklySyncNotification[]>([]);
@@ -128,14 +130,64 @@ function HomeContent() {
     setUnreadNotifCount(0);
   };
 
-  const handleSelectNewBuilding = (building: NewBuildingItem) => {
+  // Combine base markers with any new objects discovered via notifications
+  const allMarkers = useMemo(() => {
+    const map = new Map<string, MapObject>();
+    for (const m of markers) {
+      map.set(String(m.source_id), m);
+    }
+    for (const notif of notifications) {
+      for (const b of notif.new_objects || []) {
+        const id = String(b.source_id);
+        if (!map.has(id)) {
+          map.set(id, formatBuildingItemToMapObject(b));
+        }
+      }
+    }
+    return Array.from(map.values());
+  }, [markers, notifications]);
+
+  const handleSelectNewBuilding = async (building: NewBuildingItem) => {
     setActiveTab('map');
     if (building.region_soato) {
       setSelectedRegion(building.region_soato);
+    } else {
+      setSelectedRegion('');
     }
     setSelectedDistrict('');
     setSelectedStatus('Barcha statuslar');
-    setSelectedId(String(building.source_id));
+    setSearchQuery('');
+
+    const id = String(building.source_id);
+    setSelectedId(id);
+    setIsEditing(false);
+
+    // Provide instant details so the side drawer / BottomSheet renders immediately
+    const immediateDetail = formatBuildingItemToObjectDetail(building);
+    setObjectDetail(immediateDetail);
+
+    // Trigger high-priority map fly-to to exact coordinates
+    if (building.latitude && building.longitude) {
+      setFocusTarget({
+        lat: building.latitude,
+        lng: building.longitude,
+        zoom: 16,
+        timestamp: Date.now()
+      });
+    }
+
+    // Load any saved CRM data from server in background
+    setDetailLoading(true);
+    try {
+      const serverDetail = await api.getObject(id, effectiveCompanyId);
+      if (serverDetail && serverDetail.source && String(serverDetail.source.source_id) === id) {
+        setObjectDetail(serverDetail);
+      }
+    } catch (err) {
+      console.warn('Background getObject for new building:', err);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const handleLogin = (user: UserProfile) => {
@@ -152,7 +204,7 @@ function HomeContent() {
 
   // Real-time active filtering for region, search, district, and status
   const activeFilteredMarkers = useMemo(() => {
-    return markers.filter(m => {
+    return allMarkers.filter(m => {
       // 0. Region Filter
       if (selectedRegion && m.region_soato !== selectedRegion) {
         return false;
@@ -201,7 +253,7 @@ function HomeContent() {
 
       return true;
     });
-  }, [markers, selectedRegion, searchQuery, selectedDistrict, selectedStatus]);
+  }, [allMarkers, selectedRegion, searchQuery, selectedDistrict, selectedStatus]);
 
   // Calculate distances if user location exists
   const objectsWithDistance = useDistance(activeFilteredMarkers, location.lat, location.lng);
@@ -210,14 +262,14 @@ function HomeContent() {
   // Real-time calculation for the 4 top summary cards (reflects selected region or nationwide)
   const stats = useMemo(() => {
     const targetPool = selectedRegion 
-      ? markers.filter(m => m.region_soato === selectedRegion)
-      : markers;
+      ? allMarkers.filter(m => m.region_soato === selectedRegion)
+      : allMarkers;
     const total = targetPool.length;
     const visited = targetPool.filter(m => Boolean(m.is_visited || m.last_visit)).length;
     const filled = targetPool.filter(m => Boolean(m.has_internal || m.tjm_name || m.phone || m.manager_name)).length;
     const notVisited = Math.max(0, total - visited);
     return { total, visited, filled, notVisited };
-  }, [markers, selectedRegion]);
+  }, [allMarkers, selectedRegion]);
 
   // Load custom field settings
   useEffect(() => {
@@ -532,6 +584,7 @@ function HomeContent() {
                   userLat={location.lat}
                   userLng={location.lng}
                   selectedRegion={selectedRegion}
+                  focusTarget={focusTarget}
                 />
               </div>
             </div>
@@ -539,7 +592,7 @@ function HomeContent() {
 
           {activeTab === 'route' && (
             <RoutePlannerView
-              objects={markers}
+              objects={allMarkers}
               userLat={location.lat}
               userLng={location.lng}
               onSelectObject={handleSelectObject}
@@ -589,7 +642,7 @@ function HomeContent() {
         {/* Right Drawer / Sidebar (ONLY FOR MAP TAB) */}
         {selectedId && activeTab === 'map' && (
           <div className="hidden xl:flex w-[410px] shrink-0 h-full">
-            {detailLoading ? (
+            {detailLoading && !objectDetail ? (
               <div className="w-full h-full flex items-center justify-center bg-white border-l border-slate-200">
                 <div className="text-xs font-semibold text-slate-400 flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
@@ -627,7 +680,7 @@ function HomeContent() {
               isOpen={!!selectedId}
               onClose={() => { setSelectedId(null); setIsEditing(false); }}
             >
-              {detailLoading ? (
+              {detailLoading && !objectDetail ? (
                 <div className="p-8 text-center text-slate-500 text-xs">Yuklanmoqda...</div>
               ) : objectDetail ? (
                 isEditing ? (
@@ -668,7 +721,7 @@ function HomeContent() {
           }}
         >
           <div className="bg-white w-full max-w-xl h-[85vh] rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col animate-in zoom-in-95 duration-150">
-            {detailLoading ? (
+            {detailLoading && !objectDetail ? (
               <div className="p-12 flex flex-col items-center justify-center gap-3 h-full">
                 <div className="w-6 h-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
                 <p className="text-xs text-slate-400 font-semibold">Yuklanmoqda...</p>

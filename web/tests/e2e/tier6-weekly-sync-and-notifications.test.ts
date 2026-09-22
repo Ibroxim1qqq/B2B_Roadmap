@@ -121,3 +121,23 @@ defineTest('app/page.tsx integrates NotificationDrawer, toast alert, and notific
   assert.match(content, /unreadNotifCount/, 'page.tsx must maintain unreadNotifCount state');
   assert.match(content, /handleSelectNewBuilding/, 'page.tsx must handle selecting building from notification');
 });
+
+defineTest('Notification building selection connects directly to map focus and flexible UI detail panels', {
+  tier: 6, milestone: 6, feature: 'NOTIF_MAP_AND_UI_FOCUS',
+  description: 'Selecting building from notifications triggers map flight, markers sync, and instant details panel'
+}, () => {
+  const pageContent = readSrcFile('app/page.tsx');
+  assert.match(pageContent, /focusTarget/, 'page.tsx must provide focusTarget state');
+  assert.match(pageContent, /allMarkers/, 'page.tsx must merge notification objects into allMarkers');
+  assert.match(pageContent, /formatBuildingItemToObjectDetail/, 'page.tsx must format immediate details for instant UI rendering');
+  assert.match(pageContent, /<DynamicMap[^>]+focusTarget=\{focusTarget\}/, 'page.tsx must pass focusTarget to DynamicMap');
+
+  const mapContent = readSrcFile('components/Map/MapContainer.tsx');
+  assert.match(mapContent, /focusTarget/, 'MapContainer must accept focusTarget prop');
+  assert.match(mapContent, /ResizeObserver/, 'MapContainer must adapt to flexible UI drawers with ResizeObserver');
+
+  const apiContent = readSrcFile('lib/api.ts');
+  assert.match(apiContent, /formatBuildingItemToObjectDetail/, 'api.ts must export formatBuildingItemToObjectDetail');
+  assert.match(apiContent, /formatBuildingItemToMapObject/, 'api.ts must export formatBuildingItemToMapObject');
+});
+
