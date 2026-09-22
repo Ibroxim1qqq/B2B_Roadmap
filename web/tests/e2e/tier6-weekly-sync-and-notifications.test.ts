@@ -99,14 +99,16 @@ defineTest('NotificationDrawer.tsx exists and renders weekly notifications with 
   assert.match(content, /onSelectBuilding/, 'Must handle onSelectBuilding callback');
 });
 
-defineTest('FilterToolbar.tsx includes Yangi qo\'shilganlar toggle filter', {
-  tier: 6, milestone: 6, feature: 'FILTER_TOOLBAR_NEW',
-  description: 'FilterToolbar provides button to isolate new buildings from the latest weekly scan'
+defineTest('FilterToolbar.tsx maintains clean map controls and NotificationDrawer filters older than 30 days', {
+  tier: 6, milestone: 6, feature: 'FILTER_TOOLBAR_CLEAN',
+  description: 'Map toolbar is free of notification buttons and NotificationDrawer enforces 30-day auto expiry'
 }, () => {
-  const content = readSrcFile('components/Filters/FilterToolbar.tsx');
-  assert.match(content, /filterOnlyNew/, 'FilterToolbarProps must support filterOnlyNew');
-  assert.match(content, /onToggleOnlyNew/, 'FilterToolbarProps must support onToggleOnlyNew');
-  assert.ok(content.includes('Yangi qo\'shilganlar'), 'FilterToolbar must render Yangi qo\'shilganlar button');
+  const toolbarContent = readSrcFile('components/Filters/FilterToolbar.tsx');
+  assert.ok(!toolbarContent.includes('filterOnlyNew'), 'FilterToolbar must not have filterOnlyNew prop');
+  
+  const drawerContent = readSrcFile('components/Notifications/NotificationDrawer.tsx');
+  assert.ok(drawerContent.includes('ONE_MONTH_MS') || drawerContent.includes('30 * 24 * 60 * 60 * 1000'), 'NotificationDrawer must enforce 30-day cutoff');
+  assert.match(drawerContent, /timeB\s*-\s*timeA/, 'NotificationDrawer must sort newest first');
 });
 
 defineTest('app/page.tsx integrates NotificationDrawer, toast alert, and notification state', {
