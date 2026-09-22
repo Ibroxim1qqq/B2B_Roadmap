@@ -1010,6 +1010,7 @@ export async function getNotificationsFromSheet(): Promise<any[]> {
   const notifsCachePath = path.join(process.cwd(), 'src', 'lib', 'notifications.json');
   try {
     const sheets = await getSheetsClient();
+    await ensureNotificationsSheet(sheets);
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: 'Notifications!A1:G'
