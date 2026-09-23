@@ -176,4 +176,20 @@ export interface WeeklySyncNotification {
   is_read?: boolean;
 }
 
+export interface UserSession {
+  session_id: string;
+  user_id: string;
+  user_name: string;
+  login: string;
+  role: string;
+  company_id: string;
+  company_name: string;
+  action: 'login' | 'register' | 'logout';
+  ip_address: string;
+  user_agent: string;
+  timestamp: string;
+  created_at: string;
+}
+
+
 

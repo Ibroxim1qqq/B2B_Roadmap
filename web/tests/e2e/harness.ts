@@ -8,8 +8,8 @@ const __dirname = path.dirname(__filename);
 // --- Types & Interfaces ---
 
 export interface TestMetadata {
-  tier: 1 | 2 | 3 | 4 | 5 | 6;
-  milestone: 1 | 2 | 3 | 4 | 5 | 6;
+  tier: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  milestone: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   feature: string; // e.g. 'F1', 'F2', etc.
   description: string;
 }

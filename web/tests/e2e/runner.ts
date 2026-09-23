@@ -8,6 +8,7 @@ import './tier3-combinations.test.ts';
 import './tier4-scenarios.test.ts';
 import './tier5-routes-and-sheets.test.ts';
 import './tier6-weekly-sync-and-notifications.test.ts';
+import './tier7-user-sessions-and-audit.test.ts';
 
 // --- CLI Parsing ---
 const args = process.argv.slice(2);

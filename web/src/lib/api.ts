@@ -1,4 +1,4 @@
-import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute, WeeklySyncNotification } from './types';
+import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute, WeeklySyncNotification, UserSession } from './types';
 import realSheetsData from './real-sheets-data.json';
 import { getRegionName, getDistrictName, getRegionBySoato } from './regions';
 
@@ -466,6 +466,15 @@ export const api = {
       return await res.json();
     } catch (e: any) {
       return { success: false, error: e.message };
+    }
+  },
+
+  getUserSessions: async (limit: number = 100): Promise<{ success: boolean; data: UserSession[]; count?: number; error?: string }> => {
+    try {
+      const res = await fetch(`/api/admin/sessions?limit=${limit}&t=${Date.now()}`, { cache: 'no-store' });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, data: [], error: e.message };
     }
   }
 };

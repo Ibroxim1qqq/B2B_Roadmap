@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getUsersFromSheet, createUserInSheet, getCompaniesFromSheet } from '@/lib/googleSheets';
+import { getUsersFromSheet, createUserInSheet, getCompaniesFromSheet, recordUserSessionInSheet } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +53,20 @@ export async function POST(req: Request) {
       password: password.trim(),
       role: role ? role.trim() : 'manager'
     });
+
+    // Record user registration session in background
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
+    const userAgent = req.headers.get('user-agent') || 'Admin Dashboard';
+    recordUserSessionInSheet({
+      user_id: created.user_id,
+      user_name: created.name,
+      login: created.login,
+      role: created.role,
+      company_id: created.company_id,
+      action: 'register',
+      ip_address: ip,
+      user_agent: userAgent
+    }).catch(e => console.warn('Failed to record user registration audit log:', e));
 
     return NextResponse.json({ success: true, data: created });
   } catch (err: any) {

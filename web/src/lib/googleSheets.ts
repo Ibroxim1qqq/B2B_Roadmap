@@ -1072,5 +1072,163 @@ export async function getNotificationsFromSheet(): Promise<any[]> {
   return [];
 }
 
+export const SESSION_HEADERS = [
+  'session_id', 'user_id', 'user_name', 'login', 'role', 
+  'company_id', 'company_name', 'action', 'ip_address', 
+  'user_agent', 'timestamp', 'created_at'
+];
 
+/**
+ * Ensure Sessions tab exists in Google Sheets
+ */
+export async function ensureSessionsSheet(sheets: any) {
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+    const exists = meta.data.sheets?.some((s: any) => s.properties?.title === 'Sessions');
+    if (!exists) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        requestBody: {
+          requests: [{
+            addSheet: { properties: { title: 'Sessions' } }
+          }]
+        }
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: 'Sessions!A1:L1',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [SESSION_HEADERS] }
+      });
+    }
+  } catch (e) {
+    console.error('ensureSessionsSheet error:', e);
+  }
+}
 
+/**
+ * Record a user session/login event to Google Sheets Sessions tab
+ */
+export async function recordUserSessionInSheet(data: {
+  user_id?: string;
+  user_name?: string;
+  login?: string;
+  role?: string;
+  company_id?: string;
+  company_name?: string;
+  action?: 'login' | 'register' | 'logout';
+  ip_address?: string;
+  user_agent?: string;
+}) {
+  const sessionId = `sess_${Date.now()}`;
+  const now = new Date();
+  const timestamp = now.toISOString();
+  const createdAt = now.toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' });
+
+  const row = [
+    sessionId,
+    data.user_id || '',
+    data.user_name || '',
+    data.login || '',
+    data.role || 'manager',
+    data.company_id || '',
+    data.company_name || '',
+    data.action || 'login',
+    data.ip_address || '127.0.0.1',
+    data.user_agent || '',
+    timestamp,
+    createdAt
+  ];
+
+  // Try saving to Google Sheets
+  try {
+    const sheets = await getSheetsClient();
+    await ensureSessionsSheet(sheets);
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'Sessions!A1:L',
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [row] }
+    });
+  } catch (err) {
+    console.warn('Google Sheets session append error, saving to local cache:', err);
+  }
+
+  // Also cache locally in src/lib/sessions.json
+  const sessionsCachePath = path.join(process.cwd(), 'src', 'lib', 'sessions.json');
+  try {
+    let localSessions: any[] = [];
+    if (fs.existsSync(sessionsCachePath)) {
+      try {
+        localSessions = JSON.parse(fs.readFileSync(sessionsCachePath, 'utf-8'));
+        if (!Array.isArray(localSessions)) localSessions = [];
+      } catch (e) {}
+    }
+    const sessionObj = {
+      session_id: sessionId,
+      user_id: data.user_id || '',
+      user_name: data.user_name || '',
+      login: data.login || '',
+      role: data.role || 'manager',
+      company_id: data.company_id || '',
+      company_name: data.company_name || '',
+      action: data.action || 'login',
+      ip_address: data.ip_address || '127.0.0.1',
+      user_agent: data.user_agent || '',
+      timestamp,
+      created_at: createdAt
+    };
+    localSessions.unshift(sessionObj);
+    if (localSessions.length > 200) localSessions = localSessions.slice(0, 200);
+    fs.writeFileSync(sessionsCachePath, JSON.stringify(localSessions, null, 2), 'utf-8');
+  } catch (e) {}
+
+  return { success: true, session_id: sessionId };
+}
+
+/**
+ * Fetch user sessions from Google Sheets Sessions tab (with local JSON fallback)
+ */
+export async function getUserSessionsFromSheet(limit: number = 100): Promise<any[]> {
+  const sessionsCachePath = path.join(process.cwd(), 'src', 'lib', 'sessions.json');
+  try {
+    const sheets = await getSheetsClient();
+    await ensureSessionsSheet(sheets);
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Sessions!A1:L'
+    });
+    const values = res.data.values || [];
+    if (values.length > 1) {
+      const headers: string[] = values[0];
+      const sessions: any[] = [];
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        if (!row || !row[0]) continue;
+        const obj: Record<string, any> = {};
+        headers.forEach((h, idx) => {
+          obj[h] = row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+        });
+        sessions.push(obj);
+      }
+      const sorted = sessions.reverse().slice(0, limit);
+      try {
+        fs.writeFileSync(sessionsCachePath, JSON.stringify(sorted, null, 2), 'utf-8');
+      } catch (e) {}
+      return sorted;
+    }
+  } catch (err) {
+    console.warn('Google Sheets sessions fetch failed, using local fallback:', err);
+  }
+
+  if (fs.existsSync(sessionsCachePath)) {
+    try {
+      const raw = fs.readFileSync(sessionsCachePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.slice(0, limit);
+    } catch (e) {}
+  }
+
+  return [];
+}

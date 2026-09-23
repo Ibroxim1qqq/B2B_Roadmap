@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { 
   Building2, Users, Shield, Plus, ArrowLeft, LogOut, CheckCircle2, 
   ExternalLink, Search, RefreshCw, KeyRound, UserCheck, Eye, Layers, 
-  AlertCircle, X, ChevronRight, UserPlus, Building, Sparkles
+  AlertCircle, X, ChevronRight, UserPlus, Building, Sparkles,
+  Activity, Clock, Globe, LogIn, Laptop
 } from 'lucide-react';
 import { getCurrentUser, logout } from '../../lib/auth';
 import { api } from '../../lib/api';
-import { UserProfile, Company } from '../../lib/types';
+import { UserProfile, Company, UserSession } from '../../lib/types';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -19,8 +20,9 @@ export default function AdminPage() {
   // Data states
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<UserSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'view_as'>('companies');
+  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'sessions' | 'view_as'>('companies');
 
   // Modals & Forms
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
@@ -43,6 +45,8 @@ export default function AdminPage() {
   // Filters
   const [companySearch, setCompanySearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
+  const [sessionSearch, setSessionSearch] = useState('');
+  const [sessionActionFilter, setSessionActionFilter] = useState<'all' | 'login' | 'register'>('all');
   const [syncingScraper, setSyncingScraper] = useState(false);
 
   const handleTriggerWeeklySync = async () => {
@@ -81,9 +85,10 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [compRes, usersRes] = await Promise.all([
+      const [compRes, usersRes, sessionsRes] = await Promise.all([
         api.getCompanies(),
-        api.getUsers()
+        api.getUsers(),
+        api.getUserSessions(150)
       ]);
 
       if (compRes && compRes.success && compRes.data) {
@@ -95,6 +100,10 @@ export default function AdminPage() {
 
       if (usersRes && usersRes.success && usersRes.data) {
         setUsers(usersRes.data);
+      }
+
+      if (sessionsRes && sessionsRes.success && sessionsRes.data) {
+        setSessions(sessionsRes.data);
       }
     } catch (err) {
       console.error('Failed to load admin data:', err);
@@ -186,6 +195,20 @@ export default function AdminPage() {
     (u.company_name || '').toLowerCase().includes(userSearch.toLowerCase()) ||
     (u.role || '').toLowerCase().includes(userSearch.toLowerCase())
   );
+
+  const filteredSessions = sessions.filter(s => {
+    const q = sessionSearch.toLowerCase();
+    const matchesSearch = 
+      (s.user_name || '').toLowerCase().includes(q) ||
+      (s.login || '').toLowerCase().includes(q) ||
+      (s.company_name || '').toLowerCase().includes(q) ||
+      (s.ip_address || '').toLowerCase().includes(q) ||
+      (s.role || '').toLowerCase().includes(q) ||
+      (s.user_agent || '').toLowerCase().includes(q);
+    
+    if (sessionActionFilter === 'all') return matchesSearch;
+    return matchesSearch && s.action === sessionActionFilter;
+  });
 
   if (!authChecked || !currentUser) {
     return (
@@ -302,32 +325,32 @@ export default function AdminPage() {
 
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-6 h-6" />
+              <Activity className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Faol Kompaniyalar</p>
-              <p className="text-2xl font-black text-emerald-600 mt-0.5">
-                {companies.filter(c => c.status === 'active').length}
-              </p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tizimga Kirishlar</p>
+              <p className="text-2xl font-black text-emerald-600 mt-0.5">{sessions.length}</p>
             </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-              <Layers className="w-6 h-6" />
+              <CheckCircle2 className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Baza Obyektlari</p>
-              <p className="text-2xl font-black text-slate-900 mt-0.5">3,291</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Faol Kompaniyalar</p>
+              <p className="text-2xl font-black text-slate-900 mt-0.5">
+                {companies.filter(c => c.status === 'active').length}
+              </p>
             </div>
           </div>
         </div>
 
         {/* 2. Navigation Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
           <button
             onClick={() => setActiveTab('companies')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'companies'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-200/70'
@@ -339,7 +362,7 @@ export default function AdminPage() {
 
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-200/70'
@@ -350,8 +373,20 @@ export default function AdminPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('sessions')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'sessions'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-200/70'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Sessiyalar & Kirishlar ({sessions.length})</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('view_as')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'view_as'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-200/70'
@@ -555,7 +590,173 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* TAB 3: QUICK VIEW AS COMPANY */}
+        {/* TAB 3: USER SESSIONS & AUDIT TRAIL */}
+        {activeTab === 'sessions' && (
+          <div className="space-y-4">
+            {/* Action Bar & Filter */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Foydalanuvchi, login, kompaniya yoki IP bo'yicha qidiruv..."
+                  value={sessionSearch}
+                  onChange={(e) => setSessionSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 shadow-2xs"
+                />
+              </div>
+
+              {/* Action Filter Pills */}
+              <div className="flex items-center gap-1.5 bg-slate-200/60 p-1 rounded-xl shrink-0 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setSessionActionFilter('all')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                    sessionActionFilter === 'all'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Barchasi ({sessions.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSessionActionFilter('login')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                    sessionActionFilter === 'login'
+                      ? 'bg-white text-emerald-700 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Kirishlar ({sessions.filter(s => s.action === 'login').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSessionActionFilter('register')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                    sessionActionFilter === 'register'
+                      ? 'bg-white text-indigo-700 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Ro'yxatdan o'tish ({sessions.filter(s => s.action === 'register').length})
+                </button>
+              </div>
+            </div>
+
+            {/* Google Sheets Live Sync Notice */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600 bg-blue-50/70 border border-blue-100 rounded-xl px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="font-semibold text-slate-800">Google Sheets «Sessions» varag'iga real vaqtda yozib borilmoqda</span>
+              </div>
+              <span className="text-slate-500 font-mono text-[11px]">12 ustun: session_id, user_id, ism, login, rol, kompaniya, harakat, ip, brauzer, vaqt</span>
+            </div>
+
+            {/* Sessions Table */}
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+                    <tr>
+                      <th className="py-3.5 px-4 sm:px-6">Foydalanuvchi</th>
+                      <th className="py-3.5 px-4">Kompaniya</th>
+                      <th className="py-3.5 px-4 text-center">Rol</th>
+                      <th className="py-3.5 px-4 text-center">Harakat</th>
+                      <th className="py-3.5 px-4">IP Manzil</th>
+                      <th className="py-3.5 px-4">Qurilma / Brauzer</th>
+                      <th className="py-3.5 px-4">Sana va Vaqt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                    {filteredSessions.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-slate-400">
+                          <Activity className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                          <p className="font-semibold text-slate-600">Sessiyalar tarixi topilmadi</p>
+                          <p className="text-xs text-slate-400 mt-0.5">Foydalanuvchilar tizimga kirganida yoki ro'yxatdan o'tganda avtomatik qayd etiladi.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredSessions.map((s, idx) => (
+                        <tr key={s.session_id || idx} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3.5 px-4 sm:px-6 font-bold text-slate-900 flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                              {s.user_name ? s.user_name.substring(0, 2).toUpperCase() : (s.login ? s.login.substring(0, 2).toUpperCase() : 'US')}
+                            </div>
+                            <div>
+                              <span>{s.user_name || 'Noma\'lum'}</span>
+                              <div className="text-[10px] text-blue-600 font-mono font-normal">@{s.login || '—'}</div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-700">
+                            <div className="flex items-center gap-1.5 font-semibold">
+                              <Building className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate max-w-[150px]">{s.company_name || s.company_id || '—'}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                              s.role === 'superadmin' 
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200' 
+                                : s.role === 'company_admin'
+                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {s.role === 'superadmin' ? '🛡️ SuperAdmin' : s.role === 'company_admin' ? '🏢 Kompaniya Admin' : '👤 Menejer'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            {s.action === 'register' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                <UserPlus className="w-3 h-3" />
+                                <span>Ro'yxatdan o'tdi</span>
+                              </span>
+                            ) : s.action === 'logout' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-100">
+                                <LogOut className="w-3 h-3" />
+                                <span>Chiqdi</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                <LogIn className="w-3 h-3" />
+                                <span>Tizimga kirdi</span>
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-xs text-slate-600">
+                            <div className="flex items-center gap-1.5">
+                              <Globe className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>{s.ip_address || '127.0.0.1'}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600 text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <Laptop className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate max-w-[160px]" title={s.user_agent}>
+                                {s.user_agent?.includes('Mozilla')
+                                  ? (s.user_agent.includes('Chrome') ? 'Chrome' : s.user_agent.includes('Firefox') ? 'Firefox' : s.user_agent.includes('Safari') ? 'Safari' : 'Web Browser')
+                                  : (s.user_agent || 'Noma\'lum')}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-500 text-xs whitespace-nowrap">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>{s.created_at || (s.timestamp ? new Date(s.timestamp).toLocaleString('uz-UZ') : '—')}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: QUICK VIEW AS COMPANY */}
         {activeTab === 'view_as' && (
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-2xs space-y-6">
             <div>
