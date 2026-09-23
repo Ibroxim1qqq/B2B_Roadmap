@@ -479,7 +479,10 @@ function HomeContent() {
           onOpenCreate={() => setIsCreateOpen(true)}
           currentUser={currentUser}
           onLogout={handleLogout}
-          onOpenNotifications={() => setIsNotificationOpen(true)}
+          onOpenNotifications={() => {
+            setIsNotificationOpen(true);
+            handleMarkAllAsRead();
+          }}
           unreadNotificationCount={unreadNotifCount}
         />
 
