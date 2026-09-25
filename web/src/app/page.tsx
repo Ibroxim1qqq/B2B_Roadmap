@@ -88,7 +88,7 @@ function HomeContent() {
 
   // Auto-switch region to Toshkent when UYSOT.UZ company is active
   useEffect(() => {
-    if (effectiveCompanyId === 'uysot') {
+    if (effectiveCompanyId === 'uysot' || effectiveCompanyId === 'comp_1789981554543') {
       setSelectedRegion('1726');
     }
   }, [effectiveCompanyId]);

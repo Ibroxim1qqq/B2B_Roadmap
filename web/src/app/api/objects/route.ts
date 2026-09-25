@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const companyId = searchParams.get('company_id') || '';
 
     // 2. Dedicated company isolation for UYSOT.UZ (Toshkent / Domtut dataset)
-    if (companyId === 'uysot') {
+    if (companyId === 'uysot' || companyId === 'comp_1789981554543') {
       const uysotObjects = await getUysotObjectsFromSheet();
       return NextResponse.json({ success: true, count: uysotObjects.length, data: uysotObjects });
     }
