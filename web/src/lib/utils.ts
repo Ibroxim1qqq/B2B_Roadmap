@@ -16,34 +16,49 @@ export function formatDistance(km: number): string {
   return km.toFixed(1) + ' km';
 }
 
-export function formatPhone(phone: string): string {
+export function formatPhone(phone: any): string {
   if (!phone) return '';
-  const cleaned = phone.replace(/\D/g, '');
+  const str = String(phone).trim();
+  const cleaned = str.replace(/\D/g, '');
   if (cleaned.length === 9) {
     return `+998 ${cleaned.slice(0,2)} ${cleaned.slice(2,5)} ${cleaned.slice(5,7)} ${cleaned.slice(7,9)}`;
   } else if (cleaned.length === 12 && cleaned.startsWith('998')) {
     return `+${cleaned.slice(0,3)} ${cleaned.slice(3,5)} ${cleaned.slice(5,8)} ${cleaned.slice(8,10)} ${cleaned.slice(10,12)}`;
   }
-  return phone;
+  return str;
 }
 
-export function getNavigationUrl(lat: number, lng: number): string {
-  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+export function getNavigationUrl(lat: any, lng: any): string {
+  const latitude = parseFloat(lat) || 39.6542;
+  const longitude = parseFloat(lng) || 66.9597;
+  return `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
 }
 
-export function getTelegramUrl(usernameOrPhone: string): string {
-  const clean = usernameOrPhone.replace('@', '').replace(/\s/g, '').replace('+', '');
+export function getTelegramUrl(usernameOrPhone: any): string {
+  if (!usernameOrPhone) return '#';
+  const str = String(usernameOrPhone).trim();
+  if (str.startsWith('http://') || str.startsWith('https://')) {
+    return str;
+  }
+  const clean = str.replace('@', '').replace(/\s/g, '').replace('+', '');
   return `https://t.me/${clean}`;
 }
 
-export function getInstagramUrl(handle: string): string {
-  if (!handle) return '';
-  const clean = handle.replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace('@', '').replace(/\//g, '').trim();
+export function getInstagramUrl(handle: any): string {
+  if (!handle) return '#';
+  const str = String(handle).trim();
+  if (str.startsWith('http://') || str.startsWith('https://')) {
+    return str;
+  }
+  const clean = str.replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace('@', '').replace(/\//g, '').trim();
   return `https://instagram.com/${clean}`;
 }
 
-export function getCallUrl(phone: string): string {
-  return `tel:${phone.replace(/\D/g, '')}`;
+export function getCallUrl(phone: any): string {
+  if (!phone) return '#';
+  const str = String(phone).trim();
+  const digits = str.replace(/\D/g, '');
+  return digits ? `tel:+${digits.startsWith('998') ? digits : digits.length === 9 ? '998' + digits : digits}` : `tel:${str}`;
 }
 
 export function getStatusColor(statusId: number | string): string {

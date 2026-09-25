@@ -25,20 +25,20 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
 
     const initialMap: Record<string, string> = {};
     // Base default fields
-    initialMap.tjm_name = initialData?.tjm_name || '';
-    initialMap.phone = initialData?.phone || '';
-    initialMap.sales_office = initialData?.sales_office || '';
-    initialMap.manager_name = initialData?.manager_name || '';
-    initialMap.manager_phone = initialData?.manager_phone || '';
-    initialMap.telegram = initialData?.telegram || '';
-    initialMap.instagram = initialData?.instagram || '';
-    initialMap.notes = initialData?.notes || '';
-    initialMap.priority = initialData?.priority || '';
+    initialMap.tjm_name = String(initialData?.tjm_name || '');
+    initialMap.phone = String(initialData?.phone || '');
+    initialMap.sales_office = String(initialData?.sales_office || '');
+    initialMap.manager_name = String(initialData?.manager_name || '');
+    initialMap.manager_phone = String(initialData?.manager_phone || '');
+    initialMap.telegram = String(initialData?.telegram || '');
+    initialMap.instagram = String(initialData?.instagram || '');
+    initialMap.notes = String(initialData?.notes || '');
+    initialMap.priority = String(initialData?.priority || '');
 
     // Load any custom fields
     fieldsList.forEach(f => {
-      if (initialData && initialData[f.field_name] !== undefined) {
-        initialMap[f.field_name] = String(initialData[f.field_name] || '');
+      if (initialData && initialData[f.field_name] !== undefined && initialData[f.field_name] !== null) {
+        initialMap[f.field_name] = String(initialData[f.field_name]);
       } else if (!initialMap[f.field_name]) {
         initialMap[f.field_name] = '';
       }
@@ -55,7 +55,9 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave(data);
+      if (onSave) {
+        await onSave(data);
+      }
     } catch (err) {
       console.error(err);
       alert('Markaziy bazaga saqlashda xatolik yuz berdi');
@@ -72,7 +74,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
     try {
       if (onClear) {
         await onClear();
-      } else {
+      } else if (onSave) {
         const emptyData: Record<string, string> = {};
         Object.keys(data).forEach(k => {
           emptyData[k] = '';

@@ -1,6 +1,10 @@
 import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute, WeeklySyncNotification, UserSession } from './types';
 import realSheetsData from './real-sheets-data.json';
+import uysotDomtutData from './uysot-domtut-data.json';
 import { getRegionName, getDistrictName, getRegionBySoato } from './regions';
+
+const uysotRows: any[] = (Array.isArray(uysotDomtutData) ? uysotDomtutData : (uysotDomtutData as any).rows || []) as any[];
+const realSheetsRows: any[] = (realSheetsData.rows as any[]) || [];
 
 const SOATO_DISTRICT_MAP: Record<string, string> = {
   '1718401': 'Samarqand shahar',
@@ -21,110 +25,198 @@ const SOATO_DISTRICT_MAP: Record<string, string> = {
   '1718238': 'Urgut tumani'
 };
 
+export const isUysotCompany = (cid?: string) => cid === 'uysot' || cid === 'comp_1789981554543';
+
 function formatRowToMapObject(r: any): MapObject {
+  if (!r) {
+    return {
+      source_id: 'unknown',
+      object_name: 'Noma\'lum bino',
+      tjm_name: '',
+      latitude: 39.6542,
+      longitude: 66.9597,
+      status: 'Qurilish jarayonida',
+      status_id: 1,
+      region_soato: '1718',
+      region_name: 'Samarqand',
+      district_soato: '1718401',
+      district_name: 'Samarqand',
+      sphere_name: "Ko'p xonadonli uy-joylar",
+      phone: '',
+      sales_office: '',
+      manager_name: '',
+      manager_phone: '',
+      floors: '—',
+      apartment_count: '0',
+      area: '—',
+      image_url: '',
+      has_internal: false,
+      is_fully_filled: false,
+      is_visited: false,
+      last_visit: '',
+      visited_by: '',
+      builder: '—',
+      customer: '—',
+      address: '',
+      deadline: '—',
+      telegram: '',
+      instagram: '',
+      priority: '',
+      notes: ''
+    };
+  }
+
   const lat = parseFloat(r.latitude) || 39.6542;
   const lng = parseFloat(r.longitude) || 66.9597;
-  const regSoato = String(r.region_soato || (r.district_soato ? String(r.district_soato).substring(0, 4) : '1718'));
+  const regSoato = String(r.region_soato || (r.district_soato ? String(r.district_soato).substring(0, 4) : (lat > 40.5 ? '1726' : '1718')));
   const regName = getRegionName(regSoato);
-  const district = getDistrictName(String(r.district_soato || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || (r.district_soato ? `Tuman (${r.district_soato})` : regName);
+  const district = getDistrictName(String(r.district_soato || r.district || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || r.district || (r.district_soato ? `Tuman (${r.district_soato})` : regName);
 
-  const tjm = (r.tjm_name || '').trim();
-  const phone = (r.phone || '').trim();
-  const manager = (r.manager_name || '').trim();
-  const salesOffice = (r.sales_office || '').trim();
-  const lastVisit = (r.last_visit || '').trim();
+  const tjm = String(r.tjm_name || '').trim();
+  const phone = String(r.phone || '').trim();
+  const manager = String(r.manager_name || '').trim();
+  const salesOffice = String(r.sales_office || '').trim();
+  const lastVisit = String(r.last_visit || '').trim();
 
   const hasInternal = Boolean(tjm || phone || manager || salesOffice);
   const isFullyFilled = Boolean(tjm && phone && manager);
   const isVisited = Boolean(lastVisit);
 
   return {
-    source_id: String(r.source_id),
-    object_name: r.object_name || 'Qurilish obyekti',
+    source_id: String(r.source_id || ''),
+    object_name: String(r.object_name || r.tjm_name || 'Qurilish obyekti'),
     tjm_name: tjm,
     latitude: lat,
     longitude: lng,
-    status: r.status || 'Qurilish jarayonida',
+    status: String(r.status || 'Qurilish jarayonida'),
     status_id: parseInt(r.status_id) || 1,
     region_soato: regSoato,
     region_name: regName,
-    district_soato: r.district_soato || '1718401',
+    district_soato: String(r.district_soato || r.district || '1718401'),
     district_name: district,
     sphere_name: "Ko'p xonadonli uy-joylar",
     phone: phone,
     sales_office: salesOffice,
     manager_name: manager,
-    manager_phone: (r.manager_phone || '').trim(),
-    floors: (r.floors && r.floors !== '0') ? String(r.floors).trim() : '—',
+    manager_phone: String(r.manager_phone || '').trim(),
+    floors: (r.floors && String(r.floors) !== '0') ? String(r.floors).trim() : '—',
     apartment_count: r.apartment_count ? String(r.apartment_count).trim() : '0',
-    area: (r.apartment_count && r.apartment_count !== '0') ? `${r.apartment_count} xonadon` : '—',
-    image_url: r.image_url || '',
+    area: (r.apartment_count && String(r.apartment_count) !== '0') ? `${r.apartment_count} xonadon` : '—',
+    image_url: String(r.image_url || ''),
     has_internal: hasInternal,
     is_fully_filled: isFullyFilled,
     is_visited: isVisited,
     last_visit: lastVisit,
-    visited_by: (r.visited_by || '').trim(),
-    builder: (r.builder || '').trim(),
-    customer: (r.customer || '').trim(),
-    address: (r.address || '').trim(),
-    deadline: (r.deadline || '').trim(),
-    telegram: (r.telegram || '').trim(),
-    instagram: (r.instagram || '').trim(),
-    priority: (r.priority || '').trim(),
-    notes: (r.notes || '').trim()
+    visited_by: String(r.visited_by || '').trim(),
+    builder: String(r.builder || r.developer || '—').trim(),
+    customer: String(r.customer || '—').trim(),
+    address: String(r.address || '').trim(),
+    deadline: String(r.deadline || '—').trim(),
+    telegram: String(r.telegram || '').trim(),
+    instagram: String(r.instagram || '').trim(),
+    priority: String(r.priority || '').trim(),
+    notes: String(r.notes || '').trim()
   };
 }
 
 function formatRowToObjectDetail(r: any): ObjectDetail {
+  if (!r) {
+    return {
+      source: {
+        source_id: 'unknown',
+        object_name: 'Noma\'lum bino',
+        region_soato: '1718',
+        region_name: 'Samarqand',
+        district_soato: '1718401',
+        district_name: 'Samarqand',
+        address: 'Manzil ko\'rsatilmagan',
+        latitude: 39.6542,
+        longitude: 66.9597,
+        status: 'Qurilish jarayonida',
+        status_id: 1,
+        sphere_id: '57',
+        sphere_name: "Ko'p xonadonli uy-joylar",
+        customer: '—',
+        designer: '—',
+        builder: '—',
+        difficulty: 'II-toifa',
+        floors: '—',
+        apartment_count: '0',
+        area: '—',
+        block_count: '1',
+        deadline: '—',
+        created_at: '',
+        task_id: '',
+        passport_url: '',
+        source_url: '#',
+        image_url: ''
+      },
+      internal: {
+        tjm_name: '',
+        phone: '',
+        sales_office: '',
+        manager_name: '',
+        manager_phone: '',
+        telegram: '',
+        instagram: '',
+        notes: '',
+        priority: '',
+        last_visit: '',
+        visited_by: '',
+        visit_lat_lng: ''
+      }
+    };
+  }
+
   const lat = parseFloat(r.latitude) || 39.6542;
   const lng = parseFloat(r.longitude) || 66.9597;
-  const regSoato = String(r.region_soato || (r.district_soato ? String(r.district_soato).substring(0, 4) : '1718'));
+  const regSoato = String(r.region_soato || (r.district_soato ? String(r.district_soato).substring(0, 4) : (lat > 40.5 ? '1726' : '1718')));
   const regName = getRegionName(regSoato);
-  const district = getDistrictName(String(r.district_soato || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || (r.district_soato ? `Tuman (${r.district_soato})` : regName);
+  const district = getDistrictName(String(r.district_soato || r.district || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || r.district || (r.district_soato ? `Tuman (${r.district_soato})` : regName);
 
   return {
     source: {
-      source_id: String(r.source_id),
-      object_name: r.object_name || '',
+      source_id: String(r.source_id || ''),
+      object_name: String(r.object_name || r.tjm_name || ''),
       region_soato: regSoato,
       region_name: regName,
-      district_soato: r.district_soato || '1718401',
+      district_soato: String(r.district_soato || r.district || '1718401'),
       district_name: district,
-      address: r.address || `${regName}`,
+      address: String(r.address || `${regName}`),
       latitude: lat,
       longitude: lng,
-      status: r.status || 'Qurilish jarayonida',
+      status: String(r.status || 'Qurilish jarayonida'),
       status_id: parseInt(r.status_id) || 1,
-      sphere_id: r.sphere_id || '57',
+      sphere_id: String(r.sphere_id || '57'),
       sphere_name: "Ko'p xonadonli uy-joylar",
-      customer: r.customer || '—',
-      designer: r.designer || '—',
-      builder: r.builder || '—',
-      difficulty: r.difficulty ? `${r.difficulty}-toifa` : 'II-toifa',
-      floors: (r.floors && r.floors !== '0') ? String(r.floors).trim() : '—',
+      customer: String(r.customer || '—'),
+      designer: String(r.designer || '—'),
+      builder: String(r.builder || r.developer || '—'),
+      difficulty: r.difficulty ? (String(r.difficulty).includes('toifa') ? String(r.difficulty) : `${r.difficulty}-toifa`) : 'II-toifa',
+      floors: (r.floors && String(r.floors) !== '0') ? String(r.floors).trim() : '—',
       apartment_count: r.apartment_count ? String(r.apartment_count).trim() : '0',
-      area: (r.apartment_count && r.apartment_count !== '0') ? `${r.apartment_count} xonadon` : '—',
-      block_count: r.block_count || '1',
-      deadline: r.deadline || '—',
-      created_at: r.created_at || '',
-      task_id: r.task_id || '',
-      passport_url: r.passport_url || '',
-      source_url: r.source_url || `https://dshk.shaffofqurilish.uz/object/${r.source_id}`,
-      image_url: r.image_url || ''
+      area: (r.apartment_count && String(r.apartment_count) !== '0') ? `${r.apartment_count} xonadon` : '—',
+      block_count: String(r.block_count || '1'),
+      deadline: String(r.deadline || '—'),
+      created_at: String(r.created_at || ''),
+      task_id: String(r.task_id || ''),
+      passport_url: String(r.passport_url || ''),
+      source_url: String(r.source_url || (String(r.source_id).startsWith('domtut_') ? `https://domtut.uz` : `https://dshk.shaffofqurilish.uz/object/${r.source_id}`)),
+      image_url: String(r.image_url || '')
     },
     internal: {
-      tjm_name: (r.tjm_name || '').trim(),
-      phone: (r.phone || '').trim(),
-      sales_office: (r.sales_office || '').trim(),
-      manager_name: (r.manager_name || '').trim(),
-      manager_phone: (r.manager_phone || '').trim(),
-      telegram: (r.telegram || '').trim(),
-      instagram: (r.instagram || '').trim(),
-      notes: (r.notes || '').trim(),
-      priority: (r.priority || '').trim(),
-      last_visit: (r.last_visit || '').trim(),
-      visited_by: (r.visited_by || '').trim(),
-      visit_lat_lng: (r.visit_lat_lng || '').trim()
+      tjm_name: String(r.tjm_name || '').trim(),
+      phone: String(r.phone || '').trim(),
+      sales_office: String(r.sales_office || '').trim(),
+      manager_name: String(r.manager_name || '').trim(),
+      manager_phone: String(r.manager_phone || '').trim(),
+      telegram: String(r.telegram || '').trim(),
+      instagram: String(r.instagram || '').trim(),
+      notes: String(r.notes || '').trim(),
+      priority: String(r.priority || '').trim(),
+      last_visit: String(r.last_visit || '').trim(),
+      visited_by: String(r.visited_by || '').trim(),
+      visit_lat_lng: String(r.visit_lat_lng || '').trim()
     }
   };
 }
@@ -234,33 +326,43 @@ export const api = {
       const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data) {
+        if (json.success && Array.isArray(json.data)) {
           return json.data.map(formatRowToMapObject);
         }
       }
     } catch (e) {
       console.warn('Using fallback data:', e);
     }
-    return (realSheetsData.rows as any[]).map(formatRowToMapObject);
+    const fallbackRows = isUysotCompany(companyId) ? uysotRows : realSheetsRows;
+    return fallbackRows.map(formatRowToMapObject);
   },
 
   getObject: async (id: string, companyId?: string): Promise<ObjectDetail> => {
-    let rows = realSheetsData.rows as any[];
+    const cleanId = String(id || '').trim();
+    const isUysot = isUysotCompany(companyId) || cleanId.startsWith('domtut_');
+    let rows: any[] = isUysot ? uysotRows : realSheetsRows;
+
     try {
       const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
       const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data) {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           rows = json.data;
         }
       }
     } catch (e) {}
 
-    const cleanId = String(id).trim();
-    const idx = rows.findIndex((r: any) => String(r.source_id).trim() === cleanId);
-    if (idx !== -1) {
-      return formatRowToObjectDetail(rows[idx]);
+    let found = rows.find((r: any) => String(r.source_id || '').trim() === cleanId);
+
+    // Fallback search across uysot and realSheetsData if not found in current company rows
+    if (!found) {
+      found = uysotRows.find((r: any) => String(r.source_id || '').trim() === cleanId) ||
+              realSheetsRows.find((r: any) => String(r.source_id || '').trim() === cleanId);
+    }
+
+    if (found) {
+      return formatRowToObjectDetail(found);
     }
 
     // Check notifications for newly scraped buildings
@@ -270,7 +372,7 @@ export const api = {
         const notifs = await notifsRes.json();
         if (notifs && notifs.data && Array.isArray(notifs.data)) {
           for (const notif of notifs.data) {
-            const foundInNotif = (notif.new_objects || []).find((b: any) => String(b.source_id).trim() === cleanId);
+            const foundInNotif = (notif.new_objects || []).find((b: any) => String(b.source_id || '').trim() === cleanId);
             if (foundInNotif) {
               return formatBuildingItemToObjectDetail(foundInNotif);
             }
@@ -279,7 +381,11 @@ export const api = {
       }
     } catch (e) {}
 
-    return formatRowToObjectDetail(rows[0]);
+    // Safe fallback to first row or empty object detail
+    if (rows && rows.length > 0 && rows[0]) {
+      return formatRowToObjectDetail(rows[0]);
+    }
+    return formatRowToObjectDetail({ source_id: cleanId || 'unknown', object_name: "Noma'lum bino" });
   },
 
   getSettings: async (): Promise<CustomField[]> => {
@@ -309,21 +415,21 @@ export const api = {
   },
 
   getStats: async (companyId?: string): Promise<DashboardStats> => {
-    let rows = realSheetsData.rows as any[];
+    let rows: any[] = isUysotCompany(companyId) ? uysotRows : realSheetsRows;
     try {
       const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
       const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data) rows = json.data;
+        if (json.success && Array.isArray(json.data)) rows = json.data;
       }
     } catch (e) {}
 
     const total = rows.length;
-    const with_internal = rows.filter((r: any) => (r.tjm_name || r.phone || r.manager_name || '').trim()).length;
-    const visited = rows.filter((r: any) => (r.last_visit || '').trim()).length;
-    const with_phone = rows.filter((r: any) => (r.phone || '').trim()).length;
-    const with_manager = rows.filter((r: any) => (r.manager_name || '').trim()).length;
+    const with_internal = rows.filter((r: any) => String(r.tjm_name || r.phone || r.manager_name || '').trim().length > 0).length;
+    const visited = rows.filter((r: any) => String(r.last_visit || '').trim().length > 0).length;
+    const with_phone = rows.filter((r: any) => String(r.phone || '').trim().length > 0).length;
+    const with_manager = rows.filter((r: any) => String(r.manager_name || '').trim().length > 0).length;
 
     return {
       total,

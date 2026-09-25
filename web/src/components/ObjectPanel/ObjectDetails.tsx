@@ -18,11 +18,35 @@ interface Props {
 }
 
 export default function ObjectDetails({ detail, distance, onClose, onEdit, onRecordVisit, onClearB2B }: Props) {
-  const { source, internal } = detail;
+  const source = detail?.source || {
+    source_id: '',
+    object_name: "Noma'lum bino",
+    region_soato: '',
+    region_name: '',
+    district_soato: '',
+    district_name: '',
+    address: '',
+    latitude: 39.6542,
+    longitude: 66.9597,
+    status: 'Qurilish jarayonida',
+    status_id: 1,
+    sphere_id: '',
+    customer: '—',
+    designer: '—',
+    builder: '—',
+    difficulty: 'II-toifa',
+    floors: '—',
+    apartment_count: '0',
+    deadline: '—',
+    passport_url: '',
+    source_url: ''
+  };
+  const internal = detail?.internal || {};
+
   const [visitRecorded, setVisitRecorded] = useState(false);
   const [loadingVisit, setLoadingVisit] = useState(false);
 
-  const distText = distance !== undefined 
+  const distText = (distance !== undefined && distance !== null && !isNaN(distance))
     ? (distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`)
     : '—';
 
@@ -43,15 +67,19 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
     if (loadingVisit) return;
     setLoadingVisit(true);
     try {
-      await onRecordVisit();
+      if (onRecordVisit) {
+        await onRecordVisit();
+      }
       setVisitRecorded(true);
       setTimeout(() => setVisitRecorded(false), 3000);
     } catch (err) {
-      console.error(err);
+      console.error('Visit recording error:', err);
     } finally {
       setLoadingVisit(false);
     }
   };
+
+  const isDomtut = String(source.source_id || '').startsWith('domtut_');
 
   return (
     <div className="flex flex-col h-full bg-white border-l border-slate-200 shadow-xl overflow-hidden z-20">
@@ -283,14 +311,14 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
           </div>
         </div>
 
-        {/* 2. Manba ma'lumotlari (Shaffof Qurilish) */}
+        {/* 2. Manba ma'lumotlari */}
         <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-4">
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/60">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
               Manba ma'lumotlari
             </h3>
             <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
-              Shaffof Qurilish
+              {isDomtut ? 'Domtut.uz' : 'Shaffof Qurilish'}
             </span>
           </div>
 
@@ -311,9 +339,9 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
 
             <div className="flex items-start justify-between gap-3">
               <span className="text-slate-400 flex items-center gap-1.5 shrink-0">
-                <Building className="w-3.5 h-3.5 text-slate-400" /> Tuman
+                <Building className="w-3.5 h-3.5 text-slate-400" /> Tuman / Shahar
               </span>
-              <span className="font-medium text-slate-800 text-right">{source.district_name || 'Samarqand tumani'}</span>
+              <span className="font-medium text-slate-800 text-right">{source.district_name || 'Samarqand'}</span>
             </div>
 
             <div className="flex items-start justify-between gap-3">
@@ -355,9 +383,9 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
               <span className="text-slate-400 flex items-center gap-1.5 shrink-0">
                 <FileText className="w-3.5 h-3.5 text-slate-400" /> Passport
               </span>
-              {source.passport_url && source.passport_url !== '#' && source.passport_url.trim() ? (
+              {source.passport_url && String(source.passport_url).trim() !== '' && String(source.passport_url) !== '#' ? (
                 <a
-                  href={source.passport_url}
+                  href={String(source.passport_url)}
                   target="_blank"
                   rel="noreferrer"
                   className="font-semibold text-blue-600 hover:underline flex items-center gap-1"
@@ -375,12 +403,12 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
                 <ExternalLink className="w-3.5 h-3.5 text-slate-400" /> Manba
               </span>
               <a
-                href={source.source_url}
+                href={source.source_url || (isDomtut ? 'https://domtut.uz' : `https://dshk.shaffofqurilish.uz/object/${source.source_id}`)}
                 target="_blank"
                 rel="noreferrer"
                 className="font-semibold text-blue-600 hover:underline truncate max-w-[180px]"
               >
-                Shaffof Qurilish #{source.source_id}
+                {isDomtut ? `Domtut.uz #${source.source_id}` : `Shaffof Qurilish #${source.source_id}`}
               </a>
             </div>
           </div>
@@ -462,7 +490,11 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
             <button
               onClick={() => {
                 if (confirm("Haqiqatan ham bu obyektning B2B ma'lumotlarini o'chirmoqchimisiz?")) {
-                  onClearB2B();
+                  try {
+                    onClearB2B();
+                  } catch (e) {
+                    console.error('Clear error:', e);
+                  }
                 }
               }}
               className="py-2.5 px-3 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl text-xs font-bold flex items-center justify-center transition-colors cursor-pointer"
