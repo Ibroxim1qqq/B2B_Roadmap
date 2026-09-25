@@ -1,9 +1,10 @@
 'use client';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { MapObject, UserProfile, SavedRoute } from '../../lib/types';
+import { MapObject, UserProfile, SavedRoute, AIRouteRecommendation } from '../../lib/types';
 import { api } from '../../lib/api';
 import { getCurrentUser } from '../../lib/auth';
+import AIRouteModal from './AIRouteModal';
 import { 
   calculateOSRMRoute, calculateOSRMRouteMulti, findTJMsAlongRoute, RouteResult, TJMAlongRoute, 
   formatDistance, formatDuration, haversineMeters 
@@ -81,9 +82,56 @@ export default function RoutePlannerView({
   const [isSavingRoute, setIsSavingRoute] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
   const [showSavedRoutesModal, setShowSavedRoutesModal] = useState(false);
+  const [showAIRouteModal, setShowAIRouteModal] = useState(false);
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
   const [loadingSavedRoutes, setLoadingSavedRoutes] = useState(false);
   const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
+
+  // Apply AI Generated Route with multi-point waypoints
+  const handleApplyAIRoute = async (stops: AIRouteRecommendation[]) => {
+    if (!stops || stops.length === 0) return;
+
+    const startPt = (userLat && userLng) ? {
+      lat: userLat,
+      lng: userLng,
+      name: 'Mening joriy joylashuvim (GPS)'
+    } : {
+      lat: stops[0].latitude || REGISTON_LAT,
+      lng: stops[0].longitude || REGISTON_LNG,
+      name: stops[0].object_name
+    };
+
+    const lastStop = stops[stops.length - 1];
+    const endPt = {
+      lat: lastStop.latitude || (stops[0].latitude || REGISTON_LAT),
+      lng: lastStop.longitude || (stops[0].longitude || REGISTON_LNG),
+      name: lastStop.object_name
+    };
+
+    setStartPoint(startPt);
+    setStartQuery(startPt.name);
+    setEndPoint(endPt);
+    setEndQuery(endPt.name);
+
+    const waypoints: { lat: number; lng: number }[] = [
+      { lat: startPt.lat, lng: startPt.lng },
+      ...stops.map(s => ({ lat: s.latitude || startPt.lat, lng: s.longitude || startPt.lng }))
+    ];
+
+    setCalculating(true);
+    try {
+      const multiRes = await calculateOSRMRouteMulti(waypoints);
+      if (multiRes && multiRes.coordinates.length > 0) {
+        setRouteResult(multiRes);
+        const tjms = findTJMsAlongRoute(objects, multiRes.coordinates, bufferRadius);
+        setMatchedTJMs(tjms);
+      }
+    } catch (err) {
+      console.error('Failed to calculate AI multi-route:', err);
+    } finally {
+      setCalculating(false);
+    }
+  };
 
   // Point A (Start) & Point B (End)
   const [startQuery, setStartQuery] = useState('');
@@ -634,6 +682,17 @@ export default function RoutePlannerView({
             </div>
 
             <div className="flex items-center gap-2">
+              {/* AI Route Modal Trigger */}
+              <button
+                type="button"
+                onClick={() => setShowAIRouteModal(true)}
+                className="px-2.5 py-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                title="Sun'iy intellekt yordamida aqlli marshrut tuzish (Bepul)"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                <span>AI Marshrut</span>
+              </button>
+
               {/* Saved Routes Modal Trigger */}
               <button
                 type="button"
@@ -1416,6 +1475,17 @@ export default function RoutePlannerView({
           </div>
         </div>
       )}
+
+      {/* AI Smart Route Modal */}
+      <AIRouteModal
+        isOpen={showAIRouteModal}
+        onClose={() => setShowAIRouteModal(false)}
+        objects={objects}
+        userLat={userLat}
+        userLng={userLng}
+        companyId={companyId}
+        onApplyRoute={handleApplyAIRoute}
+      />
     </div>
   );
 }

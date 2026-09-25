@@ -1,10 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { ObjectDetail } from '../../lib/types';
+import { ObjectDetail, AIPitchBriefing } from '../../lib/types';
+import { api } from '../../lib/api';
 import { 
   X, MapPin, Building, HardHat, Layers, Calendar, 
   ExternalLink, FileText, Phone, User, Send, Globe, 
-  Clock, CheckCircle2, Navigation, Pencil, Trash2, ShieldCheck, Tag
+  Clock, CheckCircle2, Navigation, Pencil, Trash2, ShieldCheck, Tag,
+  Sparkles, Loader2
 } from 'lucide-react';
 import { getNavigationUrl, getCallUrl, getTelegramUrl, getInstagramUrl } from '../../lib/utils';
 
@@ -45,6 +47,29 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
 
   const [visitRecorded, setVisitRecorded] = useState(false);
   const [loadingVisit, setLoadingVisit] = useState(false);
+  const [aiBriefing, setAiBriefing] = useState<AIPitchBriefing | null>(null);
+  const [loadingBriefing, setLoadingBriefing] = useState(false);
+
+  const handleToggleAIBriefing = async () => {
+    if (aiBriefing) {
+      setAiBriefing(null);
+      return;
+    }
+    setLoadingBriefing(true);
+    try {
+      const res = await api.getAIPitchBriefing({
+        ...source,
+        ...internal
+      });
+      if (res.success && res.data) {
+        setAiBriefing(res.data);
+      }
+    } catch (e) {
+      console.error('AI briefing error:', e);
+    } finally {
+      setLoadingBriefing(false);
+    }
+  };
 
   const distText = (distance !== undefined && distance !== null && !isNaN(distance))
     ? (distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`)
@@ -418,6 +443,64 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
 
       {/* 3. Action Buttons Footer */}
       <div className="p-4 border-t border-slate-200 bg-white space-y-2.5 shrink-0">
+        {/* AI Briefing Card */}
+        {aiBriefing && (
+          <div className="p-3.5 bg-gradient-to-br from-indigo-50/90 to-blue-50/90 border border-indigo-200/90 rounded-2xl space-y-2 text-xs shadow-xs animate-in fade-in duration-150">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-indigo-950 flex items-center gap-1.5 text-[11px]">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                <span>AI Sotuv Strategiyasi &amp; Maslahati</span>
+              </span>
+              <button
+                onClick={() => setAiBriefing(null)}
+                className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                title="Yopish"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            
+            <p className="text-[11px] text-slate-700 leading-relaxed font-medium">
+              {aiBriefing.profile_summary}
+            </p>
+
+            <div className="space-y-1 pt-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Asosiy argumentlar:</span>
+              {aiBriefing.selling_points.map((pt, i) => (
+                <div key={i} className="flex items-start gap-1.5 text-[11px] text-slate-800">
+                  <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                  <span>{pt}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-2 bg-white/90 rounded-xl border border-indigo-100 text-[11px] text-indigo-950 font-medium">
+              💡 <span className="font-bold">Muzokara tavsiyasi:</span> {aiBriefing.negotiation_strategy}
+            </div>
+
+            {aiBriefing.previous_context_tip && (
+              <p className="text-[10px] text-slate-500 italic">
+                {aiBriefing.previous_context_tip}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* AI Briefing Button */}
+        <button
+          type="button"
+          onClick={handleToggleAIBriefing}
+          disabled={loadingBriefing}
+          className="w-full py-2 px-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+        >
+          {loadingBriefing ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+          )}
+          <span>{aiBriefing ? "AI Maslahatni yashirish" : "✨ AI Sotuv Brifingi (Pitch Maslahati)"}</span>
+        </button>
+
         {/* Quick Contact & Navigation Bar */}
         <div className="grid grid-cols-4 gap-2">
           <a

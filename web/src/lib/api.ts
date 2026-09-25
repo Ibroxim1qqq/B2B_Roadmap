@@ -1,4 +1,4 @@
-import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute, WeeklySyncNotification, UserSession } from './types';
+import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute, WeeklySyncNotification, UserSession, AIRoutePlanResult, AIPitchBriefing } from './types';
 import realSheetsData from './real-sheets-data.json';
 import uysotDomtutData from './uysot-domtut-data.json';
 import { getRegionName, getDistrictName, getRegionBySoato } from './regions';
@@ -600,6 +600,55 @@ export const api = {
   getDomtutStats: async (): Promise<{ success: boolean; count?: number; last_updated?: string; districts_count?: number; districts?: string[]; error?: string }> => {
     try {
       const res = await fetch(`/api/admin/sync-domtut?t=${Date.now()}`, { cache: 'no-store' });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  },
+
+  // Free AI Route Advisor & Smart Briefing
+  getAIRoutePlan: async (params: {
+    companyId?: string;
+    userLat?: number;
+    userLng?: number;
+    prompt?: string;
+    unvisitedOnly?: boolean;
+    highPriorityOnly?: boolean;
+    maxStops?: number;
+    objects: MapObject[];
+  }): Promise<{ success: boolean; data?: AIRoutePlanResult; error?: string }> => {
+    try {
+      const res = await fetch('/api/ai/route-advisor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'plan_route',
+          company_id: params.companyId,
+          user_lat: params.userLat,
+          user_lng: params.userLng,
+          prompt: params.prompt,
+          unvisited_only: params.unvisitedOnly,
+          high_priority_only: params.highPriorityOnly,
+          max_stops: params.maxStops || 5,
+          objects_pool: params.objects
+        })
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  },
+
+  getAIPitchBriefing: async (targetObject: any): Promise<{ success: boolean; data?: AIPitchBriefing; error?: string }> => {
+    try {
+      const res = await fetch('/api/ai/route-advisor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'pitch_briefing',
+          target_object: targetObject
+        })
+      });
       return await res.json();
     } catch (e: any) {
       return { success: false, error: e.message };

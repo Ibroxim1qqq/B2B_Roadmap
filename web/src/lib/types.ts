@@ -191,5 +191,32 @@ export interface UserSession {
   created_at: string;
 }
 
+export interface AIRouteRecommendation {
+  source_id: string;
+  order: number;
+  object_name: string;
+  reason: string;
+  pitch_tip: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface AIRoutePlanResult {
+  route_name: string;
+  summary: string;
+  estimated_duration_hours: number;
+  engine_used: 'gemini' | 'groq' | 'heuristic';
+  recommended_stops: AIRouteRecommendation[];
+}
+
+export interface AIPitchBriefing {
+  source_id: string;
+  object_name: string;
+  profile_summary: string;
+  selling_points: string[];
+  negotiation_strategy: string;
+  previous_context_tip?: string;
+}
+
 
 
