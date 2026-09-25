@@ -323,15 +323,17 @@ def scrape_domtut(limit=None, max_pages=None, city='all', fetch_details=True):
                 # No more items in this section
                 break
                 
-            for card in cards:
-                if card['slug'] in seen_slugs:
-                    continue
-                seen_slugs.add(card['slug'])
+            new_cards = [c for c in cards if c['slug'] not in seen_slugs]
+            for c in new_cards:
+                seen_slugs.add(c['slug'])
                 
-                if fetch_details:
-                    time.sleep(0.2)  # Respectful delay
-                    card = enrich_from_detail_page(card)
-                else:
+            if fetch_details and new_cards:
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=6) as executor:
+                    enriched_cards = list(executor.map(enrich_from_detail_page, new_cards))
+            else:
+                enriched_cards = []
+                for card in new_cards:
                     fb = get_district_fallback_coords(card.get('district', ''))
                     card['latitude'], card['longitude'] = fb
                     card['developer'] = card.get('object_name', '')
@@ -339,10 +341,11 @@ def scrape_domtut(limit=None, max_pages=None, city='all', fetch_details=True):
                     card['apartment_count'] = '100'
                     card['block_count'] = '2'
                     card['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
+                    enriched_cards.append(card)
                     
+            for card in enriched_cards:
                 all_objects.append(card)
                 logger.info(f"[{len(all_objects)}] Extracted: {card['object_name']} ({card.get('district', '')}) - Lat: {card.get('latitude')}, Lng: {card.get('longitude')}")
-                
                 if limit and len(all_objects) >= limit:
                     break
                     
