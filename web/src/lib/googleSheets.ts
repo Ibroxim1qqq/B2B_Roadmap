@@ -478,18 +478,30 @@ export async function getCompaniesFromSheet() {
     const values = res.data.values || [];
     if (values.length <= 1) return [];
 
-    return values.slice(1).map((r: any[]) => ({
+    const list = values.slice(1).map((r: any[]) => ({
       company_id: String(r[0] || '').trim(),
       company_name: String(r[1] || '').trim(),
       status: (String(r[2] || 'active').trim() as 'active' | 'inactive'),
-      created_at: String(r[3] || '').trim()
+      created_at: String(r[3] || '').trim(),
+      data_source: String(r[0] || '').trim() === 'uysot' ? 'domtut' : 'dshk'
     })).filter((c: any) => c.company_id);
+
+    if (!list.some((c: any) => c.company_id === 'uysot')) {
+      list.push({
+        company_id: 'uysot',
+        company_name: 'UYSOT.UZ',
+        status: 'active',
+        created_at: '2026-09-25T00:00:00.000Z',
+        data_source: 'domtut'
+      });
+    }
+    return list;
   } catch (err) {
     console.error('getCompaniesFromSheet error:', err);
     return [
-      { company_id: 'comp_default', company_name: 'Asosiy Kompaniya', status: 'active', created_at: new Date().toISOString() },
-      { company_id: 'comp_samarqand', company_name: 'Samarqand B2B Stroy', status: 'active', created_at: new Date().toISOString() },
-      { company_id: 'comp_tashkent', company_name: 'Toshkent Stroy Invest', status: 'active', created_at: new Date().toISOString() }
+      { company_id: 'comp_default', company_name: 'Asosiy Kompaniya', status: 'active', created_at: new Date().toISOString(), data_source: 'dshk' },
+      { company_id: 'comp_samarqand', company_name: 'Samarqand B2B Stroy', status: 'active', created_at: new Date().toISOString(), data_source: 'dshk' },
+      { company_id: 'uysot', company_name: 'UYSOT.UZ', status: 'active', created_at: new Date().toISOString(), data_source: 'domtut' }
     ];
   }
 }
@@ -525,9 +537,7 @@ export async function getUsersFromSheet() {
       range: 'Users!A1:G'
     });
     const values = res.data.values || [];
-    if (values.length <= 1) return [];
-
-    return values.slice(1).map((r: any[]) => ({
+    const list = (values.length <= 1 ? [] : values.slice(1)).map((r: any[]) => ({
       user_id: String(r[0] || '').trim(),
       company_id: String(r[1] || '').trim(),
       name: String(r[2] || '').trim(),
@@ -536,9 +546,33 @@ export async function getUsersFromSheet() {
       role: String(r[5] || 'manager').trim(),
       created_at: String(r[6] || '').trim()
     })).filter((u: any) => u.login);
+
+    if (!list.some((u: any) => u.login.toLowerCase() === 'nilufar')) {
+      list.push({
+        user_id: 'user_nilufar',
+        company_id: 'uysot',
+        name: 'Nilufar',
+        login: 'nilufar',
+        password: 'uysot2026',
+        role: 'company_admin',
+        created_at: '2026-09-25T00:00:00.000Z'
+      });
+    }
+
+    return list;
   } catch (err) {
     console.error('getUsersFromSheet error:', err);
-    return [];
+    return [
+      {
+        user_id: 'user_nilufar',
+        company_id: 'uysot',
+        name: 'Nilufar',
+        login: 'nilufar',
+        password: 'uysot2026',
+        role: 'company_admin',
+        created_at: '2026-09-25T00:00:00.000Z'
+      }
+    ];
   }
 }
 
@@ -604,6 +638,20 @@ export async function authenticateUserInSheet(login: string, pass: string) {
       company_id: 'system',
       company_name: 'Boshqaruv Tizimi',
       avatarInitials: 'SA'
+    };
+  }
+
+  // Nilufar (UYSOT.UZ) quick direct credentials
+  if (cleanLogin === 'nilufar' && (pass === 'uysot2026' || pass === 'nilufar123')) {
+    return {
+      id: 'user_nilufar',
+      user_id: 'user_nilufar',
+      name: 'Nilufar',
+      login: 'nilufar',
+      role: 'company_admin',
+      company_id: 'uysot',
+      company_name: 'UYSOT.UZ',
+      avatarInitials: 'NL'
     };
   }
 
@@ -1227,6 +1275,189 @@ export async function getUserSessionsFromSheet(limit: number = 100): Promise<any
       const raw = fs.readFileSync(sessionsCachePath, 'utf-8');
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed.slice(0, limit);
+    } catch (e) {}
+  }
+
+  return [];
+}
+
+/**
+ * UYSOT.UZ Dedicated Toshkent Residential Complexes (Domtut.uz) Headers
+ */
+export const UYSOT_HEADERS = [
+  'source_id',
+  'object_name',
+  'region',
+  'region_soato',
+  'district',
+  'address',
+  'latitude',
+  'longitude',
+  'developer',
+  'floors',
+  'apartment_count',
+  'block_count',
+  'price_from',
+  'deadline',
+  'phone',
+  'sales_office',
+  'manager_name',
+  'manager_phone',
+  'telegram',
+  'email',
+  'notes',
+  'priority',
+  'last_visit',
+  'source_url',
+  'image_url',
+  'updated_at'
+];
+
+/**
+ * Ensure UYSOT_Objects sheet exists in Google Sheets
+ */
+export async function ensureUysotSheet(sheets: any) {
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+    const titles = (meta.data.sheets || []).map((s: any) => s.properties?.title);
+    if (!titles.includes('UYSOT_Objects')) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        requestBody: {
+          requests: [{
+            addSheet: {
+              properties: {
+                title: 'UYSOT_Objects',
+                gridProperties: { rowCount: 1000, columnCount: UYSOT_HEADERS.length }
+              }
+            }
+          }]
+        }
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: 'UYSOT_Objects!A1:Z1',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [UYSOT_HEADERS] }
+      });
+    }
+  } catch (e) {
+    console.error('ensureUysotSheet error:', e);
+  }
+}
+
+/**
+ * Fetch UYSOT.UZ objects from UYSOT_Objects tab in Google Sheets
+ * with seamless fallback to local src/lib/uysot-domtut-data.json
+ */
+export async function getUysotObjectsFromSheet(): Promise<any[]> {
+  const localJsonPath = path.join(process.cwd(), 'src', 'lib', 'uysot-domtut-data.json');
+  try {
+    const sheets = await getSheetsClient();
+    await ensureUysotSheet(sheets);
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'UYSOT_Objects!A1:Z'
+    });
+    const values = res.data.values || [];
+    if (values.length > 1) {
+      const headers: string[] = values[0];
+      const items: any[] = [];
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        if (!row || !row[0]) continue;
+        const obj: Record<string, any> = {};
+        headers.forEach((h, idx) => {
+          obj[h] = row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+        });
+
+        items.push({
+          source_id: obj.source_id || `domtut_${i}`,
+          object_name: obj.object_name || 'TJM Toshkent',
+          tjm_name: obj.object_name || 'TJM Toshkent',
+          region: obj.region || 'Toshkent shahri',
+          region_soato: obj.region_soato || '1726',
+          district: obj.district || 'Toshkent',
+          district_soato: obj.district || 'Toshkent',
+          address: obj.address || 'Toshkent shahri',
+          latitude: parseFloat(obj.latitude) || 41.2995,
+          longitude: parseFloat(obj.longitude) || 69.2401,
+          status: obj.deadline || 'Qurilish jarayonida',
+          status_id: 1,
+          sphere_id: '57',
+          customer: obj.developer || '—',
+          designer: '—',
+          builder: obj.developer || '—',
+          difficulty: 'II-toifa',
+          floors: obj.floors || '—',
+          apartment_count: obj.apartment_count || '120',
+          block_count: obj.block_count || '2',
+          deadline: obj.deadline || '—',
+          phone: obj.phone || '',
+          sales_office: obj.sales_office || '',
+          manager_name: obj.manager_name || 'Sotuv ofisi',
+          manager_phone: obj.manager_phone || obj.phone || '',
+          telegram: obj.telegram || '',
+          email: obj.email || '',
+          notes: obj.notes || '',
+          priority: obj.priority || 'Normal',
+          last_visit: obj.last_visit || '',
+          image_url: obj.image_url || '',
+          source_url: obj.source_url || '',
+          is_uysot: true
+        });
+      }
+
+      if (items.length > 0) {
+        return items;
+      }
+    }
+  } catch (err) {
+    console.warn('Google Sheets UYSOT_Objects fetch error, using local fallback:', err);
+  }
+
+  // Fallback to local JSON
+  if (fs.existsSync(localJsonPath)) {
+    try {
+      const raw = fs.readFileSync(localJsonPath, 'utf-8');
+      const list = JSON.parse(raw);
+      if (Array.isArray(list) && list.length > 0) {
+        return list.map((item: any, idx: number) => ({
+          source_id: item.source_id || `domtut_${idx}`,
+          object_name: item.object_name || 'TJM Toshkent',
+          tjm_name: item.object_name || 'TJM Toshkent',
+          region: item.region || 'Toshkent shahri',
+          region_soato: item.region_soato || '1726',
+          district: item.district || 'Toshkent',
+          district_soato: item.district || 'Toshkent',
+          address: item.address || 'Toshkent shahri',
+          latitude: parseFloat(item.latitude) || 41.2995,
+          longitude: parseFloat(item.longitude) || 69.2401,
+          status: item.deadline || 'Qurilish jarayonida',
+          status_id: 1,
+          sphere_id: '57',
+          customer: item.developer || '—',
+          designer: '—',
+          builder: item.developer || '—',
+          difficulty: 'II-toifa',
+          floors: item.floors || '—',
+          apartment_count: item.apartment_count || '120',
+          block_count: item.block_count || '2',
+          deadline: item.deadline || '—',
+          phone: item.phone || '',
+          sales_office: item.sales_office || '',
+          manager_name: item.manager_name || 'Sotuv ofisi',
+          manager_phone: item.manager_phone || item.phone || '',
+          telegram: item.telegram || '',
+          email: item.email || '',
+          notes: item.notes || '',
+          priority: item.priority || 'Normal',
+          last_visit: item.last_visit || '',
+          image_url: item.image_url || '',
+          source_url: item.source_url || '',
+          is_uysot: true
+        }));
+      }
     } catch (e) {}
   }
 

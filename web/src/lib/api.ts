@@ -476,6 +476,28 @@ export const api = {
     } catch (e: any) {
       return { success: false, data: [], error: e.message };
     }
+  },
+
+  triggerDomtutSync: async (limit: number = 80): Promise<{ success: boolean; message?: string; error?: string }> => {
+    try {
+      const res = await fetch('/api/admin/sync-domtut', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit })
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  },
+
+  getDomtutStats: async (): Promise<{ success: boolean; count?: number; last_updated?: string; districts_count?: number; districts?: string[]; error?: string }> => {
+    try {
+      const res = await fetch(`/api/admin/sync-domtut?t=${Date.now()}`, { cache: 'no-store' });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
   }
 };
 

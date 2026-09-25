@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { exportAllObjectsFromSheet, getCompanyDataFromSheet } from '@/lib/googleSheets';
+import { exportAllObjectsFromSheet, getCompanyDataFromSheet, getUysotObjectsFromSheet } from '@/lib/googleSheets';
 import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +11,12 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const companyId = searchParams.get('company_id') || '';
+
+    // 2. Dedicated company isolation for UYSOT.UZ (Toshkent / Domtut dataset)
+    if (companyId === 'uysot') {
+      const uysotObjects = await getUysotObjectsFromSheet();
+      return NextResponse.json({ success: true, count: uysotObjects.length, data: uysotObjects });
+    }
 
     // 1. Get base rows (from in-memory cache, live sheets, or local backup)
     let baseRows: any[] = dataCache.getRows() || [];

@@ -48,6 +48,7 @@ export default function AdminPage() {
   const [sessionSearch, setSessionSearch] = useState('');
   const [sessionActionFilter, setSessionActionFilter] = useState<'all' | 'login' | 'register'>('all');
   const [syncingScraper, setSyncingScraper] = useState(false);
+  const [syncingDomtut, setSyncingDomtut] = useState(false);
 
   const handleTriggerWeeklySync = async () => {
     if (!confirm("O'zbekiston bo'ylab ko'p qavatli uy-joylarni avtomatik skanerlash va yangilarini bazaga qo'shishni fonda boshlaysizmi?")) return;
@@ -63,6 +64,24 @@ export default function AdminPage() {
       alert("Xatolik: " + (e.message || ''));
     } finally {
       setSyncingScraper(false);
+    }
+  };
+
+  const handleTriggerDomtutSync = async () => {
+    if (!confirm("https://domtut.uz orqali Toshkent shahri va viloyati bo'yicha TJM-larni skanerlash va UYSOT.UZ bazasini yangilashni boshlaysizmi?")) return;
+    setSyncingDomtut(true);
+    try {
+      const res = await api.triggerDomtutSync(100);
+      if (res && res.success) {
+        alert(res.message || "Domtut (Toshkent) skaneri muvaffaqiyatli ishga tushirildi!");
+        await loadData();
+      } else {
+        alert("Xatolik: " + (res?.error || 'Skanerni ishga tushirib bo\'lmadi'));
+      }
+    } catch (e: any) {
+      alert("Xatolik: " + (e.message || ''));
+    } finally {
+      setSyncingDomtut(false);
     }
   };
 
@@ -264,6 +283,17 @@ export default function AdminPage() {
             <span className="hidden sm:inline">{syncingScraper ? 'Skanerlanmoqda...' : 'Haftalik Skaner'}</span>
           </button>
 
+          {/* Domtut (Toshkent) Skaner Button */}
+          <button
+            onClick={handleTriggerDomtutSync}
+            disabled={syncingDomtut}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+            title="Domtut.uz orqali Toshkent va viloyat TJM-larini yangilash (UYSOT.UZ uchun)"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${syncingDomtut ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{syncingDomtut ? 'Toshkent yangilanmoqda...' : 'Domtut (Toshkent)'}</span>
+          </button>
+
           {/* Sync Button */}
           <button
             onClick={loadData}
@@ -455,7 +485,16 @@ export default function AdminPage() {
                             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                               <Building2 className="w-4 h-4" />
                             </div>
-                            <span>{c.company_name}</span>
+                            <div>
+                              <div>{c.company_name}</div>
+                              <span className={`inline-block text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                                c.company_id === 'uysot' 
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                                  : 'bg-slate-100 text-slate-600'
+                              }`}>
+                                {c.company_id === 'uysot' ? '📍 Domtut.uz (Toshkent)' : '📍 DSHK (Samarqand)'}
+                              </span>
+                            </div>
                           </td>
                           <td className="py-3.5 px-4 font-mono text-xs text-slate-500">
                             {c.company_id}

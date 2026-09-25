@@ -161,9 +161,18 @@ export default function MapContainer({
       delete el._leaflet_id;
     }
 
+    const initialCenter: [number, number] = (() => {
+      if (selectedRegion) {
+        const reg = getRegionBySoato(selectedRegion);
+        if (reg) return reg.center;
+      }
+      return [39.6542, 66.9597];
+    })();
+    const initialZoom = selectedRegion ? (getRegionBySoato(selectedRegion)?.zoom || 12) : 13;
+
     const map = L.map(containerRef.current, {
-      center: [39.6542, 66.9597],
-      zoom: 13,
+      center: initialCenter,
+      zoom: initialZoom,
       zoomControl: false
     });
 
@@ -354,7 +363,7 @@ export default function MapContainer({
   }, [userLat, userLng]);
 
   // 6. Fly to Selected Region (only when not viewing a specific object)
-  const prevRegionRef = useRef<string | undefined>(selectedRegion);
+  const prevRegionRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -373,6 +382,23 @@ export default function MapContainer({
       }
     }
   }, [selectedRegion, selectedId, focusTarget]);
+
+  // 6b. Auto-center on markers if they belong to Tashkent (lat > 40.5)
+  const hasAutoCenteredRef = useRef<boolean>(false);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || hasAutoCenteredRef.current || selectedId || focusTarget) return;
+    if (markers.length > 0) {
+      const valid = markers.filter(m => m.latitude && m.longitude);
+      if (valid.length > 0) {
+        const avgLat = valid.reduce((sum, m) => sum + m.latitude, 0) / valid.length;
+        if (avgLat > 40.5) {
+          hasAutoCenteredRef.current = true;
+          map.flyTo([41.2995, 69.2401], 12, { duration: 1.2 });
+        }
+      }
+    }
+  }, [markers, selectedId, focusTarget]);
 
   // 7. Invalidate size on resize
   useEffect(() => {

@@ -81,10 +81,17 @@ function HomeContent() {
 
   // Navigation & View States
   const [activeTab, setActiveTab] = useState('map');
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Jarayonda');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Auto-switch region to Toshkent when UYSOT.UZ company is active
+  useEffect(() => {
+    if (effectiveCompanyId === 'uysot') {
+      setSelectedRegion('1726');
+    }
+  }, [effectiveCompanyId]);
   const [locating, setLocating] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
