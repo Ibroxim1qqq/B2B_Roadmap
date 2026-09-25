@@ -41,6 +41,7 @@ interface RoutePlannerViewProps {
   onRecordVisit?: (id: string) => Promise<void>;
   currentUser?: UserProfile | null;
   companyId?: string;
+  initialAIStops?: AIRouteRecommendation[] | null;
 }
 
 const REGISTON_LAT = 39.6542;
@@ -62,7 +63,8 @@ export default function RoutePlannerView({
   selectedId,
   onRecordVisit,
   currentUser,
-  companyId
+  companyId,
+  initialAIStops
 }: RoutePlannerViewProps) {
   // Multi-Company User Context
   const [activeUser, setActiveUser] = useState<UserProfile | null>(currentUser || null);
@@ -86,10 +88,51 @@ export default function RoutePlannerView({
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
   const [loadingSavedRoutes, setLoadingSavedRoutes] = useState(false);
   const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
+  const [aiPlannedStops, setAiPlannedStops] = useState<AIRouteRecommendation[] | null>(null);
+
+  // Helper to guarantee AI recommended stops appear even if slightly offset from road polyline
+  const mergeAIStopsWithBufferTJMs = useCallback((
+    baseTJMs: TJMAlongRoute[],
+    aiStops: AIRouteRecommendation[] | null
+  ): TJMAlongRoute[] => {
+    if (!aiStops || aiStops.length === 0) return baseTJMs;
+
+    const existingIds = new Set<string>();
+    const guaranteedStops: TJMAlongRoute[] = [];
+
+    // 1. Add all planned AI stops in their designated sequence
+    aiStops.forEach((stop, index) => {
+      const matchedObj = objects.find(o => String(o.source_id) === String(stop.source_id));
+      if (matchedObj) {
+        existingIds.add(String(matchedObj.source_id));
+        guaranteedStops.push({
+          object: matchedObj,
+          orderNumber: index + 1,
+          distFromRoadMeters: 0,
+          distAlongRouteMeters: index * 1000
+        });
+      }
+    });
+
+    // 2. Add other buildings along the road buffer
+    let nextOrder = guaranteedStops.length + 1;
+    const additional: TJMAlongRoute[] = [];
+    baseTJMs.forEach(t => {
+      if (!existingIds.has(String(t.object.source_id))) {
+        additional.push({
+          ...t,
+          orderNumber: nextOrder++
+        });
+      }
+    });
+
+    return guaranteedStops.length > 0 ? [...guaranteedStops, ...additional] : baseTJMs;
+  }, [objects]);
 
   // Apply AI Generated Route with multi-point waypoints
   const handleApplyAIRoute = async (stops: AIRouteRecommendation[]) => {
     if (!stops || stops.length === 0) return;
+    setAiPlannedStops(stops);
 
     const startPt = (userLat && userLng) ? {
       lat: userLat,
@@ -124,7 +167,8 @@ export default function RoutePlannerView({
       if (multiRes && multiRes.coordinates.length > 0) {
         setRouteResult(multiRes);
         const tjms = findTJMsAlongRoute(objects, multiRes.coordinates, bufferRadius);
-        setMatchedTJMs(tjms);
+        const merged = mergeAIStopsWithBufferTJMs(tjms, stops);
+        setMatchedTJMs(merged);
       }
     } catch (err) {
       console.error('Failed to calculate AI multi-route:', err);
@@ -132,6 +176,13 @@ export default function RoutePlannerView({
       setCalculating(false);
     }
   };
+
+  // React to initialAIStops passed from parent
+  useEffect(() => {
+    if (initialAIStops && initialAIStops.length > 0) {
+      handleApplyAIRoute(initialAIStops);
+    }
+  }, [initialAIStops]);
 
   // Point A (Start) & Point B (End)
   const [startQuery, setStartQuery] = useState('');
@@ -217,9 +268,10 @@ export default function RoutePlannerView({
   useEffect(() => {
     if (routeResult && routeResult.coordinates.length > 0) {
       const found = findTJMsAlongRoute(objects, routeResult.coordinates, bufferRadius);
-      setMatchedTJMs(found);
+      const merged = mergeAIStopsWithBufferTJMs(found, aiPlannedStops);
+      setMatchedTJMs(merged);
     }
-  }, [bufferRadius, routeResult, objects]);
+  }, [bufferRadius, routeResult, objects, aiPlannedStops, mergeAIStopsWithBufferTJMs]);
 
   // Trigger calculation when both start and end points exist and change
   useEffect(() => {
@@ -451,6 +503,7 @@ export default function RoutePlannerView({
     setEndQuery('');
     setRouteResult(null);
     setMatchedTJMs([]);
+    setAiPlannedStops(null);
     setPickingMode(null);
     setIsNavigating(false);
 

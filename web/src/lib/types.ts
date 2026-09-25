@@ -218,5 +218,39 @@ export interface AIPitchBriefing {
   previous_context_tip?: string;
 }
 
+export interface AIChatAction {
+  type: 'view_object' | 'apply_route' | 'apply_filter';
+  label: string;
+  source_id?: string;
+  route_stops?: AIRouteRecommendation[];
+  filter?: {
+    search?: string;
+    district?: string;
+    status?: string;
+  };
+}
+
+export interface AIChatMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  text: string;
+  timestamp: string;
+  suggested_objects?: {
+    source_id: string;
+    object_name: string;
+    district_name: string;
+    floors?: string;
+    apartment_count?: string;
+    phone?: string;
+    manager_name?: string;
+    builder?: string;
+    latitude?: number;
+    longitude?: number;
+  }[];
+  route_stops?: AIRouteRecommendation[];
+  actions?: AIChatAction[];
+}
+
+
 
 

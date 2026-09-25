@@ -93,7 +93,62 @@ async function runTests() {
   j3.data.selling_points?.forEach(p => console.log(`     - ${p}`));
   console.log(`   Strategy: ${j3.data.negotiation_strategy}`);
 
-  console.log(`\n🎉 ALL AI INTEGRATION TESTS PASSED WITH 100% SUCCESS!`);
+  console.log(`\n4. Testing POST /api/ai/route-advisor (action: chat, database statistics query)...`);
+  const r4 = await fetch(`${baseUrl}/api/ai/route-advisor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'chat',
+      message: 'Bazada jami nechta bino bor va statistika qanday?'
+    })
+  });
+  if (!r4.ok) throw new Error(`HTTP error ${r4.status}`);
+  const j4 = await r4.json();
+  if (!j4.success || !j4.data?.text) throw new Error('API returned failure for chat stats query');
+  console.log(`✅ AI Chat Stats Response:\n   ${j4.data.text.slice(0, 120)}...`);
+
+  console.log(`\n5. Testing POST /api/ai/route-advisor (action: chat, nearest buildings with route action)...`);
+  const r5 = await fetch(`${baseUrl}/api/ai/route-advisor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'chat',
+      user_lat: 39.6542,
+      user_lng: 66.9597,
+      message: 'Eng yaqin 5 ta binoni topib ber'
+    })
+  });
+  if (!r5.ok) throw new Error(`HTTP error ${r5.status}`);
+  const j5 = await r5.json();
+  if (!j5.success || !j5.data) throw new Error('API returned failure for chat nearest query');
+  console.log(`✅ Suggested objects returned: ${j5.data.suggested_objects?.length || 0}`);
+  console.log(`✅ Actions attached: ${j5.data.actions?.length || 0}`);
+  if (j5.data.actions?.[0]?.type === 'apply_route') {
+    console.log(`✅ Action type "apply_route" confirmed with ${j5.data.actions[0].route_stops?.length || 0} stops!`);
+  }
+
+  console.log(`\n6. Testing POST /api/ai/route-advisor (action: chat, UYSOT Toshkent district isolation)...`);
+  const r6 = await fetch(`${baseUrl}/api/ai/route-advisor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'chat',
+      company_id: 'uysot',
+      message: 'Chilonzor tumanidagi binolar'
+    })
+  });
+  if (!r6.ok) throw new Error(`HTTP error ${r6.status}`);
+  const j6 = await r6.json();
+  if (!j6.success || !j6.data) throw new Error('API returned failure for UYSOT chat query');
+  console.log(`✅ UYSOT suggested objects: ${j6.data.suggested_objects?.length || 0}`);
+  for (const s of j6.data.suggested_objects || []) {
+    if (!String(s.source_id).startsWith('domtut_')) {
+      throw new Error(`Data leakage in AI Chat! Found non-domtut ID: ${s.source_id}`);
+    }
+  }
+  console.log(`✅ UYSOT strict company data isolation 100% verified in AI Chat!`);
+
+  console.log(`\n🎉 ALL AI INTEGRATION & CHAT TESTS PASSED WITH 100% SUCCESS!`);
 }
 
 runTests().catch(err => {

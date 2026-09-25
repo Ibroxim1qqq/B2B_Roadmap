@@ -1,4 +1,4 @@
-import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute, WeeklySyncNotification, UserSession, AIRoutePlanResult, AIPitchBriefing } from './types';
+import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute, WeeklySyncNotification, UserSession, AIRoutePlanResult, AIPitchBriefing, AIChatMessage, AIChatAction } from './types';
 import realSheetsData from './real-sheets-data.json';
 import uysotDomtutData from './uysot-domtut-data.json';
 import { getRegionName, getDistrictName, getRegionBySoato } from './regions';
@@ -647,6 +647,41 @@ export const api = {
         body: JSON.stringify({
           action: 'pitch_briefing',
           target_object: targetObject
+        })
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  },
+
+  askAIChat: async (params: {
+    message: string;
+    companyId?: string;
+    userLat?: number | null;
+    userLng?: number | null;
+    objects?: any[];
+  }): Promise<{
+    success: boolean;
+    data?: {
+      text: string;
+      suggested_objects?: AIChatMessage['suggested_objects'];
+      route_stops?: AIChatMessage['route_stops'];
+      actions?: AIChatAction[];
+    };
+    error?: string;
+  }> => {
+    try {
+      const res = await fetch('/api/ai/route-advisor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'chat',
+          company_id: params.companyId,
+          message: params.message,
+          user_lat: params.userLat,
+          user_lng: params.userLng,
+          objects_pool: params.objects
         })
       });
       return await res.json();

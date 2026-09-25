@@ -6,7 +6,8 @@ import { useObjects } from '../hooks/useObjects';
 import { useLocation } from '../hooks/useLocation';
 import { useDistance } from '../hooks/useDistance';
 import { api, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject } from '../lib/api';
-import { ObjectDetail, CustomField, MapObject, UserProfile, WeeklySyncNotification, NewBuildingItem } from '../lib/types';
+import { ObjectDetail, CustomField, MapObject, UserProfile, WeeklySyncNotification, NewBuildingItem, AIRouteRecommendation } from '../lib/types';
+import GlobalAIAssistant from '../components/AI/GlobalAIAssistant';
 import { getCurrentUser, setCurrentUser as saveCurrentUser, logout as authLogout } from '../lib/auth';
 import Navbar from '../components/Header/Navbar';
 import LeftSidebar from '../components/Sidebar/LeftSidebar';
@@ -56,6 +57,8 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryCompanyId = searchParams.get('company_id');
+  const queryTab = searchParams.get('tab');
+  const queryFocusId = searchParams.get('focus_id');
 
   // User Authentication & Session
   const [currentUser, setLocalCurrentUser] = useState<UserProfile | null>(null);
@@ -85,6 +88,17 @@ function HomeContent() {
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Jarayonda');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Handle URL query parameters for tab and focused object
+  useEffect(() => {
+    if (queryTab) {
+      setActiveTab(queryTab);
+    }
+    if (queryFocusId) {
+      handleSelectObject(queryFocusId);
+      setActiveTab('map');
+    }
+  }, [queryTab, queryFocusId]);
 
   // Auto-switch region to Toshkent when UYSOT.UZ company is active
   useEffect(() => {
@@ -294,6 +308,34 @@ function HomeContent() {
       console.error(err);
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const [activeAIStops, setActiveAIStops] = useState<AIRouteRecommendation[] | null>(null);
+
+  const handleApplyAIRouteFromCopilot = (stops: AIRouteRecommendation[]) => {
+    setActiveAIStops(stops);
+    setActiveTab('route');
+  };
+
+  const handleApplyFilterFromCopilot = (filter: { district?: string; search?: string; status?: string }) => {
+    if (filter.district) setSelectedDistrict(filter.district);
+    if (filter.search !== undefined) setSearchQuery(filter.search);
+    if (filter.status) setSelectedStatus(filter.status);
+    setActiveTab('map');
+  };
+
+  const handleSelectObjectFromCopilot = (sourceId: string) => {
+    handleSelectObject(sourceId);
+    setActiveTab('map');
+    const target = allMarkers.find(m => String(m.source_id) === String(sourceId));
+    if (target && target.latitude && target.longitude) {
+      setFocusTarget({
+        lat: target.latitude,
+        lng: target.longitude,
+        zoom: 16,
+        timestamp: Date.now()
+      });
     }
   };
 
@@ -610,6 +652,7 @@ function HomeContent() {
               onRecordVisit={handleRecordVisitForId}
               currentUser={currentUser}
               companyId={effectiveCompanyId}
+              initialAIStops={activeAIStops}
             />
           )}
 
@@ -786,6 +829,17 @@ function HomeContent() {
         onSelectBuilding={handleSelectNewBuilding}
         onMarkAllAsRead={handleMarkAllAsRead}
         unreadCount={unreadNotifCount}
+      />
+
+      {/* Global AI Copilot Assistant (Floating circular button on bottom right) */}
+      <GlobalAIAssistant
+        objects={allMarkers}
+        userLat={location.lat}
+        userLng={location.lng}
+        companyId={effectiveCompanyId}
+        onViewOnMap={handleSelectObjectFromCopilot}
+        onApplyRoute={handleApplyAIRouteFromCopilot}
+        onApplyFilter={handleApplyFilterFromCopilot}
       />
     </div>
   );

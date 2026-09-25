@@ -11,6 +11,7 @@ import {
 import { getCurrentUser, logout } from '../../lib/auth';
 import { api } from '../../lib/api';
 import { UserProfile, Company, UserSession } from '../../lib/types';
+import GlobalAIAssistant from '../../components/AI/GlobalAIAssistant';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -1048,6 +1049,14 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Global AI Copilot Assistant on Admin Page */}
+      <GlobalAIAssistant
+        objects={[]}
+        companyId={currentUser?.company_id}
+        onViewOnMap={(id) => router.push(`/?focus_id=${id}`)}
+        onApplyRoute={() => router.push('/?tab=route')}
+      />
     </div>
   );
 }
