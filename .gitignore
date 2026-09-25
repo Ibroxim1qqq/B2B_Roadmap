@@ -15,3 +15,5 @@ __pycache__/
 *.pyc
 scraper/.env
 scraper/credentials.json
+web/src/lib/sessions.json
+
