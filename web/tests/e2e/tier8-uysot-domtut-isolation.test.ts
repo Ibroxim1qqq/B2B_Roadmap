@@ -100,3 +100,55 @@ defineTest('scraper/domtut_collector.py exists and handles Tashkent scraping and
   assert.ok(code.includes('UYSOT_Objects'), 'collector must target UYSOT_Objects tab');
   assert.ok(code.includes('1726'), 'collector must assign SOATO 1726 for Toshkent');
 });
+
+defineTest('uysot-domtut-data.json contains 500+ valid Tashkent TJMs with 100% purity', {
+  tier: 8, milestone: 8, feature: 'DOMTUT_DATASET_PURITY',
+  description: 'Local cache has over 500 complexes, all with domtut_ prefix and Tashkent GPS coordinates'
+}, () => {
+  const jsonPath = path.resolve(WEB_ROOT, 'src/lib/uysot-domtut-data.json');
+  assert.ok(fs.existsSync(jsonPath), 'uysot-domtut-data.json must exist');
+  const raw = fs.readFileSync(jsonPath, 'utf-8');
+  const objects = JSON.parse(raw);
+  assert.ok(objects.length >= 500, `Expected at least 500 objects, found ${objects.length}`);
+
+  const nonDomtut = objects.filter((o: any) => !String(o.source_id).startsWith('domtut_'));
+  assert.equal(nonDomtut.length, 0, '100% of objects in UYSOT dataset must have domtut_ prefix');
+
+  const invalidCoords = objects.filter((o: any) => !o.latitude || !o.longitude || o.latitude < 40.0 || o.latitude > 42.5);
+  assert.equal(invalidCoords.length, 0, '100% of UYSOT objects must fall inside Tashkent region');
+});
+
+defineTest('Zero-Leakage Matrix: UYSOT and Samarqand datasets have 0 overlapping objects', {
+  tier: 8, milestone: 8, feature: 'ZERO_DATA_LEAKAGE_MATRIX',
+  description: 'Mathematical intersection of UYSOT IDs and Samarqand DSHK IDs is strictly empty'
+}, () => {
+  const uysotJsonPath = path.resolve(WEB_ROOT, 'src/lib/uysot-domtut-data.json');
+  const dshkJsonPath = path.resolve(WEB_ROOT, 'src/lib/real-sheets-data.json');
+  assert.ok(fs.existsSync(uysotJsonPath), 'uysot-domtut-data.json must exist');
+  assert.ok(fs.existsSync(dshkJsonPath), 'real-sheets-data.json must exist');
+
+  const uysot = JSON.parse(fs.readFileSync(uysotJsonPath, 'utf-8'));
+  const dshk = JSON.parse(fs.readFileSync(dshkJsonPath, 'utf-8'));
+  const dshkRows = dshk.rows || [];
+
+  const uysotIds = new Set(uysot.map((o: any) => String(o.source_id)));
+  const dshkIds = new Set(dshkRows.map((o: any) => String(o.source_id)));
+
+  // Strict intersection test
+  const intersection = [...uysotIds].filter(id => dshkIds.has(id));
+  assert.equal(intersection.length, 0, `Data leakage detected! Shared objects: ${intersection.join(', ')}`);
+
+  // Ensure no domtut objects exist in DSHK Samarqand dataset
+  const domtutInDshk = dshkRows.filter((o: any) => String(o.source_id).startsWith('domtut_'));
+  assert.equal(domtutInDshk.length, 0, 'Zero Domtut objects must appear in Samarqand base dataset');
+});
+
+defineTest('Company_Data CRM overrides are strictly isolated by company_id', {
+  tier: 8, milestone: 8, feature: 'CRM_COMPANY_ISOLATION',
+  description: 'getCompanyDataFromSheet filters exclusively by companyId'
+}, () => {
+  const content = readSrcFile('lib/googleSheets.ts');
+  assert.ok(content.includes('rowObj.company_id !== companyId'), 'CRM overrides must strictly check rowObj.company_id !== companyId');
+  assert.ok(content.includes('updateCompanyDataInSheet'), 'CRM update function must exist');
+});
+
