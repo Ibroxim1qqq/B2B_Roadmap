@@ -585,9 +585,8 @@ function HomeContent() {
               </div>
             )}
 
-            {/* 1. 4 Summary Stat Cards at the Top */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-5 pt-4 pb-2 shrink-0">
-
+            {/* 1. 4 Summary Stat Cards on Desktop */}
+            <div className="hidden lg:grid grid-cols-4 gap-3 px-5 pt-4 pb-2 shrink-0">
               {/* Card 1: Jami TJM-lar */}
               <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -641,6 +640,22 @@ function HomeContent() {
               </div>
             </div>
 
+            {/* Mobile Compact Horizontal Stats Strip (Yandex Maps style) */}
+            <div className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-slate-50 border-b border-slate-200/80 overflow-x-auto no-scrollbar shrink-0 text-[11px] font-semibold text-slate-600">
+              <span className="flex items-center gap-1 bg-white border border-slate-200/90 px-2.5 py-1 rounded-xl shrink-0 text-slate-800 shadow-2xs font-bold">
+                🏢 Jami: <span className="text-blue-600 font-black">{stats.total}</span> ta
+              </span>
+              <span className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl shrink-0 text-emerald-800 shadow-2xs">
+                ✅ Borilgan: {stats.visited}
+              </span>
+              <span className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl shrink-0 text-amber-800 shadow-2xs">
+                ⏳ Borilmagan: {stats.notVisited}
+              </span>
+              <span className="flex items-center gap-1 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-xl shrink-0 text-indigo-800 shadow-2xs">
+                📝 To'ldirilgan: {stats.filled}
+              </span>
+            </div>
+
             {/* 2. Filter Pills Bar (Directly Above the Map) */}
             <FilterToolbar
               selectedRegion={selectedRegion}
@@ -656,9 +671,9 @@ function HomeContent() {
               locating={locating}
             />
 
-            {/* 3. Fullscreen Map Area */}
-            <div className="flex-1 p-5 pt-2 pb-4 min-h-0">
-              <div className="h-full w-full rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-white">
+            {/* 3. Fullscreen Map Area (Edge-to-edge on mobile) */}
+            <div className="flex-1 p-0 lg:p-5 lg:pt-2 lg:pb-4 min-h-0 relative">
+              <div className="h-full w-full rounded-none lg:rounded-2xl overflow-hidden shadow-none lg:shadow-xs border-0 lg:border border-slate-200 bg-white">
                 <DynamicMap
                   markers={displayList}
                   onSelect={handleSelectObject}

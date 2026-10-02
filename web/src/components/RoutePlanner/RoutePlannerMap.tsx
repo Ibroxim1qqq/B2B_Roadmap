@@ -12,7 +12,7 @@ import {
   Locate, Phone, CheckCircle2, Navigation, Volume2, VolumeX,
   Gauge, Compass, Play, Pause, Sparkles, Layers
 } from 'lucide-react';
-import { getCallUrl } from '../../lib/utils';
+import { getCallUrl, getYandexNavUrl } from '../../lib/utils';
 
 // Fix Leaflet default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -997,6 +997,16 @@ export default function RoutePlannerMap({
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
+                <a
+                  href={getYandexNavUrl(approachingTJM.tjm.object.latitude, approachingTJM.tjm.object.longitude)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2.5 bg-slate-950 text-amber-400 hover:text-white rounded-xl shadow-xs"
+                  title="Yandex Navigator da ochish"
+                >
+                  <Navigation className="w-4 h-4" />
+                </a>
+
                 {approachingTJM.tjm.object.phone && (
                   <a
                     href={getCallUrl(approachingTJM.tjm.object.phone)}
@@ -1038,15 +1048,27 @@ export default function RoutePlannerMap({
                 </div>
               </div>
 
-              {nextUpcomingTJM.tjm.object.phone && (
+              <div className="flex items-center gap-1.5 shrink-0">
                 <a
-                  href={getCallUrl(nextUpcomingTJM.tjm.object.phone)}
-                  className="p-2 bg-white/10 hover:bg-white/20 text-emerald-400 rounded-xl"
-                  title="Qo'ng'iroq"
+                  href={getYandexNavUrl(nextUpcomingTJM.tjm.object.latitude, nextUpcomingTJM.tjm.object.longitude)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2 bg-white/10 hover:bg-white/20 text-amber-400 rounded-xl"
+                  title="Yandex Navigator da ochish"
                 >
-                  <Phone className="w-3.5 h-3.5" />
+                  <Navigation className="w-3.5 h-3.5" />
                 </a>
-              )}
+
+                {nextUpcomingTJM.tjm.object.phone && (
+                  <a
+                    href={getCallUrl(nextUpcomingTJM.tjm.object.phone)}
+                    className="p-2 bg-white/10 hover:bg-white/20 text-emerald-400 rounded-xl"
+                    title="Qo'ng'iroq"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
             </div>
           ) : (
             <div className="bg-slate-900/90 backdrop-blur-md text-white p-2.5 rounded-xl shadow-lg border border-white/15 text-center text-xs font-semibold">

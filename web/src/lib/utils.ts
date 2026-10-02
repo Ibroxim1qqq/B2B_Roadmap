@@ -34,6 +34,18 @@ export function getNavigationUrl(lat: any, lng: any): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
 }
 
+export function getYandexNavUrl(lat: any, lng: any): string {
+  const latitude = parseFloat(lat) || 39.6542;
+  const longitude = parseFloat(lng) || 66.9597;
+  return `https://yandex.com/maps/?rtext=~${latitude},${longitude}&rtt=auto`;
+}
+
+export function getYandexAppNavUrl(lat: any, lng: any): string {
+  const latitude = parseFloat(lat) || 39.6542;
+  const longitude = parseFloat(lng) || 66.9597;
+  return `yandexmaps://build_route_on_map?lat_to=${latitude}&lon_to=${longitude}`;
+}
+
 export function getTelegramUrl(usernameOrPhone: any): string {
   if (!usernameOrPhone) return '#';
   const str = String(usernameOrPhone).trim();

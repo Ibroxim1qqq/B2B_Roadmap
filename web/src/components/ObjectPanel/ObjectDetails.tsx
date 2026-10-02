@@ -8,7 +8,7 @@ import {
   Clock, CheckCircle2, Navigation, Pencil, Trash2, ShieldCheck, Tag,
   Sparkles, Loader2
 } from 'lucide-react';
-import { getNavigationUrl, getCallUrl, getTelegramUrl, getInstagramUrl } from '../../lib/utils';
+import { getNavigationUrl, getYandexNavUrl, getCallUrl, getTelegramUrl, getInstagramUrl } from '../../lib/utils';
 
 interface Props {
   detail: ObjectDetail;
@@ -155,6 +155,59 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
               )}
             </div>
           </div>
+        </div>
+
+        {/* Mobile Yo'l-yo'lakay Quick Action Bar (Yandex Maps / Yandex Go style) */}
+        <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center gap-2">
+          {internal.phone ? (
+            <a
+              href={getCallUrl(internal.phone)}
+              className="flex-1 py-2 px-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>Qo'ng'iroq</span>
+            </a>
+          ) : (
+            <div className="flex-1 py-2 px-2 bg-slate-100 text-slate-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-not-allowed">
+              <Phone className="w-3.5 h-3.5" />
+              <span>Tel yo'q</span>
+            </div>
+          )}
+
+          <a
+            href={getYandexNavUrl(source.latitude, source.longitude)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex-1 py-2 px-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all"
+            title="Yandex Navigator da ochish"
+          >
+            <Navigation className="w-3.5 h-3.5 text-slate-950" />
+            <span>Yandex Nav</span>
+          </a>
+
+          <a
+            href={getNavigationUrl(source.latitude, source.longitude)}
+            target="_blank"
+            rel="noreferrer"
+            className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center transition-all"
+            title="Google Maps da ochish"
+          >
+            <Globe className="w-4 h-4 text-blue-600" />
+          </a>
+
+          <button
+            type="button"
+            onClick={handleVisit}
+            disabled={loadingVisit}
+            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+              visitRecorded 
+                ? 'bg-emerald-700 text-white' 
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>{loadingVisit ? '...' : visitRecorded ? 'Saqlandi' : 'Tashrif'}</span>
+          </button>
         </div>
       </div>
 

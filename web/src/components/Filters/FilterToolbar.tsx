@@ -50,11 +50,11 @@ export default function FilterToolbar({
   ];
 
   return (
-    <div className="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
-      {/* Filters Pill Row */}
-      <div className="flex flex-wrap items-center gap-2.5">
+    <div className="bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2 md:px-6 md:py-3 flex items-center justify-between gap-2 shrink-0">
+      {/* Filters Pill Row (Scrollable on mobile) */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0">
         {/* Region Selector Dropdown */}
-        <div ref={regionRef} className="relative">
+        <div ref={regionRef} className="relative shrink-0">
           <button
             onClick={() => { setRegionOpen(!regionOpen); setDistrictOpen(false); setStatusOpen(false); }}
             className={`flex items-center gap-2 px-3.5 py-1.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors ${
@@ -115,13 +115,13 @@ export default function FilterToolbar({
         </div>
 
         {/* Category (Fixed) */}
-        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs">
+        <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs shrink-0">
           <Building className="w-3.5 h-3.5 text-blue-600" />
           <span>Ko'p xonadonli uy-joylar</span>
         </div>
 
         {/* District Dropdown */}
-        <div ref={districtRef} className="relative">
+        <div ref={districtRef} className="relative shrink-0">
           <button
             onClick={() => { setDistrictOpen(!districtOpen); setStatusOpen(false); }}
             className={`flex items-center gap-2 px-3.5 py-1.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors ${
@@ -160,7 +160,7 @@ export default function FilterToolbar({
         </div>
 
         {/* Status Dropdown (Default: Jarayonda) */}
-        <div ref={statusRef} className="relative">
+        <div ref={statusRef} className="relative shrink-0">
           <button
             onClick={() => { setStatusOpen(!statusOpen); setDistrictOpen(false); }}
             className={`flex items-center gap-2 px-3.5 py-1.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors ${
@@ -204,10 +204,11 @@ export default function FilterToolbar({
       <button
         onClick={onMyLocation}
         disabled={locating}
-        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-xs shadow-blue-500/25 transition-all"
+        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs font-bold shadow-xs shadow-blue-500/25 transition-all shrink-0 cursor-pointer"
+        title="Mening joylashuvim"
       >
         <Navigation className={`w-3.5 h-3.5 ${locating ? 'animate-spin' : ''}`} />
-        <span>{locating ? 'Aniqlanmoqda...' : 'Mening joylashuvim'}</span>
+        <span className="hidden sm:inline">{locating ? 'Aniqlanmoqda...' : 'Joylashuvim'}</span>
       </button>
     </div>
   );
