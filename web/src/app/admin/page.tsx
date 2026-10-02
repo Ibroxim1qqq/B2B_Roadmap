@@ -1050,13 +1050,13 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Global AI Copilot Assistant on Admin Page */}
-      <GlobalAIAssistant
+      {/* Global AI Copilot Assistant on Admin Page (Hozircha foydalanuvchi talabiga ko'ra o'chirilgan) */}
+      {/* <GlobalAIAssistant
         objects={[]}
         companyId={currentUser?.company_id}
         onViewOnMap={(id) => router.push(`/?focus_id=${id}`)}
         onApplyRoute={() => router.push('/?tab=route')}
-      />
+      /> */}
     </div>
   );
 }

@@ -930,8 +930,8 @@ function HomeContent() {
         unreadCount={unreadNotifCount}
       />
 
-      {/* Global AI Copilot Assistant (Floating circular button on bottom right) */}
-      <GlobalAIAssistant
+      {/* Global AI Copilot Assistant (Hozircha foydalanuvchi talabiga ko'ra o'chirilgan) */}
+      {/* <GlobalAIAssistant
         objects={allMarkers}
         userLat={location.lat}
         userLng={location.lng}
@@ -939,7 +939,7 @@ function HomeContent() {
         onViewOnMap={handleSelectObjectFromCopilot}
         onApplyRoute={handleApplyAIRouteFromCopilot}
         onApplyFilter={handleApplyFilterFromCopilot}
-      />
+      /> */}
     </div>
   );
 }

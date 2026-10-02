@@ -36,6 +36,9 @@ export default function GlobalAIAssistant({
   onApplyRoute,
   onApplyFilter
 }: GlobalAIAssistantProps) {
+  // Hozircha foydalanuvchi talabiga ko'ra AI vaqtincha o'chirilgan
+  return null;
+
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
