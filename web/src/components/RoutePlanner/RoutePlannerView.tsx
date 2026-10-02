@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { MapObject, UserProfile, SavedRoute, AIRouteRecommendation } from '../../lib/types';
-import { api } from '../../lib/api';
+import { api, isUysotCompany } from '../../lib/api';
 import { getCurrentUser } from '../../lib/auth';
 import AIRouteModal from './AIRouteModal';
 import { 
@@ -56,7 +56,7 @@ function getAccountRouteStorageKey(user?: UserProfile | null): string {
 }
 
 export default function RoutePlannerView({
-  objects,
+  objects: rawObjects,
   userLat,
   userLng,
   onSelectObject,
@@ -76,6 +76,14 @@ export default function RoutePlannerView({
       if (u) setActiveUser(u);
     }
   }, [currentUser]);
+
+  const isUysot = isUysotCompany(companyId || activeUser?.company_id);
+  const objects = useMemo(() => {
+    return (rawObjects || []).filter(o => {
+      const isDomtut = String(o.source_id).startsWith('domtut_') || Boolean((o as any).is_uysot);
+      return isUysot ? isDomtut : !isDomtut;
+    });
+  }, [rawObjects, isUysot]);
 
   // Route persistence per account
   const [isStorageInitialized, setIsStorageInitialized] = useState(false);
@@ -134,20 +142,23 @@ export default function RoutePlannerView({
     if (!stops || stops.length === 0) return;
     setAiPlannedStops(stops);
 
+    const centerLat = isUysot ? 41.2995 : REGISTON_LAT;
+    const centerLng = isUysot ? 69.2401 : REGISTON_LNG;
+
     const startPt = (userLat && userLng) ? {
       lat: userLat,
       lng: userLng,
       name: 'Mening joriy joylashuvim (GPS)'
     } : {
-      lat: stops[0].latitude || REGISTON_LAT,
-      lng: stops[0].longitude || REGISTON_LNG,
+      lat: stops[0].latitude || centerLat,
+      lng: stops[0].longitude || centerLng,
       name: stops[0].object_name
     };
 
     const lastStop = stops[stops.length - 1];
     const endPt = {
-      lat: lastStop.latitude || (stops[0].latitude || REGISTON_LAT),
-      lng: lastStop.longitude || (stops[0].longitude || REGISTON_LNG),
+      lat: lastStop.latitude || (stops[0].latitude || centerLat),
+      lng: lastStop.longitude || (stops[0].longitude || centerLng),
       name: lastStop.object_name
     };
 
@@ -378,12 +389,12 @@ export default function RoutePlannerView({
     }
   };
 
-  // Set Start Point to Registon Center
+  // Set Start Point to Center
   const handleUseRegiston = () => {
     const pt = {
-      lat: REGISTON_LAT,
-      lng: REGISTON_LNG,
-      name: 'Samarqand markazi (Registon)'
+      lat: isUysot ? 41.2995 : REGISTON_LAT,
+      lng: isUysot ? 69.2401 : REGISTON_LNG,
+      name: isUysot ? 'Toshkent markazi (Amir Temur xiyoboni)' : 'Samarqand markazi (Registon)'
     };
     setStartPoint(pt);
     setStartQuery(pt.name);
@@ -868,7 +879,7 @@ export default function RoutePlannerView({
                     onClick={handleUseRegiston}
                     className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-blue-50 text-blue-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
                   >
-                    <span>🏛️ Samarqand markazi (Registon)</span>
+                    <span>🏛️ {isUysot ? 'Toshkent markazi (Amir Temur)' : 'Samarqand markazi (Registon)'}</span>
                   </button>
 
                   <button

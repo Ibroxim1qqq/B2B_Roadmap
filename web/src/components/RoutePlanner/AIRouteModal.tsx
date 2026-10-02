@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Sparkles, X, MapPin, CheckCircle2, ArrowRight, Loader2, Compass, Phone, Building2, Flame } from 'lucide-react';
 import { MapObject, AIRoutePlanResult, AIRouteRecommendation } from '../../lib/types';
-import { api } from '../../lib/api';
+import { api, isUysotCompany } from '../../lib/api';
 
 interface AIRouteModalProps {
   isOpen: boolean;
@@ -66,15 +66,23 @@ export default function AIRouteModal({
     setLoading(true);
     setErrorMsg(null);
     try {
+      const isUysot = isUysotCompany(companyId);
+      const defaultLat = isUysot ? 41.2995 : 39.6542;
+      const defaultLng = isUysot ? 69.2401 : 66.9597;
+      const cleanObjects = objects.filter(o => {
+        const isDomtut = String(o.source_id).startsWith('domtut_') || Boolean((o as any).is_uysot);
+        return isUysot ? isDomtut : !isDomtut;
+      });
+
       const res = await api.getAIRoutePlan({
         companyId,
-        userLat: userLat || 39.6542,
-        userLng: userLng || 66.9597,
+        userLat: userLat || defaultLat,
+        userLng: userLng || defaultLng,
         prompt: promptText,
         unvisitedOnly,
         highPriorityOnly,
         maxStops,
-        objects
+        objects: cleanObjects
       });
 
       if (res.success && res.data) {

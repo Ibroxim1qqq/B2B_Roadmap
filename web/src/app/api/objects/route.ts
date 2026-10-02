@@ -7,15 +7,28 @@ import { dataCache } from '@/lib/dataCache';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const isUysotCompany = (cid?: string | null): boolean => {
+  if (!cid) return false;
+  const clean = String(cid).trim().toLowerCase();
+  return clean === 'uysot' || 
+         clean === 'comp_1789981554543' || 
+         clean === 'uysot.uz' || 
+         clean === 'uysot_uz' || 
+         clean.includes('uysot');
+};
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const companyId = searchParams.get('company_id') || '';
+    const isUysot = companyId === 'uysot' || isUysotCompany(companyId);
 
     // 2. Dedicated company isolation for UYSOT.UZ (Toshkent / Domtut dataset)
-    if (companyId === 'uysot' || companyId === 'comp_1789981554543') {
+    if (isUysot) {
       const uysotObjects = await getUysotObjectsFromSheet();
-      return NextResponse.json({ success: true, count: uysotObjects.length, data: uysotObjects });
+      // Enforce 100% strict isolation: only Domtut objects
+      const pureUysot = uysotObjects.filter((r: any) => String(r.source_id || '').startsWith('domtut_') || r.is_uysot);
+      return NextResponse.json({ success: true, count: pureUysot.length, data: pureUysot });
     }
 
     // 1. Get base rows (from in-memory cache, live sheets, or local backup)
@@ -46,6 +59,9 @@ export async function GET(req: NextRequest) {
         console.warn('Local backup read failed:', fsErr);
       }
     }
+
+    // Ensure non-UYSOT companies NEVER receive Domtut objects
+    baseRows = baseRows.filter((r: any) => !String(r.source_id || '').startsWith('domtut_') && !r.is_uysot);
 
     // 2. If no company_id provided, return base objects as is
     if (!companyId || companyId === 'system') {
@@ -115,7 +131,8 @@ export async function GET(req: NextRequest) {
       is_custom: true
     }));
 
-    const finalData = [...customList, ...mergedRows];
+    const pureCustomList = customList.filter((c: any) => !String(c.source_id || '').startsWith('domtut_') && !c.is_uysot);
+    const finalData = [...pureCustomList, ...mergedRows];
     return NextResponse.json({ success: true, count: finalData.length, data: finalData });
   } catch (err: any) {
     console.error('API /api/objects error:', err);

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useObjects } from '../hooks/useObjects';
 import { useLocation } from '../hooks/useLocation';
 import { useDistance } from '../hooks/useDistance';
-import { api, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject } from '../lib/api';
+import { api, isUysotCompany, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject } from '../lib/api';
 import { ObjectDetail, CustomField, MapObject, UserProfile, WeeklySyncNotification, NewBuildingItem, AIRouteRecommendation } from '../lib/types';
 import GlobalAIAssistant from '../components/AI/GlobalAIAssistant';
 import { getCurrentUser, setCurrentUser as saveCurrentUser, logout as authLogout } from '../lib/auth';
@@ -102,7 +102,7 @@ function HomeContent() {
 
   // Auto-switch region to Toshkent when UYSOT.UZ company is active
   useEffect(() => {
-    if (effectiveCompanyId === 'uysot' || effectiveCompanyId === 'comp_1789981554543') {
+    if (effectiveCompanyId === 'uysot' || isUysotCompany(effectiveCompanyId)) {
       setSelectedRegion('1726');
     }
   }, [effectiveCompanyId]);
@@ -127,13 +127,25 @@ function HomeContent() {
   useEffect(() => {
     async function loadNotifications() {
       try {
+        const isUysot = isUysotCompany(effectiveCompanyId);
+        // UYSOT users strictly never see DSHK notifications
+        if (isUysot) {
+          setNotifications([]);
+          setUnreadNotifCount(0);
+          return;
+        }
+
         const res = await api.getNotifications();
         if (res.success && Array.isArray(res.data)) {
-          setNotifications(res.data);
+          // Non-UYSOT companies only see non-domtut notifications
+          const filteredNotifs = res.data.filter(n =>
+            n.new_objects?.some((b: any) => !String(b.source_id).startsWith('domtut_') && !b.is_uysot)
+          );
+          setNotifications(filteredNotifs);
           const userId = currentUser?.id || currentUser?.user_id || 'guest';
           const readKey = `b2b_read_notifs_${userId}`;
           const readIds: string[] = JSON.parse(localStorage.getItem(readKey) || '[]');
-          const unread = res.data.filter(n => !readIds.includes(n.id));
+          const unread = filteredNotifs.filter(n => !readIds.includes(n.id));
           const totalNew = unread.reduce((acc, curr) => acc + (curr.new_count || (curr.new_objects?.length || 1)), 0);
           setUnreadNotifCount(totalNew);
         }
@@ -142,7 +154,7 @@ function HomeContent() {
       }
     }
     loadNotifications();
-  }, [currentUser]);
+  }, [currentUser, effectiveCompanyId]);
 
   const handleMarkAllAsRead = () => {
     const userId = currentUser?.id || currentUser?.user_id || 'guest';
@@ -151,22 +163,34 @@ function HomeContent() {
     setUnreadNotifCount(0);
   };
 
-  // Combine base markers with any new objects discovered via notifications
+  // Combine base markers with any new objects discovered via notifications (with 100% strict company isolation)
   const allMarkers = useMemo(() => {
+    const isUysot = isUysotCompany(effectiveCompanyId);
     const map = new Map<string, MapObject>();
+    
     for (const m of markers) {
-      map.set(String(m.source_id), m);
+      const isDomtut = String(m.source_id).startsWith('domtut_') || Boolean((m as any).is_uysot);
+      if (isUysot) {
+        if (isDomtut) map.set(String(m.source_id), m);
+      } else {
+        if (!isDomtut) map.set(String(m.source_id), m);
+      }
     }
-    for (const notif of notifications) {
-      for (const b of notif.new_objects || []) {
-        const id = String(b.source_id);
-        if (!map.has(id)) {
-          map.set(id, formatBuildingItemToMapObject(b));
+
+    // Only non-UYSOT companies receive DSHK scraper notifications
+    if (!isUysot) {
+      for (const notif of notifications) {
+        for (const b of notif.new_objects || []) {
+          const id = String(b.source_id);
+          if (!id.startsWith('domtut_') && !map.has(id)) {
+            map.set(id, formatBuildingItemToMapObject(b));
+          }
         }
       }
     }
+
     return Array.from(map.values());
-  }, [markers, notifications]);
+  }, [markers, notifications, effectiveCompanyId]);
 
   const handleSelectNewBuilding = async (building: NewBuildingItem) => {
     setActiveTab('map');
@@ -225,8 +249,14 @@ function HomeContent() {
 
   // Real-time active filtering for region, search, district, and status
   const activeFilteredMarkers = useMemo(() => {
+    const isUysot = isUysotCompany(effectiveCompanyId);
     return allMarkers.filter(m => {
-      // 0. Region Filter
+      // 0. Hard company isolation guard:
+      const isDomtut = String(m.source_id).startsWith('domtut_') || Boolean((m as any).is_uysot);
+      if (isUysot && !isDomtut) return false;
+      if (!isUysot && isDomtut) return false;
+
+      // 1. Region Filter
       if (selectedRegion && m.region_soato !== selectedRegion) {
         return false;
       }
@@ -452,7 +482,7 @@ function HomeContent() {
   const handleSyncWithSheets = async () => {
     setSyncing(true);
     try {
-      const res = await api.syncWithSheets();
+      const res = await api.syncWithSheets(effectiveCompanyId);
       if (res && res.success) {
         await refresh();
         if (selectedId) {

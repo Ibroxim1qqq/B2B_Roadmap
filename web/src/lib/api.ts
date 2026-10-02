@@ -25,7 +25,15 @@ const SOATO_DISTRICT_MAP: Record<string, string> = {
   '1718238': 'Urgut tumani'
 };
 
-export const isUysotCompany = (cid?: string) => cid === 'uysot' || cid === 'comp_1789981554543';
+export const isUysotCompany = (cid?: string | null): boolean => {
+  if (!cid) return false;
+  const clean = String(cid).trim().toLowerCase();
+  return clean === 'uysot' || 
+         clean === 'comp_1789981554543' || 
+         clean === 'uysot.uz' || 
+         clean === 'uysot_uz' || 
+         clean.includes('uysot');
+};
 
 function formatRowToMapObject(r: any): MapObject {
   if (!r) {
@@ -321,20 +329,31 @@ export function formatBuildingItemToMapObject(b: any): MapObject {
 
 export const api = {
   getMarkers: async (companyId?: string): Promise<MapObject[]> => {
+    const isUysot = isUysotCompany(companyId);
     try {
       const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
       const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          return json.data.map(formatRowToMapObject);
+          // Strict isolation guarantee:
+          const filtered = json.data.filter((r: any) => {
+            const isDomtut = String(r.source_id || '').startsWith('domtut_') || Boolean(r.is_uysot);
+            return isUysot ? isDomtut : !isDomtut;
+          });
+          return filtered.map(formatRowToMapObject);
         }
       }
     } catch (e) {
       console.warn('Using fallback data:', e);
     }
-    const fallbackRows = isUysotCompany(companyId) ? uysotRows : realSheetsRows;
-    return fallbackRows.map(formatRowToMapObject);
+    const fallbackRows = isUysot ? uysotRows : realSheetsRows;
+    return fallbackRows
+      .filter((r: any) => {
+        const isDomtut = String(r.source_id || '').startsWith('domtut_') || Boolean(r.is_uysot);
+        return isUysot ? isDomtut : !isDomtut;
+      })
+      .map(formatRowToMapObject);
   },
 
   getObject: async (id: string, companyId?: string): Promise<ObjectDetail> => {
@@ -353,35 +372,43 @@ export const api = {
       }
     } catch (e) {}
 
+    // Enforce strict isolation on fetched rows
+    rows = rows.filter((r: any) => {
+      const isDomtut = String(r.source_id || '').startsWith('domtut_') || Boolean(r.is_uysot);
+      return isUysot ? isDomtut : !isDomtut;
+    });
+
     let found = rows.find((r: any) => String(r.source_id || '').trim() === cleanId);
 
-    // Fallback search across uysot and realSheetsData if not found in current company rows
+    // If not found in fetched rows, search ONLY in respective company's dataset (NEVER cross-bleed!)
     if (!found) {
-      found = uysotRows.find((r: any) => String(r.source_id || '').trim() === cleanId) ||
-              realSheetsRows.find((r: any) => String(r.source_id || '').trim() === cleanId);
+      const targetDataset = isUysot ? uysotRows : realSheetsRows;
+      found = targetDataset.find((r: any) => String(r.source_id || '').trim() === cleanId);
     }
 
     if (found) {
       return formatRowToObjectDetail(found);
     }
 
-    // Check notifications for newly scraped buildings
-    try {
-      const notifsRes = await fetch(`/api/notifications?t=${Date.now()}`, { cache: 'no-store' });
-      if (notifsRes.ok) {
-        const notifs = await notifsRes.json();
-        if (notifs && notifs.data && Array.isArray(notifs.data)) {
-          for (const notif of notifs.data) {
-            const foundInNotif = (notif.new_objects || []).find((b: any) => String(b.source_id || '').trim() === cleanId);
-            if (foundInNotif) {
-              return formatBuildingItemToObjectDetail(foundInNotif);
+    // Check notifications only for non-UYSOT (DSHK scraper)
+    if (!isUysot) {
+      try {
+        const notifsRes = await fetch(`/api/notifications?t=${Date.now()}`, { cache: 'no-store' });
+        if (notifsRes.ok) {
+          const notifs = await notifsRes.json();
+          if (notifs && notifs.data && Array.isArray(notifs.data)) {
+            for (const notif of notifs.data) {
+              const foundInNotif = (notif.new_objects || []).find((b: any) => String(b.source_id || '').trim() === cleanId);
+              if (foundInNotif && !String(foundInNotif.source_id).startsWith('domtut_')) {
+                return formatBuildingItemToObjectDetail(foundInNotif);
+              }
             }
           }
         }
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
 
-    // Safe fallback to first row or empty object detail
+    // Safe fallback strictly to first isolated row or empty object detail
     if (rows && rows.length > 0 && rows[0]) {
       return formatRowToObjectDetail(rows[0]);
     }
@@ -415,7 +442,8 @@ export const api = {
   },
 
   getStats: async (companyId?: string): Promise<DashboardStats> => {
-    let rows: any[] = isUysotCompany(companyId) ? uysotRows : realSheetsRows;
+    const isUysot = isUysotCompany(companyId);
+    let rows: any[] = isUysot ? uysotRows : realSheetsRows;
     try {
       const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
       const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
@@ -424,6 +452,12 @@ export const api = {
         if (json.success && Array.isArray(json.data)) rows = json.data;
       }
     } catch (e) {}
+
+    // Strict isolation filter on rows for stats
+    rows = rows.filter((r: any) => {
+      const isDomtut = String(r.source_id || '').startsWith('domtut_') || Boolean(r.is_uysot);
+      return isUysot ? isDomtut : !isDomtut;
+    });
 
     const total = rows.length;
     const with_internal = rows.filter((r: any) => String(r.tjm_name || r.phone || r.manager_name || '').trim().length > 0).length;
@@ -470,8 +504,10 @@ export const api = {
     return await res.json();
   },
 
-  syncWithSheets: async (): Promise<{ success: boolean; count?: number; data?: any[] }> => {
-    const res = await fetch('/api/objects/sync', { method: 'POST' });
+  syncWithSheets: async (companyId?: string): Promise<{ success: boolean; count?: number; data?: any[] }> => {
+    const isUysot = isUysotCompany(companyId);
+    const q = isUysot ? '?company_id=uysot' : '';
+    const res = await fetch(`/api/objects/sync${q}`, { method: 'POST' });
     return await res.json();
   },
 

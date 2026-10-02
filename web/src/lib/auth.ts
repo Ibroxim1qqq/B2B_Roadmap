@@ -153,6 +153,36 @@ export const SEED_CREDENTIALS: { login: string; password: string; user: UserProf
       phone: '+998 97 999 88 77',
       avatarInitials: 'RR'
     }
+  },
+  {
+    login: 'nilufar',
+    password: 'uysot2026',
+    user: {
+      id: 'user_nilufar',
+      user_id: 'user_nilufar',
+      name: 'Nilufar Rahimova',
+      role: 'company_admin',
+      company_id: 'uysot',
+      company_name: 'UYSOT.UZ',
+      login: 'nilufar',
+      phone: '+998 90 987 65 43',
+      avatarInitials: 'NR'
+    }
+  },
+  {
+    login: 'nilufar',
+    password: 'nilufar123',
+    user: {
+      id: 'user_nilufar',
+      user_id: 'user_nilufar',
+      name: 'Nilufar Rahimova',
+      role: 'company_admin',
+      company_id: 'uysot',
+      company_name: 'UYSOT.UZ',
+      login: 'nilufar',
+      phone: '+998 90 987 65 43',
+      avatarInitials: 'NR'
+    }
   }
 ];
 

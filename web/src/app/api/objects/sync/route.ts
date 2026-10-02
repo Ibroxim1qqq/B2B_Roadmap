@@ -1,25 +1,56 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import { exportAllObjectsFromSheet } from '@/lib/googleSheets';
+import { exportAllObjectsFromSheet, getUysotObjectsFromSheet } from '@/lib/googleSheets';
 import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+const isUysotCompany = (cid?: string | null): boolean => {
+  if (!cid) return false;
+  const clean = String(cid).trim().toLowerCase();
+  return clean === 'uysot' || 
+         clean === 'comp_1789981554543' || 
+         clean === 'uysot.uz' || 
+         clean === 'uysot_uz' || 
+         clean.includes('uysot');
+};
+
+export async function POST(req: NextRequest) {
   try {
-    // Force cache invalidation to get 100% fresh data from Google Sheets
+    let companyId = '';
+    try {
+      const { searchParams } = new URL(req.url);
+      companyId = searchParams.get('company_id') || '';
+      if (!companyId) {
+        const body = await req.json().catch(() => ({}));
+        companyId = body.company_id || '';
+      }
+    } catch (e) {}
+
+    const isUysot = isUysotCompany(companyId);
+
+    if (isUysot) {
+      // Sync strictly for UYSOT.UZ (Domtut dataset)
+      const uysotObjects = await getUysotObjectsFromSheet();
+      const pureUysot = uysotObjects.filter((r: any) => String(r.source_id || '').startsWith('domtut_') || r.is_uysot);
+      return NextResponse.json({ success: true, count: pureUysot.length, data: pureUysot });
+    }
+
+    // Force cache invalidation to get 100% fresh data from Google Sheets for non-UYSOT (DSHK)
     dataCache.invalidate();
 
     const result = await exportAllObjectsFromSheet();
     if (result.success && result.rows) {
+      // Filter out any domtut rows from DSHK dataset
+      const pureDshk = result.rows.filter((r: any) => !String(r.source_id || '').startsWith('domtut_') && !r.is_uysot);
       try {
         const filePath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
-        fs.writeFileSync(filePath, JSON.stringify({ headers: result.headers, rows: result.rows }, null, 2), 'utf-8');
+        fs.writeFileSync(filePath, JSON.stringify({ headers: result.headers, rows: pureDshk }, null, 2), 'utf-8');
       } catch (e) {
         // Harmless on read-only environments
       }
-      return NextResponse.json({ success: true, count: result.count, data: result.rows });
+      return NextResponse.json({ success: true, count: pureDshk.length, data: pureDshk });
     }
 
     // Fallback if sheet empty
@@ -27,8 +58,9 @@ export async function POST() {
     if (fs.existsSync(filePath)) {
       const raw = fs.readFileSync(filePath, 'utf-8');
       const json = JSON.parse(raw);
-      dataCache.setAll(json.headers || [], json.rows);
-      return NextResponse.json({ success: true, count: json.rows.length, data: json.rows });
+      const pureRows = (json.rows || []).filter((r: any) => !String(r.source_id || '').startsWith('domtut_') && !r.is_uysot);
+      dataCache.setAll(json.headers || [], pureRows);
+      return NextResponse.json({ success: true, count: pureRows.length, data: pureRows });
     }
 
     return NextResponse.json({ success: false, error: "Ma'lumot topilmadi" }, { status: 404 });

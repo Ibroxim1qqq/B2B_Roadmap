@@ -6,7 +6,15 @@ import uysotDomtutData from '../../../../lib/uysot-domtut-data.json';
 
 export const dynamic = 'force-dynamic';
 
-const isUysotCompany = (cid?: string) => cid === 'uysot' || cid === 'comp_1789981554543';
+const isUysotCompany = (cid?: string | null): boolean => {
+  if (!cid) return false;
+  const clean = String(cid).trim().toLowerCase();
+  return clean === 'uysot' || 
+         clean === 'comp_1789981554543' || 
+         clean === 'uysot.uz' || 
+         clean === 'uysot_uz' || 
+         clean.includes('uysot');
+};
 
 const uysotRows: any[] = (Array.isArray(uysotDomtutData) ? uysotDomtutData : (uysotDomtutData as any).rows || []) as any[];
 const realSheetsRows: any[] = (realSheetsData.rows as any[]) || [];
@@ -33,7 +41,8 @@ function analyzeAndSearchDatabase(
   pool: any[],
   companyName: string,
   userLat?: number,
-  userLng?: number
+  userLng?: number,
+  isUysot: boolean = false
 ): {
   replyText: string;
   suggestedObjects: any[];
@@ -55,7 +64,7 @@ function analyzeAndSearchDatabase(
   // A. Check for Route Planning queries ("marshrut", "yo'nalish", "borish", "plan", "reja")
   const isRouteQuery = q.includes('marshrut') || q.includes('yo\'nalish') || q.includes('yonalish') || q.includes('borish') || q.includes('reja');
   if (isRouteQuery) {
-    const planner = smartHeuristicPlanner(pool, userLat, userLng, q.includes('borilmagan'), q.includes('yuqori'), 5, query);
+    const planner = smartHeuristicPlanner(pool, userLat, userLng, q.includes('borilmagan'), q.includes('yuqori'), 5, query, isUysot);
     routeStops = planner.recommended_stops;
     suggestedObjects = planner.recommended_stops.map(s => {
       const match = pool.find(p => String(p.source_id) === String(s.source_id)) || {};
@@ -74,8 +83,7 @@ function analyzeAndSearchDatabase(
     });
 
     replyText = `Siz uchun **${companyName}** bazasidagi eng qulay va kam vaqt sarflanadigan **${routeStops.length} ta TJM** bo'yicha kunlik optimal marshrut tuzildi (~${planner.estimated_duration_hours} soat).
-
-Quyidagi **"Xaritada Marshrutni Chizish"** tugmasini bossangiz, avtomobil navigatori avtomatik ishga tushadi:`;
+\nQuyidagi **"Xaritada Marshrutni Chizish"** tugmasini bossangiz, avtomobil navigatori avtomatik ishga tushadi:`;
 
     actions.push({
       type: 'apply_route',
@@ -103,8 +111,8 @@ Quyidagi **"Xaritada Marshrutni Chizish"** tugmasini bossangiz, avtomobil naviga
   // C. Check for Nearest queries ("yaqin", "atrof", "yon")
   const isNearestQuery = q.includes('yaqin') || q.includes('atrof') || q.includes('yon');
   if (isNearestQuery) {
-    const lat = userLat || 39.6542;
-    const lng = userLng || 66.9597;
+    const lat = userLat || (isUysot ? 41.2995 : 39.6542);
+    const lng = userLng || (isUysot ? 69.2401 : 66.9597);
     const sorted = [...pool]
       .filter(o => o.latitude && o.longitude)
       .map(o => ({
@@ -273,10 +281,11 @@ function smartHeuristicPlanner(
   unvisitedOnly?: boolean,
   highPriorityOnly?: boolean,
   maxStops: number = 5,
-  prompt?: string
+  prompt?: string,
+  isUysot: boolean = false
 ): AIRoutePlanResult {
-  const startLat = userLat || 39.6542;
-  const startLng = userLng || 66.9597;
+  const startLat = userLat || (isUysot ? 41.2995 : 39.6542);
+  const startLng = userLng || (isUysot ? 69.2401 : 66.9597);
   const promptLower = (prompt || '').toLowerCase();
 
   // If prompt explicitly mentions a district (e.g. Urgut, Chilonzor), prioritize candidates in that district!
@@ -481,9 +490,22 @@ export async function POST(req: Request) {
     // Determine target dataset based on company isolation
     const isUysot = isUysotCompany(body.company_id);
     const companyName = isUysot ? 'UYSOT.UZ (Toshkent)' : 'Samarqand Qurilish Xaritasi';
-    const pool: any[] = (Array.isArray(body.objects_pool) && body.objects_pool.length > 0)
+    let pool: any[] = (Array.isArray(body.objects_pool) && body.objects_pool.length > 0)
       ? body.objects_pool
       : (isUysot ? uysotRows : realSheetsRows);
+
+    // Strictly enforce company dataset isolation on pool
+    pool = pool.filter((o: any) => {
+      const isDomtut = String(o.source_id || '').startsWith('domtut_') || Boolean(o.is_uysot);
+      return isUysot ? isDomtut : !isDomtut;
+    });
+
+    if (pool.length === 0) {
+      pool = (isUysot ? uysotRows : realSheetsRows).filter((o: any) => {
+        const isDomtut = String(o.source_id || '').startsWith('domtut_') || Boolean(o.is_uysot);
+        return isUysot ? isDomtut : !isDomtut;
+      });
+    }
 
     // ACTION A: Interactive Global Chat & Search
     if (action === 'chat') {
@@ -495,7 +517,8 @@ export async function POST(req: Request) {
         pool,
         companyName,
         body.user_lat,
-        body.user_lng
+        body.user_lng,
+        isUysot
       );
 
       // If an LLM API key is present, enhance the answer with natural generative reasoning
@@ -617,7 +640,8 @@ Quyidagi JSON strukturasida O'ZBEK TILIDA javob qaytar:
       body.unvisited_only,
       body.high_priority_only,
       maxStops,
-      body.prompt
+      body.prompt,
+      isUysot
     );
 
     return NextResponse.json({ success: true, data: heuristicResult });

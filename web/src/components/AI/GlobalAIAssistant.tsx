@@ -87,12 +87,17 @@ export default function GlobalAIAssistant({
     setLoading(true);
 
     try {
+      const pureObjects = (objects || []).filter(o => {
+        const isDomtut = String(o.source_id).startsWith('domtut_') || Boolean((o as any).is_uysot);
+        return isUysot ? isDomtut : !isDomtut;
+      });
+
       const res = await api.askAIChat({
         message: text,
         companyId,
-        userLat,
-        userLng,
-        objects
+        userLat: userLat || (isUysot ? 41.2995 : 39.6542),
+        userLng: userLng || (isUysot ? 69.2401 : 66.9597),
+        objects: pureObjects
       });
 
       if (res.success && res.data) {
