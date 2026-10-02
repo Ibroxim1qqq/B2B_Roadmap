@@ -286,6 +286,9 @@ export default function MapContainer({
       });
 
       leafletMarker.on('click', () => {
+        if (typeof navigator !== 'undefined' && (navigator as any).vibrate) {
+          try { (navigator as any).vibrate(20); } catch (_) {}
+        }
         onSelect(marker.source_id);
       });
 
@@ -312,7 +315,9 @@ export default function MapContainer({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !focusTarget) return;
-    map.flyTo([focusTarget.lat, focusTarget.lng], focusTarget.zoom || 16, { duration: 1.2 });
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1280;
+    const targetLat = isMobile ? focusTarget.lat - 0.0035 : focusTarget.lat;
+    map.flyTo([targetLat, focusTarget.lng], focusTarget.zoom || 16, { duration: 1.0 });
 
     const timer = setTimeout(() => {
       map.invalidateSize();
@@ -322,17 +327,19 @@ export default function MapContainer({
           m.openPopup();
         }
       }
-    }, 1300);
+    }, 1100);
     return () => clearTimeout(timer);
   }, [focusTarget, selectedId]);
 
-  // 4b. Focus / Fly to Selected Object
+  // 4b. Focus / Fly to Selected Object (with smart mobile offset for BottomSheet)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedId) return;
     const found = markers.find(m => String(m.source_id) === String(selectedId));
     if (found && found.latitude && found.longitude) {
-      map.flyTo([found.latitude, found.longitude], 16, { duration: 1.2 });
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 1280;
+      const targetLat = isMobile ? found.latitude - 0.0035 : found.latitude;
+      map.flyTo([targetLat, found.longitude], 16, { duration: 1.0 });
     }
     const timer = setTimeout(() => {
       map.invalidateSize();
@@ -340,7 +347,7 @@ export default function MapContainer({
       if (m) {
         m.openPopup();
       }
-    }, 1300);
+    }, 1100);
     return () => clearTimeout(timer);
   }, [selectedId, markers]);
 
@@ -434,7 +441,7 @@ export default function MapContainer({
       </div>
 
       {/* Map Tile Switcher (Xarita | Satelit) bottom-right */}
-      <div className="absolute bottom-5 right-5 z-[400] bg-white border border-slate-200/80 rounded-xl p-1 shadow-md flex items-center gap-1 text-xs font-semibold text-slate-700">
+      <div className="absolute bottom-16 sm:bottom-5 right-3 sm:right-5 z-[400] bg-white border border-slate-200/80 rounded-xl p-1 shadow-md flex items-center gap-1 text-xs font-semibold text-slate-700">
         <button
           onClick={() => setMapType('map')}
           className={`px-3 py-1.5 rounded-lg transition-all ${

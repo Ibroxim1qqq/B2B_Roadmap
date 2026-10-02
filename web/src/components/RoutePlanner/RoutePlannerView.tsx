@@ -1342,20 +1342,64 @@ export default function RoutePlannerView({
               </label>
             </div>
 
+            {/* Filter Tabs in Desktop Sidebar */}
+            <div className="p-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setStopsDrawerFilter('all')}
+                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                  stopsDrawerFilter === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                Barchasi ({matchedTJMs.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStopsDrawerFilter('unvisited')}
+                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                  stopsDrawerFilter === 'unvisited' ? 'bg-amber-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                ⏳ Borilmagan ({matchedTJMs.filter(t => !t.object.last_visit && !Boolean((t.object as any).is_visited)).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStopsDrawerFilter('phone')}
+                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                  stopsDrawerFilter === 'phone' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                📞 Telefon ({matchedTJMs.filter(t => Boolean(t.object.phone)).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStopsDrawerFilter('priority')}
+                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                  stopsDrawerFilter === 'priority' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                ⭐ Ustuvor ({matchedTJMs.filter(t => (t.object.priority || '').toLowerCase().includes('yuqori')).length})
+              </button>
+            </div>
+
             {/* Scrollable List of TJMs along Route */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-              {matchedTJMs.length === 0 ? (
+              {filteredDrawerStops.length === 0 ? (
                 <div className="p-8 text-center text-slate-400 space-y-2">
                   <Compass className="w-8 h-8 mx-auto text-slate-300" />
                   <p className="text-xs font-medium">
-                    Tanlangan marshrutdan {bufferRadius} metr radiusda TJM topilmadi.
+                    {matchedTJMs.length === 0 
+                      ? `Tanlangan marshrutdan ${bufferRadius} metr radiusda TJM topilmadi.`
+                      : "Ushbu filtr bo'yicha to'xtash joyi topilmadi."}
                   </p>
-                  <p className="text-[11px] text-slate-400">
-                    Radiusni 500 metrga oshirib ko'ring yoki boshqa manzilni tanlang.
-                  </p>
+                  {matchedTJMs.length === 0 && (
+                    <p className="text-[11px] text-slate-400">
+                      Radiusni 500 metrga oshirib ko'ring yoki boshqa manzilni tanlang.
+                    </p>
+                  )}
                 </div>
               ) : (
-                matchedTJMs.map((item) => {
+                filteredDrawerStops.map((item) => {
                   const { object: obj, orderNumber, distFromRoadMeters, distAlongRouteMeters } = item;
                   const isSelected = selectedId === obj.source_id;
                   const isVisited = Boolean(obj.is_visited || obj.last_visit);
@@ -1497,18 +1541,31 @@ export default function RoutePlannerView({
                 onClick={() => setIsMobileControlsCollapsed(false)}
                 className="bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-lg rounded-2xl p-2.5 flex items-center justify-between gap-2 cursor-pointer active:scale-98 transition-all"
               >
-                <div className="flex items-center gap-2 min-w-0 text-xs font-bold text-slate-800">
+                <div className="flex items-center gap-1.5 min-w-0 text-xs font-bold text-slate-800">
                   <div className="w-5 h-5 rounded-full bg-emerald-500 text-white font-black text-[10px] flex items-center justify-center shrink-0">
                     A
                   </div>
-                  <span className="truncate max-w-[100px] text-slate-700">
+                  <span className="truncate max-w-[80px] text-slate-700">
                     {startPoint ? (startPoint.name || 'A nuqta') : 'Boshlanish'}
                   </span>
-                  <span className="text-slate-400">➔</span>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic(20);
+                      handleSwap();
+                    }}
+                    className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-90 text-slate-600 transition-all cursor-pointer"
+                    title="A va B ni almashtirish"
+                  >
+                    <ArrowDownUp className="w-3 h-3 text-slate-700" />
+                  </button>
+
                   <div className="w-5 h-5 rounded-full bg-rose-500 text-white font-black text-[10px] flex items-center justify-center shrink-0">
                     B
                   </div>
-                  <span className="truncate max-w-[100px] text-slate-700">
+                  <span className="truncate max-w-[80px] text-slate-700">
                     {endPoint ? (endPoint.name || 'B nuqta') : 'Borish manzili'}
                   </span>
                 </div>
@@ -1840,6 +1897,9 @@ export default function RoutePlannerView({
                   const obj = currentTJM.object;
                   const isVisited = Boolean((obj as any).last_visit || (obj as any).is_visited);
                   const detour = getDetourBadge(currentTJM.distFromRoadMeters);
+                  const directDist = (userLat && userLng && obj.latitude && obj.longitude)
+                    ? haversineMeters(userLat, userLng, obj.latitude, obj.longitude)
+                    : null;
 
                   return (
                     <div 
@@ -1918,6 +1978,12 @@ export default function RoutePlannerView({
                         </span>
                         <span className="text-slate-500">•</span>
                         <span>Marshrut: <b>{formatDistance(currentTJM.distAlongRouteMeters)}</b></span>
+                        {directDist !== null && (
+                          <>
+                            <span className="text-slate-500">•</span>
+                            <span className="text-emerald-400 font-bold">🎯 Sizdan: {formatDistance(directDist)}</span>
+                          </>
+                        )}
                       </div>
 
                       {/* Big Tactile Action Buttons */}
