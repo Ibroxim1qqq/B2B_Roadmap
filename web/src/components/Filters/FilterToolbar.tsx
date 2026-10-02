@@ -50,33 +50,35 @@ export default function FilterToolbar({
   ];
 
   return (
-    <div className="bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2 md:px-6 md:py-3 flex items-center justify-between gap-2 shrink-0">
-      {/* Filters Pill Row (Scrollable on mobile) */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0">
+    <div className="relative z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2 md:px-6 md:py-3 flex items-center justify-between gap-2 shrink-0">
+      {/* Filters Pill Row */}
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-visible">
         {/* Region Selector Dropdown */}
         <div ref={regionRef} className="relative shrink-0">
           <button
+            type="button"
             onClick={() => { setRegionOpen(!regionOpen); setDistrictOpen(false); setStatusOpen(false); }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors ${
+            className={`flex items-center gap-2 px-3 py-1.5 sm:px-3.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer ${
               selectedRegion
                 ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
                 : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
             }`}
           >
-            {selectedRegion ? <MapPin className="w-3.5 h-3.5 text-blue-600" /> : <Globe className="w-3.5 h-3.5 text-blue-600" />}
-            <span>{selectedRegion ? getRegionName(selectedRegion) : "Barcha viloyatlar"}</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
+            {selectedRegion ? <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" /> : <Globe className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+            <span className="truncate max-w-[120px] sm:max-w-none">{selectedRegion ? getRegionName(selectedRegion) : "Barcha viloyatlar"}</span>
+            <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
           </button>
 
           {regionOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-60 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-50 max-h-72 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1.5 w-60 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-2xl shadow-2xl p-1.5 z-50 max-h-72 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
               <button
+                type="button"
                 onClick={() => {
                   onRegionChange('');
                   onDistrictChange('');
                   setRegionOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-xs rounded-lg flex items-center justify-between transition-colors ${
+                className={`w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
                   !selectedRegion
                     ? 'bg-blue-50 text-blue-600 font-semibold'
                     : 'text-slate-700 hover:bg-slate-50'
@@ -92,12 +94,13 @@ export default function FilterToolbar({
               {REGION_LIST.map((r) => (
                 <button
                   key={r.soato}
+                  type="button"
                   onClick={() => {
                     onRegionChange(r.soato);
                     onDistrictChange('');
                     setRegionOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-1.5 text-xs rounded-lg flex items-center justify-between transition-colors ${
+                  className={`w-full text-left px-3 py-1.5 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
                     selectedRegion === r.soato
                       ? 'bg-blue-50 text-blue-600 font-semibold'
                       : 'text-slate-700 hover:bg-slate-50'
@@ -115,35 +118,37 @@ export default function FilterToolbar({
         </div>
 
         {/* Category (Fixed) */}
-        <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs shrink-0">
-          <Building className="w-3.5 h-3.5 text-blue-600" />
+        <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs shrink-0 select-none">
+          <Building className="w-3.5 h-3.5 text-blue-600 shrink-0" />
           <span>Ko'p xonadonli uy-joylar</span>
         </div>
 
         {/* District Dropdown */}
         <div ref={districtRef} className="relative shrink-0">
           <button
-            onClick={() => { setDistrictOpen(!districtOpen); setStatusOpen(false); }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors ${
+            type="button"
+            onClick={() => { setDistrictOpen(!districtOpen); setRegionOpen(false); setStatusOpen(false); }}
+            className={`flex items-center gap-2 px-3 py-1.5 sm:px-3.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer ${
               selectedDistrict
                 ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
                 : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
             }`}
           >
-            <span>{selectedDistrict || 'Tuman'}</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
+            <span className="truncate max-w-[100px] sm:max-w-none">{selectedDistrict || 'Tuman'}</span>
+            <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
           </button>
 
           {districtOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 z-40 max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1.5 w-48 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-2xl shadow-2xl p-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
               {districts.map((d) => (
                 <button
                   key={d}
+                  type="button"
                   onClick={() => {
                     onDistrictChange(d === 'Barcha tumanlar' ? '' : d);
                     setDistrictOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-1.5 text-xs rounded-lg flex items-center justify-between transition-colors ${
+                  className={`w-full text-left px-3 py-1.5 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
                     (selectedDistrict === d || (!selectedDistrict && d === 'Barcha tumanlar'))
                       ? 'bg-blue-50 text-blue-600 font-semibold'
                       : 'text-slate-700 hover:bg-slate-50'
@@ -159,31 +164,33 @@ export default function FilterToolbar({
           )}
         </div>
 
-        {/* Status Dropdown (Default: Jarayonda) */}
+        {/* Status Dropdown (Default: Barcha statuslar) */}
         <div ref={statusRef} className="relative shrink-0">
           <button
-            onClick={() => { setStatusOpen(!statusOpen); setDistrictOpen(false); }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors ${
+            type="button"
+            onClick={() => { setStatusOpen(!statusOpen); setRegionOpen(false); setDistrictOpen(false); }}
+            className={`flex items-center gap-2 px-3 py-1.5 sm:px-3.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer ${
               selectedStatus
                 ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
                 : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
             }`}
           >
-            <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
-            <span>{selectedStatus ? `Status: ${selectedStatus}` : 'Barcha statuslar'}</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
+            <RefreshCw className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span className="truncate max-w-[120px] sm:max-w-none">{selectedStatus ? `Status: ${selectedStatus}` : 'Barcha statuslar'}</span>
+            <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
           </button>
 
           {statusOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 z-40">
+            <div className="absolute top-full left-0 mt-1.5 w-48 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
               {statuses.map((s) => (
                 <button
                   key={s}
+                  type="button"
                   onClick={() => {
                     onStatusChange(s === 'Barcha statuslar' ? '' : s);
                     setStatusOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-1.5 text-xs rounded-lg flex items-center justify-between transition-colors ${
+                  className={`w-full text-left px-3 py-1.5 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
                     (selectedStatus === s || (!selectedStatus && s === 'Barcha statuslar'))
                       ? 'bg-blue-50 text-blue-600 font-semibold'
                       : 'text-slate-700 hover:bg-slate-50'

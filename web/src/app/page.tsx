@@ -86,7 +86,7 @@ function HomeContent() {
   const [activeTab, setActiveTab] = useState('map');
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('Jarayonda');
+  const [selectedStatus, setSelectedStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Handle URL query parameters for tab and focused object
