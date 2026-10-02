@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { MapObject, UserProfile, SavedRoute, AIRouteRecommendation } from '../../lib/types';
 import { api, isUysotCompany } from '../../lib/api';
@@ -222,6 +222,80 @@ export default function RoutePlannerView({
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [matchedTJMs, setMatchedTJMs] = useState<TJMAlongRoute[]>([]);
   const [activeMobileTab, setActiveMobileTab] = useState<'list' | 'map'>('list');
+
+  // Mobile drawer filter & swipe state
+  const [stopsDrawerFilter, setStopsDrawerFilter] = useState<'all' | 'unvisited' | 'phone' | 'priority'>('all');
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const triggerHaptic = useCallback((ms = 25) => {
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && (navigator as any).vibrate) {
+      try { (navigator as any).vibrate(ms); } catch (_) {}
+    }
+  }, []);
+
+  const getDetourBadge = useCallback((distMeters: number) => {
+    if (distMeters <= 50) {
+      return {
+        label: "⚡ Yo'l yoqasida (+0 daq)",
+        className: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+      };
+    } else if (distMeters <= 150) {
+      return {
+        label: `↩ Qisqa burilish (+${distMeters} m)`,
+        className: "bg-blue-500/20 text-blue-300 border-blue-500/30"
+      };
+    } else {
+      return {
+        label: `↗ Yo'ldan chetda (+${distMeters} m)`,
+        className: "bg-amber-500/20 text-amber-300 border-amber-500/30"
+      };
+    }
+  }, []);
+
+  // Filtered stops for mobile stops drawer
+  const filteredDrawerStops = useMemo(() => {
+    if (stopsDrawerFilter === 'unvisited') {
+      return matchedTJMs.filter(t => !t.object.last_visit && !Boolean((t.object as any).is_visited));
+    }
+    if (stopsDrawerFilter === 'phone') {
+      return matchedTJMs.filter(t => Boolean(t.object.phone));
+    }
+    if (stopsDrawerFilter === 'priority') {
+      return matchedTJMs.filter(t => (t.object.priority || '').toLowerCase().includes('yuqori'));
+    }
+    return matchedTJMs;
+  }, [matchedTJMs, stopsDrawerFilter]);
+
+  // Touch swipe handlers for active stop card
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0 && mobileActiveStopIndex < matchedTJMs.length - 1) {
+        triggerHaptic(20);
+        const nextIdx = mobileActiveStopIndex + 1;
+        setMobileActiveStopIndex(nextIdx);
+        if (matchedTJMs[nextIdx]) onSelectObject(matchedTJMs[nextIdx].object.source_id);
+      } else if (dx > 0 && mobileActiveStopIndex > 0) {
+        triggerHaptic(20);
+        const prevIdx = mobileActiveStopIndex - 1;
+        setMobileActiveStopIndex(prevIdx);
+        if (matchedTJMs[prevIdx]) onSelectObject(matchedTJMs[prevIdx].object.source_id);
+      }
+    } else if (dy < -45 && Math.abs(dy) > Math.abs(dx)) {
+      triggerHaptic(25);
+      setShowMobileStopsDrawer(true);
+    }
+  };
 
   // Real-time In-Car Navigation mode (Yandex "Поехали" / Google Maps "Start")
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
@@ -1759,15 +1833,30 @@ export default function RoutePlannerView({
                   </div>
                 </div>
 
-                {/* Current Active Stop Card */}
+                {/* Current Active Stop Card with Touch Swipe Gestures */}
                 {(() => {
                   const currentTJM = matchedTJMs[Math.min(mobileActiveStopIndex, matchedTJMs.length - 1)];
                   if (!currentTJM) return null;
                   const obj = currentTJM.object;
                   const isVisited = Boolean((obj as any).last_visit || (obj as any).is_visited);
+                  const detour = getDetourBadge(currentTJM.distFromRoadMeters);
 
                   return (
-                    <div className="space-y-2">
+                    <div 
+                      onTouchStart={handleTouchStart}
+                      onTouchEnd={handleTouchEnd}
+                      className="space-y-2 select-none"
+                    >
+                      {/* Swipe handle hint */}
+                      <div 
+                        onClick={() => {
+                          triggerHaptic(20);
+                          setShowMobileStopsDrawer(true);
+                        }}
+                        className="w-10 h-1 bg-white/30 hover:bg-white/50 rounded-full mx-auto -mt-1 mb-1 cursor-pointer transition-colors" 
+                        title="Barcha to'xtashlarni ko'rish uchun bosing yoki yuqoriga suring"
+                      />
+
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-7 h-7 rounded-xl bg-blue-600 text-white text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
@@ -1796,12 +1885,13 @@ export default function RoutePlannerView({
                             type="button"
                             disabled={mobileActiveStopIndex === 0}
                             onClick={() => {
+                              triggerHaptic(20);
                               const newIdx = Math.max(0, mobileActiveStopIndex - 1);
                               setMobileActiveStopIndex(newIdx);
                               if (matchedTJMs[newIdx]) onSelectObject(matchedTJMs[newIdx].object.source_id);
                             }}
                             className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white text-xs flex items-center justify-center cursor-pointer transition-all active:scale-95"
-                            title="Oldingi bino"
+                            title="Oldingi bino (chapga surish)"
                           >
                             ◀
                           </button>
@@ -1809,20 +1899,23 @@ export default function RoutePlannerView({
                             type="button"
                             disabled={mobileActiveStopIndex >= matchedTJMs.length - 1}
                             onClick={() => {
+                              triggerHaptic(20);
                               const newIdx = Math.min(matchedTJMs.length - 1, mobileActiveStopIndex + 1);
                               setMobileActiveStopIndex(newIdx);
                               if (matchedTJMs[newIdx]) onSelectObject(matchedTJMs[newIdx].object.source_id);
                             }}
                             className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white text-xs flex items-center justify-center cursor-pointer transition-all active:scale-95"
-                            title="Keyingi bino"
+                            title="Keyingi bino (o'ngga surish)"
                           >
                             ▶
                           </button>
                         </div>
                       </div>
 
-                      <div className="text-[10px] text-slate-300 flex items-center gap-2">
-                        <span>📏 Yo&apos;ldan: <b className="text-amber-400">{currentTJM.distFromRoadMeters} m</b></span>
+                      <div className="text-[10px] text-slate-300 flex items-center gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-md font-bold border text-[10px] ${detour.className}`}>
+                          {detour.label}
+                        </span>
                         <span className="text-slate-500">•</span>
                         <span>Marshrut: <b>{formatDistance(currentTJM.distAlongRouteMeters)}</b></span>
                       </div>
@@ -1833,6 +1926,7 @@ export default function RoutePlannerView({
                           href={getYandexNavUrl(obj.latitude, obj.longitude)}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={() => triggerHaptic(30)}
                           className="flex-1 py-2 px-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-1 shadow-md transition-all"
                           title="Yandex Navigator da ochish"
                         >
@@ -1843,6 +1937,7 @@ export default function RoutePlannerView({
                         {obj.phone && (
                           <a
                             href={getCallUrl(obj.phone)}
+                            onClick={() => triggerHaptic(20)}
                             className="py-2 px-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 shadow-md transition-all"
                             title="Qo'ng'iroq"
                           >
@@ -1854,6 +1949,7 @@ export default function RoutePlannerView({
                           <button
                             type="button"
                             onClick={async () => {
+                              triggerHaptic(40);
                               await onRecordVisit(obj.source_id);
                               if (mobileActiveStopIndex < matchedTJMs.length - 1) {
                                 setMobileActiveStopIndex(prev => prev + 1);
@@ -1869,7 +1965,10 @@ export default function RoutePlannerView({
 
                         <button
                           type="button"
-                          onClick={handleStartInCarNavigation}
+                          onClick={() => {
+                            triggerHaptic(30);
+                            handleStartInCarNavigation();
+                          }}
                           className="py-2 px-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black rounded-xl text-xs flex items-center justify-center gap-1 shadow-md active:scale-95 cursor-pointer"
                           title="Jonli haydovchi navigator"
                         >
@@ -1879,7 +1978,10 @@ export default function RoutePlannerView({
 
                         <button
                           type="button"
-                          onClick={() => setShowMobileStopsDrawer(true)}
+                          onClick={() => {
+                            triggerHaptic(20);
+                            setShowMobileStopsDrawer(true);
+                          }}
                           className="py-2 px-2 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95"
                           title="Barcha to'xtash joylari ro'yxati"
                         >
@@ -1901,7 +2003,10 @@ export default function RoutePlannerView({
                   </div>
                   <button
                     type="button"
-                    onClick={handleQuickNearestAIRoute}
+                    onClick={() => {
+                      triggerHaptic(25);
+                      handleQuickNearestAIRoute();
+                    }}
                     className="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-bold rounded-lg shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer"
                   >
                     <Sparkles className="w-3 h-3 text-amber-300" />
@@ -1915,7 +2020,10 @@ export default function RoutePlannerView({
                     <button
                       key={item.object.source_id}
                       type="button"
-                      onClick={() => handleSetDestinationFromNearest(item.object)}
+                      onClick={() => {
+                        triggerHaptic(20);
+                        handleSetDestinationFromNearest(item.object);
+                      }}
                       className="bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 p-2 rounded-2xl shrink-0 text-left min-w-[140px] max-w-[180px] space-y-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
                     >
                       <div className="flex items-center justify-between gap-1">
@@ -1940,7 +2048,7 @@ export default function RoutePlannerView({
           </div>
         )}
 
-        {/* Mobile Full Itinerary Drawer */}
+        {/* Mobile Full Itinerary Drawer with Filter Tabs */}
         {showMobileStopsDrawer && (
           <div 
             className="fixed inset-0 z-[600] flex flex-col justify-end bg-slate-950/60 backdrop-blur-xs md:hidden animate-in fade-in duration-150"
@@ -1968,90 +2076,145 @@ export default function RoutePlannerView({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                {matchedTJMs.map((tjm, idx) => {
-                  const obj = tjm.object;
-                  const isVisited = Boolean((obj as any).last_visit || (obj as any).is_visited);
-                  const isCurrent = idx === mobileActiveStopIndex;
+              {/* Filter Tabs inside Drawer */}
+              <div className="p-2 bg-slate-100/90 border-b border-slate-200/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic(15); setStopsDrawerFilter('all'); }}
+                  className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+                    stopsDrawerFilter === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
+                  }`}
+                >
+                  Barchasi ({matchedTJMs.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic(15); setStopsDrawerFilter('unvisited'); }}
+                  className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+                    stopsDrawerFilter === 'unvisited' ? 'bg-amber-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
+                  }`}
+                >
+                  ⏳ Borilmagan ({matchedTJMs.filter(t => !t.object.last_visit && !Boolean((t.object as any).is_visited)).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic(15); setStopsDrawerFilter('phone'); }}
+                  className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+                    stopsDrawerFilter === 'phone' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
+                  }`}
+                >
+                  📞 Telefon bor ({matchedTJMs.filter(t => Boolean(t.object.phone)).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic(15); setStopsDrawerFilter('priority'); }}
+                  className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+                    stopsDrawerFilter === 'priority' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
+                  }`}
+                >
+                  ⭐ Yuqori ustuvor ({matchedTJMs.filter(t => (t.object.priority || '').toLowerCase().includes('yuqori')).length})
+                </button>
+              </div>
 
-                  return (
-                    <div
-                      key={obj.source_id}
-                      onClick={() => {
-                        setMobileActiveStopIndex(idx);
-                        onSelectObject(obj.source_id);
-                        setShowMobileStopsDrawer(false);
-                      }}
-                      className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                        isCurrent 
-                          ? 'bg-blue-50/90 border-blue-400 ring-2 ring-blue-500/20' 
-                          : 'bg-white border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shrink-0 ${
-                            isCurrent ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+              {/* Scrollable list */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {filteredDrawerStops.length === 0 ? (
+                  <div className="py-10 text-center text-xs text-slate-400 font-semibold">
+                    Ushbu filtr bo&apos;yicha to&apos;xtash joyi topilmadi
+                  </div>
+                ) : (
+                  filteredDrawerStops.map((tjm) => {
+                    const obj = tjm.object;
+                    const isVisited = Boolean((obj as any).last_visit || (obj as any).is_visited);
+                    const originalIndex = matchedTJMs.findIndex(m => m.object.source_id === obj.source_id);
+                    const isCurrent = originalIndex === mobileActiveStopIndex;
+                    const detour = getDetourBadge(tjm.distFromRoadMeters);
+
+                    return (
+                      <div
+                        key={obj.source_id}
+                        onClick={() => {
+                          triggerHaptic(20);
+                          if (originalIndex !== -1) setMobileActiveStopIndex(originalIndex);
+                          onSelectObject(obj.source_id);
+                          setShowMobileStopsDrawer(false);
+                        }}
+                        className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                          isCurrent 
+                            ? 'bg-blue-50/90 border-blue-400 ring-2 ring-blue-500/20' 
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shrink-0 ${
+                              isCurrent ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              #{tjm.orderNumber}
+                            </span>
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-black text-slate-900 truncate">
+                                {obj.tjm_name || obj.object_name}
+                              </h4>
+                              <p className="text-[10px] text-slate-500 truncate">
+                                {obj.address || obj.district_name}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 ${
+                            isVisited ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                           }`}>
-                            #{tjm.orderNumber}
+                            {isVisited ? '✓ Borilgan' : 'Borilmagan'}
                           </span>
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-black text-slate-900 truncate">
-                              {obj.tjm_name || obj.object_name}
-                            </h4>
-                            <p className="text-[10px] text-slate-500 truncate">
-                              {obj.address || obj.district_name}
-                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-100/80 mt-2">
+                          <span className={`px-1.5 py-0.2 rounded-md font-bold text-[9px] ${detour.className}`}>
+                            {detour.label}
+                          </span>
+
+                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <a
+                              href={getYandexNavUrl(obj.latitude, obj.longitude)}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={() => triggerHaptic(25)}
+                              className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-lg text-[10px] flex items-center gap-1"
+                            >
+                              <Navigation className="w-3 h-3" />
+                              <span>Nav</span>
+                            </a>
+
+                            {obj.phone && (
+                              <a
+                                href={getCallUrl(obj.phone)}
+                                onClick={() => triggerHaptic(20)}
+                                className="p-1 bg-emerald-600 text-white rounded-lg"
+                                title="Qo'ng'iroq"
+                              >
+                                <Phone className="w-3 h-3" />
+                              </a>
+                            )}
+
+                            {onRecordVisit && !isVisited && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  triggerHaptic(30);
+                                  await onRecordVisit(obj.source_id);
+                                }}
+                                className="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold rounded-lg text-[10px] cursor-pointer"
+                              >
+                                Bordim
+                              </button>
+                            )}
                           </div>
                         </div>
-
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 ${
-                          isVisited ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                        }`}>
-                          {isVisited ? '✓ Borilgan' : 'Borilmagan'}
-                        </span>
                       </div>
-
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-100/80 mt-2">
-                        <span>Yo&apos;ldan: <b className="text-amber-600">{tjm.distFromRoadMeters} m</b></span>
-
-                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                          <a
-                            href={getYandexNavUrl(obj.latitude, obj.longitude)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-lg text-[10px] flex items-center gap-1"
-                          >
-                            <Navigation className="w-3 h-3" />
-                            <span>Nav</span>
-                          </a>
-
-                          {obj.phone && (
-                            <a
-                              href={getCallUrl(obj.phone)}
-                              className="p-1 bg-emerald-600 text-white rounded-lg"
-                              title="Qo'ng'iroq"
-                            >
-                              <Phone className="w-3 h-3" />
-                            </a>
-                          )}
-
-                          {onRecordVisit && !isVisited && (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                await onRecordVisit(obj.source_id);
-                              }}
-                              className="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold rounded-lg text-[10px] cursor-pointer"
-                            >
-                              Bordim
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

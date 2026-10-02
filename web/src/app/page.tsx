@@ -18,7 +18,7 @@ import BottomSheet from '../components/UI/BottomSheet';
 import ObjectsTableView from '../components/ObjectsTable/ObjectsTableView';
 import DashboardView from '../components/Dashboard/DashboardView';
 import CustomFieldManager from '../components/CustomFields/CustomFieldManager';
-import { Building2, MapPin, CheckCircle2, Clock, Bell } from 'lucide-react';
+import { Building2, MapPin, CheckCircle2, Clock, Bell, Navigation } from 'lucide-react';
 import MobileBottomNav from '../components/Navigation/MobileBottomNav';
 
 const CreateObjectModal = dynamic(() => import('../components/ObjectPanel/CreateObjectModal'), { 
@@ -375,6 +375,45 @@ function HomeContent() {
     handleSelectObject(id);
   };
 
+  // Bridge from ObjectDetails to RoutePlannerView with 1-tap route planning
+  const handlePlanRouteToObject = (sourceId: string | null) => {
+    if (!sourceId) return;
+    const obj = allMarkers.find(m => String(m.source_id) === String(sourceId));
+    if (!obj || !obj.latitude || !obj.longitude) return;
+
+    const u = currentUser;
+    const accountId = u?.user_id || u?.id || u?.login || 'default_user';
+    const storageKey = `b2b_active_route_${accountId}`;
+    const startPt = (location.lat && location.lng) ? {
+      lat: location.lat,
+      lng: location.lng,
+      name: 'Mening joriy joylashuvim (GPS)'
+    } : {
+      lat: isUysotCompany(effectiveCompanyId) ? 41.2995 : 39.6542,
+      lng: isUysotCompany(effectiveCompanyId) ? 69.2401 : 66.9597,
+      name: isUysotCompany(effectiveCompanyId) ? 'Toshkent markazi' : 'Samarqand markazi (Registon)'
+    };
+
+    const endPt = {
+      lat: obj.latitude,
+      lng: obj.longitude,
+      name: obj.tjm_name || obj.object_name
+    };
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        startPoint: startPt,
+        startQuery: startPt.name,
+        endPoint: endPt,
+        endQuery: endPt.name,
+        bufferRadius: 200
+      }));
+    } catch (_) {}
+
+    setSelectedId(null);
+    setActiveTab('route');
+  };
+
   // Switch tab and clean up selected object panel
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -684,6 +723,18 @@ function HomeContent() {
                   focusTarget={focusTarget}
                 />
               </div>
+
+              {/* Floating 1-tap Route Planner pill for mobile */}
+              {!selectedId && (
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('route')}
+                  className="lg:hidden absolute bottom-4 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 px-4 py-2.5 bg-blue-600 active:bg-blue-700 text-white rounded-full shadow-lg shadow-blue-500/30 text-xs font-bold tracking-wide active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
+                >
+                  <Navigation className="w-4 h-4 text-white fill-white/20 animate-pulse" />
+                  <span>Yo&apos;l-yo&apos;lakay reja</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -765,6 +816,7 @@ function HomeContent() {
                   onEdit={() => setIsEditing(true)}
                   onRecordVisit={handleRecordVisit}
                   onClearB2B={handleClearB2B}
+                  onPlanRoute={() => handlePlanRouteToObject(selectedId)}
                 />
               )
             ) : null}
@@ -798,6 +850,7 @@ function HomeContent() {
                     onEdit={() => setIsEditing(true)}
                     onRecordVisit={handleRecordVisit}
                     onClearB2B={handleClearB2B}
+                    onPlanRoute={() => handlePlanRouteToObject(selectedId)}
                   />
                 )
               ) : null}
@@ -842,6 +895,7 @@ function HomeContent() {
                   onEdit={() => setIsEditing(true)}
                   onRecordVisit={handleRecordVisit}
                   onClearB2B={handleClearB2B}
+                  onPlanRoute={() => handlePlanRouteToObject(selectedId)}
                 />
               )
             ) : null}

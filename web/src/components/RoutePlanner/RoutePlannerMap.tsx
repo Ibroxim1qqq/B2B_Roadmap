@@ -657,8 +657,23 @@ export default function RoutePlannerMap({
     onSelectTJM, 
     onSetPointFromObject, 
     onDragStartPoint, 
-    onDragEndPoint
   ]);
+
+  // Smoothly glide map to selected TJM with mobile bottom sheet offset
+  useEffect(() => {
+    if (!selectedTJMId || !mapRef.current || isNavigating) return;
+    const target = allObjects.find(o => String(o.source_id) === String(selectedTJMId));
+    if (target && target.latitude && target.longitude) {
+      const map = mapRef.current;
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      // On mobile, offset latitude down slightly so the marker sits nicely in the upper portion above the bottom drawer
+      const offsetLat = isMobile ? -0.003 : 0;
+      map.flyTo([target.latitude + offsetLat, target.longitude], Math.max(map.getZoom(), 15), {
+        duration: 0.8,
+        easeLinearity: 0.25
+      });
+    }
+  }, [selectedTJMId, allObjects, isNavigating]);
 
   // 6. Update Driver Tracking state (GPS or Demo)
   const updateDriverPosition = useCallback((lat: number, lng: number, calculatedSpeed: number, calculatedBearing?: number) => {

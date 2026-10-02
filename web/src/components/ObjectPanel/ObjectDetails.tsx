@@ -6,7 +6,7 @@ import {
   X, MapPin, Building, HardHat, Layers, Calendar, 
   ExternalLink, FileText, Phone, User, Send, Globe, 
   Clock, CheckCircle2, Navigation, Pencil, Trash2, ShieldCheck, Tag,
-  Sparkles, Loader2
+  Sparkles, Loader2, Route as RouteIcon
 } from 'lucide-react';
 import { getNavigationUrl, getYandexNavUrl, getCallUrl, getTelegramUrl, getInstagramUrl } from '../../lib/utils';
 
@@ -17,9 +17,10 @@ interface Props {
   onEdit: () => void;
   onRecordVisit: () => Promise<void>;
   onClearB2B?: () => void;
+  onPlanRoute?: () => void;
 }
 
-export default function ObjectDetails({ detail, distance, onClose, onEdit, onRecordVisit, onClearB2B }: Props) {
+export default function ObjectDetails({ detail, distance, onClose, onEdit, onRecordVisit, onClearB2B, onPlanRoute }: Props) {
   const source = detail?.source || {
     source_id: '',
     object_name: "Noma'lum bino",
@@ -184,6 +185,18 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
             <Navigation className="w-3.5 h-3.5 text-slate-950" />
             <span>Yandex Nav</span>
           </a>
+
+          {onPlanRoute && (
+            <button
+              type="button"
+              onClick={onPlanRoute}
+              className="py-2 px-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-xs transition-all cursor-pointer"
+              title="Yo'l-yo'lakay marshrutga qo'shish"
+            >
+              <RouteIcon className="w-3.5 h-3.5 text-blue-600" />
+              <span>Marshrut</span>
+            </button>
+          )}
 
           <a
             href={getNavigationUrl(source.latitude, source.longitude)}
