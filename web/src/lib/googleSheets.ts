@@ -1,8 +1,8 @@
 import { google } from 'googleapis';
 import path from 'path';
 import fs from 'fs';
-import { dataCache } from './dataCache';
-import { db } from './db';
+import { dataCache } from './dataCache.ts';
+import { db } from './db.ts';
 
 // Primary configuration & Column Specifications
 export const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1ZmPUfae89OAiK4kJykrL4O3XaSrYUK8KoJlmCjYhzKA';

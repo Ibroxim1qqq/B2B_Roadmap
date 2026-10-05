@@ -1,11 +1,11 @@
 import { neon } from '@neondatabase/serverless';
 import fs from 'fs';
 import path from 'path';
-import { 
+import type { 
   MapObject, ObjectDetail, Company, UserProfile, SavedRoute, 
   WeeklySyncNotification, UserSession, CustomField 
-} from './types';
-import { getRegionName, getDistrictName } from './regions';
+} from './types.ts';
+import { getRegionName, getDistrictName } from './regions.ts';
 
 // 1. Connection string resolution
 export function getDatabaseUrl(): string {

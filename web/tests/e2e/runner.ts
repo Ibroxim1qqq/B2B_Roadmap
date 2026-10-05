@@ -11,6 +11,9 @@ import './tier6-weekly-sync-and-notifications.test.ts';
 import './tier7-user-sessions-and-audit.test.ts';
 import './tier8-uysot-domtut-isolation.test.ts';
 import './tier9-ai-route-advisor.test.ts';
+import './tier10-neon-sql-architecture.test.ts';
+import './tier11-db-crud-decoupling.test.ts';
+import './tier12-tenant-isolation-security.test.ts';
 
 // --- CLI Parsing ---
 const args = process.argv.slice(2);
@@ -104,8 +107,9 @@ async function runTests(): Promise<void> {
   console.log(`Failed:         ${failedCount > 0 ? red(bold(String(failedCount))) : green('0')}`);
 
   // Tier breakdown
+  const maxTier = Math.max(...results.map((r) => r.test.metadata.tier), 1);
   console.log(dim('\nBreakdown by Tier:'));
-  for (let t = 1; t <= 6; t++) {
+  for (let t = 1; t <= maxTier; t++) {
     const tierResults = results.filter((r) => r.test.metadata.tier === t);
     if (tierResults.length > 0) {
       const p = tierResults.filter((r) => r.passed).length;
@@ -116,8 +120,9 @@ async function runTests(): Promise<void> {
   }
 
   // Milestone breakdown
+  const maxMilestone = Math.max(...results.map((r) => r.test.metadata.milestone), 1);
   console.log(dim('\nBreakdown by Milestone:'));
-  for (let m = 1; m <= 6; m++) {
+  for (let m = 1; m <= maxMilestone; m++) {
     const mResults = results.filter((r) => r.test.metadata.milestone === m);
     if (mResults.length > 0) {
       const p = mResults.filter((r) => r.passed).length;
@@ -152,6 +157,14 @@ function getTierTitle(tier: number): string {
     case 2: return 'Boundary & Corner Cases';
     case 3: return 'Cross-Feature Combinations';
     case 4: return 'Real-World Scenarios';
+    case 5: return 'Routes Management & Persistence';
+    case 6: return 'Weekly Sync & Notifications';
+    case 7: return 'User Sessions & Audit Trail';
+    case 8: return 'UYSOT & Domtut Isolation';
+    case 9: return 'AI Route Advisor & Pitch Briefing';
+    case 10: return 'Neon PostgreSQL Architecture & SQL DDL';
+    case 11: return 'Database CRUD & Data Decoupling';
+    case 12: return 'Multi-Tenant Isolation & Security Matrix';
     default: return 'Tests';
   }
 }
