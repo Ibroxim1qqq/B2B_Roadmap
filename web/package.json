@@ -11,9 +11,12 @@
     "test:m1": "node --experimental-strip-types tests/e2e/runner.ts --milestone=1",
     "test:m2": "node --experimental-strip-types tests/e2e/runner.ts --milestone=2",
     "test:m3": "node --experimental-strip-types tests/e2e/runner.ts --milestone=3",
-    "test:m4": "node --experimental-strip-types tests/e2e/runner.ts --milestone=4"
+    "test:m4": "node --experimental-strip-types tests/e2e/runner.ts --milestone=4",
+    "db:migrate": "node --experimental-strip-types scripts/migrate-neon.ts",
+    "db:seed": "node --experimental-strip-types scripts/seed-neon.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@types/leaflet": "^1.9.22",
     "@types/leaflet.markercluster": "^1.5.6",
     "clsx": "^2.1.1",

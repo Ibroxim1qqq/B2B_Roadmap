@@ -31,10 +31,10 @@ export async function POST(req: Request) {
     recordUserSessionInSheet({
       user_id: user.user_id || user.id,
       user_name: user.name,
-      login: user.login,
-      role: user.role,
-      company_id: user.company_id,
-      company_name: user.company_name,
+      login: user.login || '',
+      role: user.role || 'manager',
+      company_id: user.company_id || 'comp_default',
+      company_name: user.company_name || 'Asosiy Kompaniya',
       action: 'login',
       ip_address: ip,
       user_agent: userAgent

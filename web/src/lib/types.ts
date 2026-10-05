@@ -84,10 +84,12 @@ export interface ObjectDetail {
 
 export interface CustomField {
   field_name: string;
-  field_type: 'text' | 'phone' | 'number' | 'date' | 'url' | 'select' | 'textarea' | 'checkbox';
+  field_type: 'text' | 'phone' | 'number' | 'date' | 'url' | 'select' | 'textarea' | 'checkbox' | string;
   required: boolean;
   visible: boolean;
   column_letter?: string;
+  label?: string;
+  desc?: string;
 }
 
 export interface DashboardStats {
@@ -132,6 +134,7 @@ export interface SavedRoute {
   company_id: string;
   user_id?: string;
   user_name?: string;
+  route_name?: string;
   start_name: string;
   start_lat: number;
   start_lng: number;
