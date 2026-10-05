@@ -534,7 +534,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
 
             <div className="space-y-1 pt-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Asosiy argumentlar:</span>
-              {aiBriefing.selling_points.map((pt, i) => (
+              {Array.isArray(aiBriefing.selling_points) && aiBriefing.selling_points.map((pt, i) => (
                 <div key={i} className="flex items-start gap-1.5 text-[11px] text-slate-800">
                   <span className="text-emerald-600 font-bold shrink-0">✓</span>
                   <span>{pt}</span>

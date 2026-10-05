@@ -17,6 +17,7 @@ export function useObjects(companyId?: string) {
       setLoading(true);
       const data = await api.getMarkers(companyId);
       setMarkers(data);
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
@@ -25,8 +26,30 @@ export function useObjects(companyId?: string) {
   }, [companyId]);
 
   useEffect(() => {
-    fetchMarkers();
-  }, [fetchMarkers]);
+    let isCancelled = false;
+    setLoading(true);
+    api.getMarkers(companyId)
+      .then(data => {
+        if (!isCancelled) {
+          setMarkers(data);
+          setError(null);
+        }
+      })
+      .catch(err => {
+        if (!isCancelled) {
+          setError(err instanceof Error ? err : new Error('Unknown error'));
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [companyId]);
 
   const filteredMarkers = useMemo(() => {
     return markers.filter(marker => {

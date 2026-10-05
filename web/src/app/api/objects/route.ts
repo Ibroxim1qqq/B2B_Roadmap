@@ -21,13 +21,41 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const companyId = searchParams.get('company_id') || '';
-    const isUysot = companyId === 'uysot' || isUysotCompany(companyId);
+    const targetId = (searchParams.get('id') || '').trim();
+    const isUysot = companyId === 'uysot' || isUysotCompany(companyId) || (targetId ? targetId.startsWith('domtut_') : false);
 
     // 2. Dedicated company isolation for UYSOT.UZ (Toshkent / Domtut dataset)
     if (isUysot) {
       const uysotObjects = await getUysotObjectsFromSheet();
       // Enforce 100% strict isolation: only Domtut objects
-      const pureUysot = uysotObjects.filter((r: any) => String(r.source_id || '').startsWith('domtut_') || r.is_uysot);
+      let pureUysot = uysotObjects.filter((r: any) => String(r.source_id || '').startsWith('domtut_') || r.is_uysot);
+
+      // Merge company-specific overrides if companyId is provided
+      if (companyId) {
+        try {
+          const { overrides, customObjects } = await getCompanyDataFromSheet(companyId);
+          if (overrides.size > 0) {
+            pureUysot = pureUysot.map((r: any) => {
+              const ov = overrides.get(String(r.source_id));
+              return ov ? { ...r, ...ov } : r;
+            });
+          }
+          if (customObjects.length > 0) {
+            const pureCustom = customObjects.filter((c: any) => String(c.source_id || '').startsWith('domtut_') || c.is_uysot);
+            pureUysot = [...pureCustom, ...pureUysot];
+          }
+        } catch (_) {}
+      }
+
+      // If single ID requested
+      if (targetId) {
+        const found = pureUysot.find((r: any) => String(r.source_id).trim() === targetId);
+        if (found) {
+          return NextResponse.json({ success: true, data: found });
+        }
+        return NextResponse.json({ success: false, error: 'Obyekt topilmadi' }, { status: 404 });
+      }
+
       return NextResponse.json({ success: true, count: pureUysot.length, data: pureUysot });
     }
 
@@ -65,6 +93,13 @@ export async function GET(req: NextRequest) {
 
     // 2. If no company_id provided, return base objects as is
     if (!companyId || companyId === 'system') {
+      if (targetId) {
+        const found = baseRows.find((r: any) => String(r.source_id).trim() === targetId);
+        if (found) {
+          return NextResponse.json({ success: true, data: found });
+        }
+        return NextResponse.json({ success: false, error: 'Obyekt topilmadi' }, { status: 404 });
+      }
       return NextResponse.json({ success: true, count: baseRows.length, data: baseRows });
     }
 
@@ -133,6 +168,15 @@ export async function GET(req: NextRequest) {
 
     const pureCustomList = customList.filter((c: any) => !String(c.source_id || '').startsWith('domtut_') && !c.is_uysot);
     const finalData = [...pureCustomList, ...mergedRows];
+
+    if (targetId) {
+      const found = finalData.find((r: any) => String(r.source_id).trim() === targetId);
+      if (found) {
+        return NextResponse.json({ success: true, data: found });
+      }
+      return NextResponse.json({ success: false, error: 'Obyekt topilmadi' }, { status: 404 });
+    }
+
     return NextResponse.json({ success: true, count: finalData.length, data: finalData });
   } catch (err: any) {
     console.error('API /api/objects error:', err);

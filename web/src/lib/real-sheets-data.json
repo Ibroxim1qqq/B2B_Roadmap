@@ -66,11 +66,11 @@
       "manager_phone": "",
       "telegram": "",
       "instagram": "",
-      "notes": "",
+      "notes": "QA Test Run 1790330449095",
       "priority": "",
-      "last_visit": "",
-      "visited_by": "",
-      "visit_lat_lng": ""
+      "last_visit": "2026-09-25 15:00 (QA Bot)",
+      "visited_by": "QA Bot",
+      "visit_lat_lng": "39.65,66.96"
     },
     {
       "source_id": "9529",

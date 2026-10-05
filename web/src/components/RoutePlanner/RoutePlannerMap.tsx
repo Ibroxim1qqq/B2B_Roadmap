@@ -394,10 +394,6 @@ export default function RoutePlannerMap({
             L.DomEvent.stopPropagation(e);
             if (pickingMode) {
               onSetPointFromObject(obj, pickingMode);
-            } else if (!startPoint) {
-              onSetPointFromObject(obj, 'A');
-            } else if (!endPoint) {
-              onSetPointFromObject(obj, 'B');
             } else {
               onSelectTJM(obj.source_id);
             }

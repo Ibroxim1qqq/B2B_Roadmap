@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useObjects } from '../hooks/useObjects';
 import { useLocation } from '../hooks/useLocation';
 import { useDistance } from '../hooks/useDistance';
-import { api, isUysotCompany, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject } from '../lib/api';
+import { api, isUysotCompany, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject, formatMapObjectToObjectDetail, formatRowToObjectDetail } from '../lib/api';
 import { calculateDistance } from '../lib/utils';
 import { ObjectDetail, CustomField, MapObject, UserProfile, WeeklySyncNotification, NewBuildingItem, AIRouteRecommendation } from '../lib/types';
 import GlobalAIAssistant from '../components/AI/GlobalAIAssistant';
@@ -62,8 +62,18 @@ function HomeContent() {
   const queryFocusId = searchParams.get('focus_id');
 
   // User Authentication & Session
-  const [currentUser, setLocalCurrentUser] = useState<UserProfile | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [currentUser, setLocalCurrentUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== 'undefined') {
+      return getCurrentUser();
+    }
+    return null;
+  });
+  const [authChecked, setAuthChecked] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!getCurrentUser();
+    }
+    return false;
+  });
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -337,20 +347,26 @@ function HomeContent() {
     // 1. Instant optimistic detail from in-memory objects (eliminates network delay & guarantees data is always visible immediately)
     const existing = allMarkers.find(m => String(m.source_id).trim() === cleanId);
     if (existing) {
-      setObjectDetail(formatBuildingItemToObjectDetail(existing));
+      setObjectDetail(formatMapObjectToObjectDetail(existing));
       setDetailLoading(false);
     } else {
+      setObjectDetail(formatRowToObjectDetail({
+        source_id: cleanId,
+        object_name: `Bino #${cleanId}`,
+        status: 'Qurilish jarayonida',
+        region_soato: isUysotCompany(effectiveCompanyId) ? '1726' : '1718'
+      }));
       setDetailLoading(true);
     }
 
     // 2. Fetch full detail from API in background for any fresh CRM/Sheets updates
     try {
       const detail = await api.getObject(cleanId, effectiveCompanyId);
-      if (detail && detail.source) {
+      if (detail && detail.source && String(detail.source.source_id) === cleanId) {
         setObjectDetail(detail);
       }
     } catch (err) {
-      console.error('Failed to fetch full object detail:', err);
+      console.warn('Background getObject error:', err);
     } finally {
       setDetailLoading(false);
     }
@@ -922,7 +938,18 @@ function HomeContent() {
                   onPlanRoute={() => handlePlanRouteToObject(selectedId)}
                 />
               )
-            ) : null}
+            ) : (
+              <div className="p-8 flex flex-col items-center justify-center gap-3 h-full text-center">
+                <p className="text-sm font-semibold text-slate-700">Obyekt ma&apos;lumotlari topilmadi</p>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedId(null); setIsEditing(false); }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Yopish
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

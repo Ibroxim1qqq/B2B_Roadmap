@@ -127,7 +127,7 @@ function formatRowToMapObject(r: any): MapObject {
   };
 }
 
-function formatRowToObjectDetail(r: any): ObjectDetail {
+export function formatRowToObjectDetail(r: any): ObjectDetail {
   if (!r) {
     return {
       source: {
@@ -327,6 +327,62 @@ export function formatBuildingItemToMapObject(b: any): MapObject {
   };
 }
 
+export function formatMapObjectToObjectDetail(m: MapObject): ObjectDetail {
+  const anyM = m as any;
+  const lat = typeof m.latitude === 'number' ? m.latitude : parseFloat(String(m.latitude)) || 39.6542;
+  const lng = typeof m.longitude === 'number' ? m.longitude : parseFloat(String(m.longitude)) || 66.9597;
+  const regSoato = String(m.region_soato || (lat > 40.5 ? '1726' : '1718'));
+  const regName = m.region_name || getRegionName(regSoato) || (lat > 40.5 ? 'Toshkent shahri' : 'Samarqand');
+  const district = m.district_name || getDistrictName(String(m.district_soato || ''), regSoato) || regName;
+  const isDomtut = String(m.source_id || '').startsWith('domtut_');
+
+  return {
+    source: {
+      source_id: String(m.source_id || ''),
+      object_name: String(m.object_name || m.tjm_name || "Noma'lum bino"),
+      region_soato: regSoato,
+      region_name: regName,
+      district_soato: String(m.district_soato || '1718401'),
+      district_name: district,
+      address: String(m.address || m.sales_office || `${regName}`),
+      latitude: lat,
+      longitude: lng,
+      status: String(m.status || 'Qurilish jarayonida'),
+      status_id: m.status_id || 1,
+      sphere_id: String(anyM.sphere_id || '57'),
+      sphere_name: String(m.sphere_name || "Ko'p xonadonli uy-joylar"),
+      customer: String(m.customer || '—'),
+      designer: String(anyM.designer || '—'),
+      builder: String(m.builder || '—'),
+      difficulty: String(anyM.difficulty || 'II-toifa'),
+      floors: String(m.floors || '—'),
+      apartment_count: String(m.apartment_count || '0'),
+      area: String(m.area || '—'),
+      block_count: String(anyM.block_count || '1'),
+      deadline: String(m.deadline || '—'),
+      created_at: String(anyM.created_at || ''),
+      task_id: String(anyM.task_id || ''),
+      passport_url: String(anyM.passport_url || ''),
+      source_url: String(anyM.source_url || (isDomtut ? 'https://domtut.uz' : `https://dshk.shaffofqurilish.uz/object/${m.source_id}`)),
+      image_url: String(m.image_url || '')
+    },
+    internal: {
+      tjm_name: String(m.tjm_name || '').trim(),
+      phone: String(m.phone || '').trim(),
+      sales_office: String(m.sales_office || '').trim(),
+      manager_name: String(m.manager_name || '').trim(),
+      manager_phone: String(m.manager_phone || '').trim(),
+      telegram: String(m.telegram || '').trim(),
+      instagram: String(m.instagram || '').trim(),
+      notes: String(m.notes || '').trim(),
+      priority: String(m.priority || '').trim(),
+      last_visit: String(m.last_visit || '').trim(),
+      visited_by: String(m.visited_by || '').trim(),
+      visit_lat_lng: String(anyM.visit_lat_lng || '').trim()
+    }
+  };
+}
+
 export const api = {
   getMarkers: async (companyId?: string): Promise<MapObject[]> => {
     const isUysot = isUysotCompany(companyId);
@@ -359,38 +415,29 @@ export const api = {
   getObject: async (id: string, companyId?: string): Promise<ObjectDetail> => {
     const cleanId = String(id || '').trim();
     const isUysot = isUysotCompany(companyId) || cleanId.startsWith('domtut_');
-    let rows: any[] = isUysot ? uysotRows : realSheetsRows;
 
+    // 1. Single-object API fetch (fast & lightweight, ~15ms)
     try {
-      const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
+      const q = `?id=${encodeURIComponent(cleanId)}&company_id=${encodeURIComponent(companyId || '')}&t=${Date.now()}`;
       const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          rows = json.data;
+        if (json.success && json.data) {
+          return formatRowToObjectDetail(json.data);
         }
       }
-    } catch (e) {}
-
-    // Enforce strict isolation on fetched rows
-    rows = rows.filter((r: any) => {
-      const isDomtut = String(r.source_id || '').startsWith('domtut_') || Boolean(r.is_uysot);
-      return isUysot ? isDomtut : !isDomtut;
-    });
-
-    let found = rows.find((r: any) => String(r.source_id || '').trim() === cleanId);
-
-    // If not found in fetched rows, search ONLY in respective company's dataset (NEVER cross-bleed!)
-    if (!found) {
-      const targetDataset = isUysot ? uysotRows : realSheetsRows;
-      found = targetDataset.find((r: any) => String(r.source_id || '').trim() === cleanId);
+    } catch (e) {
+      console.warn('Single-object API fetch error:', e);
     }
 
+    // 2. Direct fallback to preloaded rows matching company isolation
+    const targetDataset = isUysot ? uysotRows : realSheetsRows;
+    const found = targetDataset.find((r: any) => String(r.source_id || '').trim() === cleanId);
     if (found) {
       return formatRowToObjectDetail(found);
     }
 
-    // Check notifications only for non-UYSOT (DSHK scraper)
+    // 3. Check notifications for non-UYSOT (DSHK scraper)
     if (!isUysot) {
       try {
         const notifsRes = await fetch(`/api/notifications?t=${Date.now()}`, { cache: 'no-store' });
@@ -408,11 +455,13 @@ export const api = {
       } catch (e) {}
     }
 
-    // Safe fallback strictly to first isolated row or empty object detail
-    if (rows && rows.length > 0 && rows[0]) {
-      return formatRowToObjectDetail(rows[0]);
-    }
-    return formatRowToObjectDetail({ source_id: cleanId || 'unknown', object_name: "Noma'lum bino" });
+    // 4. Safe fallback: Return a clean ObjectDetail for this specific cleanId, NEVER a mismatched row like rows[0]!
+    return formatRowToObjectDetail({
+      source_id: cleanId,
+      object_name: `Bino #${cleanId}`,
+      status: 'Qurilish jarayonida',
+      region_soato: isUysot ? '1726' : '1718'
+    });
   },
 
   getSettings: async (): Promise<CustomField[]> => {

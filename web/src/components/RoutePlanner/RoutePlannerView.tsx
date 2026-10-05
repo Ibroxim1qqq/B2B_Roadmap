@@ -284,12 +284,10 @@ export default function RoutePlannerView({
         triggerHaptic(20);
         const nextIdx = mobileActiveStopIndex + 1;
         setMobileActiveStopIndex(nextIdx);
-        if (matchedTJMs[nextIdx]) onSelectObject(matchedTJMs[nextIdx].object.source_id);
       } else if (dx > 0 && mobileActiveStopIndex > 0) {
         triggerHaptic(20);
         const prevIdx = mobileActiveStopIndex - 1;
         setMobileActiveStopIndex(prevIdx);
-        if (matchedTJMs[prevIdx]) onSelectObject(matchedTJMs[prevIdx].object.source_id);
       }
     } else if (dy < -45 && Math.abs(dy) > Math.abs(dx)) {
       triggerHaptic(25);
@@ -1955,7 +1953,6 @@ export default function RoutePlannerView({
                               triggerHaptic(20);
                               const newIdx = Math.max(0, mobileActiveStopIndex - 1);
                               setMobileActiveStopIndex(newIdx);
-                              if (matchedTJMs[newIdx]) onSelectObject(matchedTJMs[newIdx].object.source_id);
                             }}
                             className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white text-xs flex items-center justify-center cursor-pointer transition-all active:scale-95"
                             title="Oldingi bino (chapga surish)"
@@ -1969,7 +1966,6 @@ export default function RoutePlannerView({
                               triggerHaptic(20);
                               const newIdx = Math.min(matchedTJMs.length - 1, mobileActiveStopIndex + 1);
                               setMobileActiveStopIndex(newIdx);
-                              if (matchedTJMs[newIdx]) onSelectObject(matchedTJMs[newIdx].object.source_id);
                             }}
                             className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white text-xs flex items-center justify-center cursor-pointer transition-all active:scale-95"
                             title="Keyingi bino (o'ngga surish)"
