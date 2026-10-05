@@ -14,6 +14,9 @@ import './tier9-ai-route-advisor.test.ts';
 import './tier10-neon-sql-architecture.test.ts';
 import './tier11-db-crud-decoupling.test.ts';
 import './tier12-tenant-isolation-security.test.ts';
+import './tier13-api-endpoints-contract.test.ts';
+import './tier14-geospatial-routing-math.test.ts';
+import './tier15-concurrency-stress-resilience.test.ts';
 
 // --- CLI Parsing ---
 const args = process.argv.slice(2);
@@ -165,6 +168,9 @@ function getTierTitle(tier: number): string {
     case 10: return 'Neon PostgreSQL Architecture & SQL DDL';
     case 11: return 'Database CRUD & Data Decoupling';
     case 12: return 'Multi-Tenant Isolation & Security Matrix';
+    case 13: return 'Live API Endpoints & Contract Tests';
+    case 14: return 'Geospatial Routing & Mathematical Precision';
+    case 15: return 'Concurrency, Stress & Extreme Bounds';
     default: return 'Tests';
   }
 }
