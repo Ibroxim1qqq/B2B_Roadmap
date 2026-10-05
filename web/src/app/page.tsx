@@ -6,6 +6,7 @@ import { useObjects } from '../hooks/useObjects';
 import { useLocation } from '../hooks/useLocation';
 import { useDistance } from '../hooks/useDistance';
 import { api, isUysotCompany, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject } from '../lib/api';
+import { calculateDistance } from '../lib/utils';
 import { ObjectDetail, CustomField, MapObject, UserProfile, WeeklySyncNotification, NewBuildingItem, AIRouteRecommendation } from '../lib/types';
 import GlobalAIAssistant from '../components/AI/GlobalAIAssistant';
 import { getCurrentUser, setCurrentUser as saveCurrentUser, logout as authLogout } from '../lib/auth';
@@ -328,14 +329,28 @@ function HomeContent() {
   }, []);
 
   const handleSelectObject = async (id: string) => {
-    setSelectedId(id);
-    setDetailLoading(true);
+    if (!id) return;
+    const cleanId = String(id).trim();
+    setSelectedId(cleanId);
     setIsEditing(false);
+
+    // 1. Instant optimistic detail from in-memory objects (eliminates network delay & guarantees data is always visible immediately)
+    const existing = allMarkers.find(m => String(m.source_id).trim() === cleanId);
+    if (existing) {
+      setObjectDetail(formatBuildingItemToObjectDetail(existing));
+      setDetailLoading(false);
+    } else {
+      setDetailLoading(true);
+    }
+
+    // 2. Fetch full detail from API in background for any fresh CRM/Sheets updates
     try {
-      const detail = await api.getObject(id, effectiveCompanyId);
-      setObjectDetail(detail);
+      const detail = await api.getObject(cleanId, effectiveCompanyId);
+      if (detail && detail.source) {
+        setObjectDetail(detail);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch full object detail:', err);
     } finally {
       setDetailLoading(false);
     }
@@ -548,9 +563,18 @@ function HomeContent() {
 
   const selectedDistance = useMemo(() => {
     if (!selectedId) return undefined;
-    const found = displayList.find(m => m.source_id === selectedId);
-    return found?.distance;
-  }, [selectedId, displayList]);
+    const found = displayList.find(m => String(m.source_id) === String(selectedId));
+    if (found?.distance !== undefined) return found.distance;
+    const fromAll = allMarkers.find(m => String(m.source_id) === String(selectedId));
+    if (fromAll && location.lat && location.lng && fromAll.latitude && fromAll.longitude) {
+      const numLat = typeof fromAll.latitude === 'number' ? fromAll.latitude : parseFloat(String(fromAll.latitude));
+      const numLng = typeof fromAll.longitude === 'number' ? fromAll.longitude : parseFloat(String(fromAll.longitude));
+      if (!isNaN(numLat) && !isNaN(numLng)) {
+        return calculateDistance(location.lat, location.lng, numLat, numLng);
+      }
+    }
+    return undefined;
+  }, [selectedId, displayList, allMarkers, location.lat, location.lng]);
 
   if (!authChecked) {
     return (

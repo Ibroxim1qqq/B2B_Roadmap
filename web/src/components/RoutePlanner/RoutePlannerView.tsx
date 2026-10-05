@@ -1922,7 +1922,14 @@ export default function RoutePlannerView({
                           <span className="w-7 h-7 rounded-xl bg-blue-600 text-white text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
                             #{currentTJM.orderNumber}
                           </span>
-                          <div className="min-w-0">
+                          <div 
+                            onClick={() => {
+                              triggerHaptic(20);
+                              onSelectObject(obj.source_id);
+                            }}
+                            className="min-w-0 cursor-pointer active:opacity-75 transition-opacity"
+                            title="Batafsil ma'lumotni ochish"
+                          >
                             <div className="flex items-center gap-1.5">
                               <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">
                                 To&apos;xtash {mobileActiveStopIndex + 1}/{matchedTJMs.length}
@@ -1933,7 +1940,7 @@ export default function RoutePlannerView({
                                 {isVisited ? '✓ Borilgan' : 'Borilmagan'}
                               </span>
                             </div>
-                            <h4 className="text-xs font-black text-white truncate max-w-[210px]">
+                            <h4 className="text-xs font-black text-white truncate max-w-[210px] underline decoration-white/20 underline-offset-2">
                               {obj.tjm_name || obj.object_name}
                             </h4>
                           </div>

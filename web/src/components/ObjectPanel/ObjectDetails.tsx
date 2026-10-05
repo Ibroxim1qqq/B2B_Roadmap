@@ -393,7 +393,9 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
                   {extraEntries.map(([k, v]) => (
                     <div key={k} className="flex items-start justify-between gap-3">
                       <span className="text-slate-400 shrink-0 capitalize">{k.replace(/_/g, ' ')}:</span>
-                      <span className="font-semibold text-slate-800 text-right">{v}</span>
+                      <span className="font-semibold text-slate-800 text-right">
+                        {typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -453,21 +455,21 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
               <span className="text-slate-400 flex items-center gap-1.5 shrink-0">
                 <Layers className="w-3.5 h-3.5 text-slate-400" /> Qavat
               </span>
-              <span className="font-medium text-slate-800">{source.floors}</span>
+              <span className="font-medium text-slate-800">{String(source.floors || '—')}</span>
             </div>
 
             <div className="flex items-start justify-between gap-3">
               <span className="text-slate-400 flex items-center gap-1.5 shrink-0">
                 <Building className="w-3.5 h-3.5 text-slate-400" /> Xonadonlar
               </span>
-              <span className="font-medium text-slate-800">{source.apartment_count || '0'} ta</span>
+              <span className="font-medium text-slate-800">{String(source.apartment_count || '0')} ta</span>
             </div>
 
             <div className="flex items-start justify-between gap-3">
               <span className="text-slate-400 flex items-center gap-1.5 shrink-0">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" /> Muddat
               </span>
-              <span className="font-medium text-slate-800">{source.deadline || '—'}</span>
+              <span className="font-medium text-slate-800">{String(source.deadline || '—')}</span>
             </div>
 
             <div className="flex items-start justify-between gap-3">

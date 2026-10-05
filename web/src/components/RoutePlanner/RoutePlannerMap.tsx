@@ -623,8 +623,8 @@ export default function RoutePlannerMap({
       `);
 
       marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
         if (pickingMode) {
-          L.DomEvent.stopPropagation(e);
           onSetPointFromObject(obj, pickingMode);
         } else {
           onSelectTJM(obj.source_id);
@@ -635,12 +635,16 @@ export default function RoutePlannerMap({
       boundsPoints.push([obj.latitude, obj.longitude]);
     });
 
-    // Fit map bounds to route when calculated
-    if (routeCoords.length > 1 && !pickingMode && !isNavigating) {
-      map.fitBounds(L.latLngBounds(routeCoords), {
-        padding: [60, 60],
-        maxZoom: 16
-      });
+    // Fit map bounds to route ONLY when route coordinates first load/change, not on every object selection
+    if (routeCoords.length > 1 && !pickingMode && !isNavigating && !selectedTJMId) {
+      try {
+        map.fitBounds(L.latLngBounds(routeCoords), {
+          padding: [60, 60],
+          maxZoom: 16
+        });
+      } catch (err) {
+        console.warn('Map fitBounds safe catch:', err);
+      }
     }
   }, [
     routeCoords, 
@@ -659,19 +663,27 @@ export default function RoutePlannerMap({
     onDragStartPoint, 
   ]);
 
-  // Smoothly glide map to selected TJM with mobile bottom sheet offset
+  // Smoothly glide map to selected TJM with mobile bottom sheet offset (strictly numerical coords)
   useEffect(() => {
     if (!selectedTJMId || !mapRef.current || isNavigating) return;
     const target = allObjects.find(o => String(o.source_id) === String(selectedTJMId));
     if (target && target.latitude && target.longitude) {
       const map = mapRef.current;
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const numLat = typeof target.latitude === 'number' ? target.latitude : parseFloat(String(target.latitude));
+      const numLng = typeof target.longitude === 'number' ? target.longitude : parseFloat(String(target.longitude));
+      if (isNaN(numLat) || isNaN(numLng)) return;
+
       // On mobile, offset latitude down slightly so the marker sits nicely in the upper portion above the bottom drawer
       const offsetLat = isMobile ? -0.003 : 0;
-      map.flyTo([target.latitude + offsetLat, target.longitude], Math.max(map.getZoom(), 15), {
-        duration: 0.8,
-        easeLinearity: 0.25
-      });
+      try {
+        map.flyTo([numLat + offsetLat, numLng], Math.max(map.getZoom(), 15), {
+          duration: 0.8,
+          easeLinearity: 0.25
+        });
+      } catch (err) {
+        console.warn('Map flyTo safe catch:', err);
+      }
     }
   }, [selectedTJMId, allObjects, isNavigating]);
 

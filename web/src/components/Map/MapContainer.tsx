@@ -316,8 +316,12 @@ export default function MapContainer({
     const map = mapRef.current;
     if (!map || !focusTarget) return;
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1280;
-    const targetLat = isMobile ? focusTarget.lat - 0.0035 : focusTarget.lat;
-    map.flyTo([targetLat, focusTarget.lng], focusTarget.zoom || 16, { duration: 1.0 });
+    const focusLat = typeof focusTarget.lat === 'number' ? focusTarget.lat : parseFloat(String(focusTarget.lat));
+    const focusLng = typeof focusTarget.lng === 'number' ? focusTarget.lng : parseFloat(String(focusTarget.lng));
+    if (isNaN(focusLat) || isNaN(focusLng)) return;
+
+    const targetLat = isMobile ? focusLat - 0.0035 : focusLat;
+    map.flyTo([targetLat, focusLng], focusTarget.zoom || 16, { duration: 1.0 });
 
     const timer = setTimeout(() => {
       map.invalidateSize();
@@ -338,8 +342,12 @@ export default function MapContainer({
     const found = markers.find(m => String(m.source_id) === String(selectedId));
     if (found && found.latitude && found.longitude) {
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 1280;
-      const targetLat = isMobile ? found.latitude - 0.0035 : found.latitude;
-      map.flyTo([targetLat, found.longitude], 16, { duration: 1.0 });
+      const foundLat = typeof found.latitude === 'number' ? found.latitude : parseFloat(String(found.latitude));
+      const foundLng = typeof found.longitude === 'number' ? found.longitude : parseFloat(String(found.longitude));
+      if (isNaN(foundLat) || isNaN(foundLng)) return;
+
+      const targetLat = isMobile ? foundLat - 0.0035 : foundLat;
+      map.flyTo([targetLat, foundLng], 16, { duration: 1.0 });
     }
     const timer = setTimeout(() => {
       map.invalidateSize();
