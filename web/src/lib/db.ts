@@ -337,7 +337,9 @@ export async function ensureDatabaseSchema(): Promise<boolean> {
       .filter(s => s.length > 0);
 
     for (const stmt of statements) {
-      if (typeof (sql as any).unsafe === 'function') {
+      if (typeof (sql as any).query === 'function') {
+        await (sql as any).query(stmt);
+      } else if (typeof (sql as any).unsafe === 'function') {
         await (sql as any).unsafe(stmt);
       } else {
         await (sql as any)([stmt] as unknown as TemplateStringsArray);
