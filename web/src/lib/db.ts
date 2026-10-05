@@ -368,6 +368,34 @@ export const db = {
       try {
         await ensureDatabaseSchema();
         if (targetId) {
+          // Check if targetId is a custom TJM in company_data first
+          const customCheck = await sql`
+            SELECT * FROM company_data 
+            WHERE source_id = ${targetId} 
+              AND is_custom_tjm = true
+              ${companyId && companyId !== 'system' ? sql`AND company_id = ${companyId}` : sql``}
+            LIMIT 1
+          `;
+          if (customCheck.length > 0) {
+            const crow = customCheck[0];
+            const parsed = crow.custom_object_json || crow;
+            return [{
+              ...parsed,
+              tjm_name: crow.tjm_name || parsed.tjm_name || parsed.object_name,
+              phone: crow.phone || parsed.phone || '',
+              sales_office: crow.sales_office || parsed.sales_office || '',
+              manager_name: crow.manager_name || parsed.manager_name || '',
+              manager_phone: crow.manager_phone || parsed.manager_phone || '',
+              telegram: crow.telegram || parsed.telegram || '',
+              instagram: crow.instagram || parsed.instagram || '',
+              notes: crow.notes || parsed.notes || '',
+              priority: crow.priority || parsed.priority || 'Normal',
+              last_visit: crow.last_visit || parsed.last_visit || '',
+              visited_by: crow.visited_by || parsed.visited_by || '',
+              visit_lat_lng: crow.visit_lat_lng || parsed.visit_lat_lng || ''
+            }];
+          }
+
           const res = await sql`
             SELECT o.*, cd.tjm_name as c_tjm_name, cd.phone as c_phone, cd.sales_office as c_sales_office,
                    cd.manager_name as c_manager_name, cd.manager_phone as c_manager_phone,
@@ -441,11 +469,38 @@ export const db = {
     }
 
     if (targetId) {
+      // 1. Check if targetId is custom TJM in companyData
+      if (companyId) {
+        const customOv = localStore.companyData.get(`${companyId}_${targetId}`);
+        if (customOv && customOv.is_custom_tjm) {
+          return [customOv];
+        }
+      } else {
+        for (const [, val] of localStore.companyData.entries()) {
+          if (val && val.is_custom_tjm && String(val.source_id).trim() === targetId.trim()) {
+            return [val];
+          }
+        }
+      }
+
+      // 2. Query base objects
       const found = list.find(o => String(o.source_id).trim() === targetId.trim());
       if (!found) return [];
       const ovKey = `${companyId || 'comp_default'}_${targetId}`;
       const ov = localStore.companyData.get(ovKey);
       return [ov ? { ...found, ...ov } : found];
+    }
+
+    // Include custom TJMs belonging to this company or system
+    const customList: any[] = [];
+    for (const [, val] of localStore.companyData.entries()) {
+      if (val && val.is_custom_tjm) {
+        if (!companyId || companyId === 'system' || val.company_id === companyId) {
+          if (isUysot === undefined || !!val.is_uysot === isUysot) {
+            customList.push(val);
+          }
+        }
+      }
     }
 
     if (companyId) {
@@ -456,7 +511,7 @@ export const db = {
       });
     }
 
-    return list;
+    return [...customList, ...list];
   },
 
   /** Get single object detail */
@@ -1048,6 +1103,12 @@ export const db = {
           ON CONFLICT (field_name) DO UPDATE SET visible = true
         `;
       } catch (e) {}
+    }
+
+    const existingIdx = localStore.customFields.findIndex(f => f.field_name === item.field_name);
+    if (existingIdx !== -1) {
+      localStore.customFields[existingIdx] = { ...localStore.customFields[existingIdx], ...item, visible: true };
+      return localStore.customFields[existingIdx];
     }
 
     localStore.customFields.push(item);

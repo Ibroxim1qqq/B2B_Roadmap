@@ -17,6 +17,7 @@ import './tier12-tenant-isolation-security.test.ts';
 import './tier13-api-endpoints-contract.test.ts';
 import './tier14-geospatial-routing-math.test.ts';
 import './tier15-concurrency-stress-resilience.test.ts';
+import './tier16-real-world-100-cases.test.ts';
 
 // --- CLI Parsing ---
 const args = process.argv.slice(2);
@@ -171,6 +172,7 @@ function getTierTitle(tier: number): string {
     case 13: return 'Live API Endpoints & Contract Tests';
     case 14: return 'Geospatial Routing & Mathematical Precision';
     case 15: return 'Concurrency, Stress & Extreme Bounds';
+    case 16: return '100+ Real-World End-to-End User Cases';
     default: return 'Tests';
   }
 }
