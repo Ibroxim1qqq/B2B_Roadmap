@@ -828,8 +828,8 @@ function HomeContent() {
           )}
         </main>
 
-        {/* Right Drawer / Sidebar (ONLY FOR MAP TAB) */}
-        {selectedId && activeTab === 'map' && (
+        {/* Right Drawer / Sidebar (For Map and Route tabs on desktop) */}
+        {selectedId && (activeTab === 'map' || activeTab === 'route') && (
           <div className="hidden xl:flex w-[410px] shrink-0 h-full">
             {detailLoading && !objectDetail ? (
               <div className="w-full h-full flex items-center justify-center bg-white border-l border-slate-200">
@@ -863,8 +863,8 @@ function HomeContent() {
           </div>
         )}
 
-        {/* Mobile View Bottom Sheet Drawer (For Map tab on mobile) */}
-        {activeTab === 'map' && (
+        {/* Mobile View Bottom Sheet Drawer (For Map and Route tabs on mobile/tablet) */}
+        {(activeTab === 'map' || activeTab === 'route') && (
           <div className="xl:hidden">
             <BottomSheet
               isOpen={!!selectedId}
@@ -901,7 +901,7 @@ function HomeContent() {
       </div>
 
       {/* Center Modal for Object Details (When on Objects, Visits, or Dashboard tabs) */}
-      {selectedId && activeTab !== 'map' && (
+      {selectedId && activeTab !== 'map' && activeTab !== 'route' && (
         <div 
           className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
           onClick={(e) => {

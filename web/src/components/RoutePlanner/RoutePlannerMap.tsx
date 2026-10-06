@@ -395,7 +395,7 @@ export default function RoutePlannerMap({
             if (pickingMode) {
               onSetPointFromObject(obj, pickingMode);
             } else {
-              onSelectTJM(obj.source_id);
+              onSelectTJM(String(obj.source_id));
             }
           });
 
@@ -623,7 +623,7 @@ export default function RoutePlannerMap({
         if (pickingMode) {
           onSetPointFromObject(obj, pickingMode);
         } else {
-          onSelectTJM(obj.source_id);
+          onSelectTJM(String(obj.source_id));
         }
       });
 

@@ -1289,7 +1289,7 @@ export default function RoutePlannerView({
                 {objects.slice(0, 20).map((obj, index) => (
                   <div
                     key={obj.source_id}
-                    onClick={() => onSelectObject(obj.source_id)}
+                    onClick={() => onSelectObject(String(obj.source_id))}
                     className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-xs transition-all flex items-center justify-between gap-3 cursor-pointer"
                   >
                     {/* Number Badge: 1, 2, 3, 4, 5... */}
@@ -1399,13 +1399,13 @@ export default function RoutePlannerView({
               ) : (
                 filteredDrawerStops.map((item) => {
                   const { object: obj, orderNumber, distFromRoadMeters, distAlongRouteMeters } = item;
-                  const isSelected = selectedId === obj.source_id;
+                  const isSelected = String(selectedId) === String(obj.source_id);
                   const isVisited = Boolean(obj.is_visited || obj.last_visit);
 
                   return (
                     <div
                       key={obj.source_id}
-                      onClick={() => onSelectObject(obj.source_id)}
+                      onClick={() => onSelectObject(String(obj.source_id))}
                       className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-blue-50/80 border-blue-400 shadow-sm ring-2 ring-blue-500/10'
@@ -1478,7 +1478,7 @@ export default function RoutePlannerView({
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onSelectObject(obj.source_id);
+                                  onSelectObject(String(obj.source_id));
                                 }}
                                 className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                                 title="Batafsil ma'lumot"
@@ -1923,7 +1923,7 @@ export default function RoutePlannerView({
                           <div 
                             onClick={() => {
                               triggerHaptic(20);
-                              onSelectObject(obj.source_id);
+                              onSelectObject(String(obj.source_id));
                             }}
                             className="min-w-0 cursor-pointer active:opacity-75 transition-opacity"
                             title="Batafsil ma'lumotni ochish"
@@ -2205,7 +2205,7 @@ export default function RoutePlannerView({
                         onClick={() => {
                           triggerHaptic(20);
                           if (originalIndex !== -1) setMobileActiveStopIndex(originalIndex);
-                          onSelectObject(obj.source_id);
+                          onSelectObject(String(obj.source_id));
                           setShowMobileStopsDrawer(false);
                         }}
                         className={`p-3 rounded-2xl border transition-all cursor-pointer ${
