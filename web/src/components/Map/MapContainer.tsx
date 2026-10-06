@@ -34,6 +34,28 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
+function safeFlyTo(map: L.Map | null, center: [number, number], zoom?: number, options?: L.ZoomPanOptions) {
+  if (!map) return;
+  const lat = typeof center[0] === 'number' ? center[0] : parseFloat(String(center[0]));
+  const lng = typeof center[1] === 'number' ? center[1] : parseFloat(String(center[1]));
+  if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) return;
+
+  try {
+    const size = map.getSize();
+    // Guard: If container width or height is 0 (hidden tab, unmounted, or before layout paint),
+    // Leaflet's flyTo divides by Math.max(size.x, size.y) -> 0 -> producing NaN and throwing Invalid LatLng (NaN, NaN).
+    if (!size || size.x <= 0 || size.y <= 0) {
+      map.setView([lat, lng], zoom ?? map.getZoom());
+      return;
+    }
+    map.flyTo([lat, lng], zoom, options);
+  } catch (err) {
+    try {
+      map.setView([lat, lng], zoom ?? map.getZoom());
+    } catch (_) {}
+  }
+}
+
 export default function MapContainer({ 
   markers, 
   onSelect, 
@@ -235,13 +257,19 @@ export default function MapContainer({
     }
 
     markers.forEach((marker) => {
-      const isSelected = selectedId === marker.source_id;
+      const lat = typeof marker.latitude === 'number' ? marker.latitude : parseFloat(String(marker.latitude));
+      const lng = typeof marker.longitude === 'number' ? marker.longitude : parseFloat(String(marker.longitude));
+      if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
+        return; // Guard against NaN LatLng crashes
+      }
+
+      const isSelected = String(selectedId) === String(marker.source_id);
       const dist = marker.distance !== undefined
         ? (marker.distance < 1 ? `${Math.round(marker.distance * 1000)} m` : `${marker.distance.toFixed(1)} km`)
         : '—';
 
       const icon = createPinIcon(marker, isSelected);
-      const leafletMarker = L.marker([marker.latitude, marker.longitude], { icon });
+      const leafletMarker = L.marker([lat, lng], { icon });
 
       // Custom Popup DOM element to avoid innerHTML click issues
       const popupDiv = document.createElement('div');
@@ -321,16 +349,18 @@ export default function MapContainer({
     if (isNaN(focusLat) || isNaN(focusLng)) return;
 
     const targetLat = isMobile ? focusLat - 0.0035 : focusLat;
-    map.flyTo([targetLat, focusLng], focusTarget.zoom || 16, { duration: 1.0 });
+    safeFlyTo(map, [targetLat, focusLng], focusTarget.zoom || 16, { duration: 1.0 });
 
     const timer = setTimeout(() => {
-      map.invalidateSize();
-      if (selectedId) {
-        const m = markerMapRef.current.get(String(selectedId));
-        if (m) {
-          m.openPopup();
+      try {
+        map.invalidateSize();
+        if (selectedId) {
+          const m = markerMapRef.current.get(String(selectedId));
+          if (m) {
+            m.openPopup();
+          }
         }
-      }
+      } catch (_) {}
     }, 1100);
     return () => clearTimeout(timer);
   }, [focusTarget, selectedId]);
@@ -344,17 +374,19 @@ export default function MapContainer({
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 1280;
       const foundLat = typeof found.latitude === 'number' ? found.latitude : parseFloat(String(found.latitude));
       const foundLng = typeof found.longitude === 'number' ? found.longitude : parseFloat(String(found.longitude));
-      if (isNaN(foundLat) || isNaN(foundLng)) return;
-
-      const targetLat = isMobile ? foundLat - 0.0035 : foundLat;
-      map.flyTo([targetLat, foundLng], 16, { duration: 1.0 });
+      if (!isNaN(foundLat) && !isNaN(foundLng) && isFinite(foundLat) && isFinite(foundLng)) {
+        const targetLat = isMobile ? foundLat - 0.0035 : foundLat;
+        safeFlyTo(map, [targetLat, foundLng], 16, { duration: 1.0 });
+      }
     }
     const timer = setTimeout(() => {
-      map.invalidateSize();
-      const m = markerMapRef.current.get(String(selectedId));
-      if (m) {
-        m.openPopup();
-      }
+      try {
+        map.invalidateSize();
+        const m = markerMapRef.current.get(String(selectedId));
+        if (m) {
+          m.openPopup();
+        }
+      } catch (_) {}
     }, 1100);
     return () => clearTimeout(timer);
   }, [selectedId, markers]);
@@ -365,12 +397,16 @@ export default function MapContainer({
     if (!map) return;
 
     if (userLat && userLng) {
-      if (!userMarkerRef.current) {
-        userMarkerRef.current = L.marker([userLat, userLng], { icon: userIcon }).addTo(map);
-      } else {
-        userMarkerRef.current.setLatLng([userLat, userLng]);
+      const uLat = typeof userLat === 'number' ? userLat : parseFloat(String(userLat));
+      const uLng = typeof userLng === 'number' ? userLng : parseFloat(String(userLng));
+      if (!isNaN(uLat) && !isNaN(uLng) && isFinite(uLat) && isFinite(uLng)) {
+        if (!userMarkerRef.current) {
+          userMarkerRef.current = L.marker([uLat, uLng], { icon: userIcon }).addTo(map);
+        } else {
+          userMarkerRef.current.setLatLng([uLat, uLng]);
+        }
+        safeFlyTo(map, [uLat, uLng], 14, { duration: 1 });
       }
-      map.flyTo([userLat, userLng], 14, { duration: 1 });
     } else if (userMarkerRef.current) {
       map.removeLayer(userMarkerRef.current);
       userMarkerRef.current = null;
@@ -389,11 +425,11 @@ export default function MapContainer({
 
       if (selectedRegion) {
         const reg = getRegionBySoato(selectedRegion);
-        if (reg) {
-          map.flyTo(reg.center, reg.zoom, { duration: 1.2 });
+        if (reg && reg.center) {
+          safeFlyTo(map, reg.center, reg.zoom, { duration: 1.2 });
         }
       } else {
-        map.flyTo(UZBEKISTAN_CENTER, UZBEKISTAN_ZOOM, { duration: 1.2 });
+        safeFlyTo(map, UZBEKISTAN_CENTER, UZBEKISTAN_ZOOM, { duration: 1.2 });
       }
     }
   }, [selectedRegion, selectedId, focusTarget]);
@@ -404,12 +440,20 @@ export default function MapContainer({
     const map = mapRef.current;
     if (!map || hasAutoCenteredRef.current || selectedId || focusTarget) return;
     if (markers.length > 0) {
-      const valid = markers.filter(m => m.latitude && m.longitude);
+      const valid = markers.filter(m => {
+        const lat = typeof m.latitude === 'number' ? m.latitude : parseFloat(String(m.latitude));
+        const lng = typeof m.longitude === 'number' ? m.longitude : parseFloat(String(m.longitude));
+        return !isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng);
+      });
       if (valid.length > 0) {
-        const avgLat = valid.reduce((sum, m) => sum + m.latitude, 0) / valid.length;
-        if (avgLat > 40.5) {
+        const sumLat = valid.reduce((sum, m) => {
+          const lat = typeof m.latitude === 'number' ? m.latitude : parseFloat(String(m.latitude));
+          return sum + lat;
+        }, 0);
+        const avgLat = sumLat / valid.length;
+        if (!isNaN(avgLat) && avgLat > 40.5) {
           hasAutoCenteredRef.current = true;
-          map.flyTo([41.2995, 69.2401], 12, { duration: 1.2 });
+          safeFlyTo(map, [41.2995, 69.2401], 12, { duration: 1.2 });
         }
       }
     }

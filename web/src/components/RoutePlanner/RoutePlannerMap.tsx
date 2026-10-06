@@ -599,7 +599,11 @@ export default function RoutePlannerMap({
         iconAnchor: [17, 17]
       });
 
-      const marker = L.marker([obj.latitude, obj.longitude], { icon: tjmIcon });
+      const objLat = typeof obj.latitude === 'number' ? obj.latitude : parseFloat(String(obj.latitude));
+      const objLng = typeof obj.longitude === 'number' ? obj.longitude : parseFloat(String(obj.longitude));
+      if (isNaN(objLat) || isNaN(objLng) || !isFinite(objLat) || !isFinite(objLng)) return;
+
+      const marker = L.marker([objLat, objLng], { icon: tjmIcon });
 
       const name = obj.tjm_name || obj.object_name;
       const phoneText = obj.phone ? `<div style="margin-top:4px; font-weight:bold; color:#059669;">📞 ${obj.phone}</div>` : '';
@@ -628,7 +632,7 @@ export default function RoutePlannerMap({
       });
 
       layerGroup.addLayer(marker);
-      boundsPoints.push([obj.latitude, obj.longitude]);
+      boundsPoints.push([objLat, objLng]);
     });
 
     // Fit map bounds to route ONLY when route coordinates first load/change, not on every object selection
@@ -673,12 +677,19 @@ export default function RoutePlannerMap({
       // On mobile, offset latitude down slightly so the marker sits nicely in the upper portion above the bottom drawer
       const offsetLat = isMobile ? -0.003 : 0;
       try {
-        map.flyTo([numLat + offsetLat, numLng], Math.max(map.getZoom(), 15), {
-          duration: 0.8,
-          easeLinearity: 0.25
-        });
+        const size = map.getSize();
+        if (!size || size.x <= 0 || size.y <= 0) {
+          map.setView([numLat + offsetLat, numLng], Math.max(map.getZoom(), 15));
+        } else {
+          map.flyTo([numLat + offsetLat, numLng], Math.max(map.getZoom(), 15), {
+            duration: 0.8,
+            easeLinearity: 0.25
+          });
+        }
       } catch (err) {
-        console.warn('Map flyTo safe catch:', err);
+        try {
+          map.setView([numLat + offsetLat, numLng], Math.max(map.getZoom(), 15));
+        } catch (_) {}
       }
     }
   }, [selectedTJMId, allObjects, isNavigating]);

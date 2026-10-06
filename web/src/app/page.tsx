@@ -61,19 +61,9 @@ function HomeContent() {
   const queryTab = searchParams.get('tab');
   const queryFocusId = searchParams.get('focus_id');
 
-  // User Authentication & Session
-  const [currentUser, setLocalCurrentUser] = useState<UserProfile | null>(() => {
-    if (typeof window !== 'undefined') {
-      return getCurrentUser();
-    }
-    return null;
-  });
-  const [authChecked, setAuthChecked] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return !!getCurrentUser();
-    }
-    return false;
-  });
+  // User Authentication & Session (Initialized consistently on SSR and client to prevent hydration error)
+  const [currentUser, setLocalCurrentUser] = useState<UserProfile | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const user = getCurrentUser();
