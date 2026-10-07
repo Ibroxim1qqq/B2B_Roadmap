@@ -22,6 +22,44 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Defensive patch for Leaflet's internal DomUtil.getPosition to prevent
+// TypeError: Cannot read properties of undefined (reading '_leaflet_pos')
+if (typeof window !== 'undefined' && (L as any)?.DomUtil) {
+  const domUtil = (L as any).DomUtil;
+  if (!domUtil._posPatched) {
+    const origGetPosition = domUtil.getPosition;
+    domUtil.getPosition = function(el: any) {
+      if (!el) return new (L as any).Point(0, 0);
+      try {
+        return origGetPosition.call(this, el) || new (L as any).Point(0, 0);
+      } catch (_) {
+        return new (L as any).Point(0, 0);
+      }
+    };
+    domUtil._posPatched = true;
+  }
+}
+
+function safeFlyTo(map: L.Map | null, center: [number, number], zoom?: number, options?: L.ZoomPanOptions) {
+  if (!map) return;
+  const lat = typeof center[0] === 'number' ? center[0] : parseFloat(String(center[0]));
+  const lng = typeof center[1] === 'number' ? center[1] : parseFloat(String(center[1]));
+  if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) return;
+
+  try {
+    const size = map.getSize();
+    if (!size || size.x <= 0 || size.y <= 0) {
+      map.setView([lat, lng], zoom ?? map.getZoom());
+      return;
+    }
+    map.flyTo([lat, lng], zoom, options);
+  } catch (err) {
+    try {
+      map.setView([lat, lng], zoom ?? map.getZoom());
+    } catch (_) {}
+  }
+}
+
 interface RoutePlannerMapProps {
   startPoint: { lat: number; lng: number; name: string } | null;
   endPoint: { lat: number; lng: number; name: string } | null;
@@ -372,6 +410,10 @@ export default function RoutePlannerMap({
     const layerGroup = layerGroupRef.current;
     if (!map || !layerGroup) return;
 
+    try {
+      map.closePopup();
+    } catch (_) {}
+
     layerGroup.clearLayers();
 
     const boundsPoints: [number, number][] = [];
@@ -620,7 +662,7 @@ export default function RoutePlannerMap({
           </div>
           ${phoneText}
         </div>
-      `);
+      `, { autoPan: false });
 
       marker.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
@@ -676,21 +718,10 @@ export default function RoutePlannerMap({
 
       // On mobile, offset latitude down slightly so the marker sits nicely in the upper portion above the bottom drawer
       const offsetLat = isMobile ? -0.003 : 0;
-      try {
-        const size = map.getSize();
-        if (!size || size.x <= 0 || size.y <= 0) {
-          map.setView([numLat + offsetLat, numLng], Math.max(map.getZoom(), 15));
-        } else {
-          map.flyTo([numLat + offsetLat, numLng], Math.max(map.getZoom(), 15), {
-            duration: 0.8,
-            easeLinearity: 0.25
-          });
-        }
-      } catch (err) {
-        try {
-          map.setView([numLat + offsetLat, numLng], Math.max(map.getZoom(), 15));
-        } catch (_) {}
-      }
+      safeFlyTo(map, [numLat + offsetLat, numLng], Math.max(map.getZoom(), 15), {
+        duration: 0.8,
+        easeLinearity: 0.25
+      });
     }
   }, [selectedTJMId, allObjects, isNavigating]);
 

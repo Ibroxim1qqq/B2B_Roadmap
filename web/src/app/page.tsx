@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useObjects } from '../hooks/useObjects';
 import { useLocation } from '../hooks/useLocation';
 import { useDistance } from '../hooks/useDistance';
-import { api, isUysotCompany, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject, formatMapObjectToObjectDetail, formatRowToObjectDetail } from '../lib/api';
+import { api, isUysotCompany, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject, formatMapObjectToObjectDetail, formatRowToObjectDetail, uysotRows, realSheetsRows } from '../lib/api';
 import { calculateDistance } from '../lib/utils';
 import { ObjectDetail, CustomField, MapObject, UserProfile, WeeklySyncNotification, NewBuildingItem, AIRouteRecommendation } from '../lib/types';
 import GlobalAIAssistant from '../components/AI/GlobalAIAssistant';
@@ -340,13 +340,23 @@ function HomeContent() {
       setObjectDetail(formatMapObjectToObjectDetail(existing));
       setDetailLoading(false);
     } else {
-      setObjectDetail(formatRowToObjectDetail({
-        source_id: cleanId,
-        object_name: `Bino #${cleanId}`,
-        status: 'Qurilish jarayonida',
-        region_soato: isUysotCompany(effectiveCompanyId) ? '1726' : '1718'
-      }));
-      setDetailLoading(true);
+      const isDomtut = cleanId.startsWith('domtut_');
+      const fallbackObj = isDomtut
+        ? (uysotRows as any[]).find((r: any) => String(r.source_id).trim() === cleanId)
+        : (realSheetsRows as any[]).find((r: any) => String(r.source_id).trim() === cleanId);
+
+      if (fallbackObj) {
+        setObjectDetail(formatRowToObjectDetail(fallbackObj));
+        setDetailLoading(false);
+      } else {
+        setObjectDetail(formatRowToObjectDetail({
+          source_id: cleanId,
+          object_name: `Bino #${cleanId}`,
+          status: 'Qurilish jarayonida',
+          region_soato: isUysotCompany(effectiveCompanyId) || isDomtut ? '1726' : '1718'
+        }));
+        setDetailLoading(true);
+      }
     }
 
     // 2. Fetch full detail from API in background for any fresh CRM/Sheets updates
@@ -751,6 +761,7 @@ function HomeContent() {
                   userLng={location.lng}
                   selectedRegion={selectedRegion}
                   focusTarget={focusTarget}
+                  isActive={activeTab === 'map'}
                 />
               </div>
 

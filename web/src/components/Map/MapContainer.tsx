@@ -16,6 +16,24 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Defensive patch for Leaflet's internal DomUtil.getPosition to prevent
+// TypeError: Cannot read properties of undefined (reading '_leaflet_pos')
+if (typeof window !== 'undefined' && (L as any)?.DomUtil) {
+  const domUtil = (L as any).DomUtil;
+  if (!domUtil._posPatched) {
+    const origGetPosition = domUtil.getPosition;
+    domUtil.getPosition = function(el: any) {
+      if (!el) return new (L as any).Point(0, 0);
+      try {
+        return origGetPosition.call(this, el) || new (L as any).Point(0, 0);
+      } catch (_) {
+        return new (L as any).Point(0, 0);
+      }
+    };
+    domUtil._posPatched = true;
+  }
+}
+
 interface MapContainerProps {
   markers: (MapObject & { distance?: number })[];
   onSelect: (id: string) => void;
@@ -24,6 +42,7 @@ interface MapContainerProps {
   userLng?: number | null;
   selectedRegion?: string;
   focusTarget?: { lat: number; lng: number; zoom?: number; timestamp?: number } | null;
+  isActive?: boolean;
 }
 
 function escapeHtml(str: string): string {
@@ -63,7 +82,8 @@ export default function MapContainer({
   userLat, 
   userLng, 
   selectedRegion,
-  focusTarget 
+  focusTarget,
+  isActive = true
 }: MapContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -328,19 +348,41 @@ export default function MapContainer({
     layerRef.current = layer;
   }, [markers, selectedId, onSelect, createPinIcon, createClusterCustomIcon]);
 
-  // 3b. Invalidate size whenever container geometry changes (drawer toggle, responsive layout)
+  // 3b. When tab becomes active, safely invalidate size so Leaflet recalculates dimensions
   useEffect(() => {
-    if (!containerRef.current || !mapRef.current) return;
+    if (!isActive || !mapRef.current) return;
+    const timer = setTimeout(() => {
+      try {
+        if (mapRef.current && containerRef.current) {
+          const size = mapRef.current.getSize();
+          if (size && size.x > 0 && size.y > 0) {
+            mapRef.current.invalidateSize();
+          }
+        }
+      } catch (_) {}
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isActive]);
+
+  // 3c. Invalidate size whenever container geometry changes (drawer toggle, responsive layout)
+  useEffect(() => {
+    if (!isActive || !containerRef.current || !mapRef.current) return;
     const map = mapRef.current;
     const observer = new ResizeObserver(() => {
-      map.invalidateSize();
+      try {
+        const size = map.getSize();
+        if (size && size.x > 0 && size.y > 0) {
+          map.invalidateSize();
+        }
+      } catch (_) {}
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [isActive]);
 
   // 4a. Direct Focus Target (e.g. from Notifications "Xaritada ko'rish")
   useEffect(() => {
+    if (!isActive) return;
     const map = mapRef.current;
     if (!map || !focusTarget) return;
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1280;
@@ -353,20 +395,30 @@ export default function MapContainer({
 
     const timer = setTimeout(() => {
       try {
-        map.invalidateSize();
+        if (!isActive || !mapRef.current) return;
+        const size = mapRef.current.getSize();
+        if (!size || size.x <= 0 || size.y <= 0) return;
+        mapRef.current.invalidateSize();
         if (selectedId) {
           const m = markerMapRef.current.get(String(selectedId));
           if (m) {
-            m.openPopup();
+            if (layerRef.current && typeof layerRef.current.zoomToShowLayer === 'function') {
+              layerRef.current.zoomToShowLayer(m, () => {
+                try { if ((m as any)._icon && mapRef.current) m.openPopup(); } catch (_) {}
+              });
+            } else if ((m as any)._icon) {
+              m.openPopup();
+            }
           }
         }
       } catch (_) {}
     }, 1100);
     return () => clearTimeout(timer);
-  }, [focusTarget, selectedId]);
+  }, [focusTarget, selectedId, isActive]);
 
   // 4b. Focus / Fly to Selected Object (with smart mobile offset for BottomSheet)
   useEffect(() => {
+    if (!isActive) return;
     const map = mapRef.current;
     if (!map || !selectedId) return;
     const found = markers.find(m => String(m.source_id) === String(selectedId));
@@ -381,15 +433,24 @@ export default function MapContainer({
     }
     const timer = setTimeout(() => {
       try {
-        map.invalidateSize();
+        if (!isActive || !mapRef.current) return;
+        const size = mapRef.current.getSize();
+        if (!size || size.x <= 0 || size.y <= 0) return;
+        mapRef.current.invalidateSize();
         const m = markerMapRef.current.get(String(selectedId));
         if (m) {
-          m.openPopup();
+          if (layerRef.current && typeof layerRef.current.zoomToShowLayer === 'function') {
+            layerRef.current.zoomToShowLayer(m, () => {
+              try { if ((m as any)._icon && mapRef.current) m.openPopup(); } catch (_) {}
+            });
+          } else if ((m as any)._icon) {
+            m.openPopup();
+          }
         }
       } catch (_) {}
     }, 1100);
     return () => clearTimeout(timer);
-  }, [selectedId, markers]);
+  }, [selectedId, markers, isActive]);
 
   // 5. User Location Marker
   useEffect(() => {
@@ -405,17 +466,20 @@ export default function MapContainer({
         } else {
           userMarkerRef.current.setLatLng([uLat, uLng]);
         }
-        safeFlyTo(map, [uLat, uLng], 14, { duration: 1 });
+        if (isActive) {
+          safeFlyTo(map, [uLat, uLng], 14, { duration: 1 });
+        }
       }
     } else if (userMarkerRef.current) {
       map.removeLayer(userMarkerRef.current);
       userMarkerRef.current = null;
     }
-  }, [userLat, userLng]);
+  }, [userLat, userLng, isActive]);
 
   // 6. Fly to Selected Region (only when not viewing a specific object)
   const prevRegionRef = useRef<string | undefined>(undefined);
   useEffect(() => {
+    if (!isActive) return;
     const map = mapRef.current;
     if (!map) return;
     if (prevRegionRef.current !== selectedRegion) {
@@ -432,11 +496,12 @@ export default function MapContainer({
         safeFlyTo(map, UZBEKISTAN_CENTER, UZBEKISTAN_ZOOM, { duration: 1.2 });
       }
     }
-  }, [selectedRegion, selectedId, focusTarget]);
+  }, [selectedRegion, selectedId, focusTarget, isActive]);
 
   // 6b. Auto-center on markers if they belong to Tashkent (lat > 40.5)
   const hasAutoCenteredRef = useRef<boolean>(false);
   useEffect(() => {
+    if (!isActive) return;
     const map = mapRef.current;
     if (!map || hasAutoCenteredRef.current || selectedId || focusTarget) return;
     if (markers.length > 0) {
@@ -457,7 +522,7 @@ export default function MapContainer({
         }
       }
     }
-  }, [markers, selectedId, focusTarget]);
+  }, [markers, selectedId, focusTarget, isActive]);
 
   // 7. Invalidate size on resize
   useEffect(() => {

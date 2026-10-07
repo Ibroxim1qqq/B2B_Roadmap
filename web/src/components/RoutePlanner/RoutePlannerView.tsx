@@ -1405,7 +1405,10 @@ export default function RoutePlannerView({
                   return (
                     <div
                       key={obj.source_id}
-                      onClick={() => onSelectObject(String(obj.source_id))}
+                      onClick={() => {
+                        triggerHaptic(15);
+                        onSelectObject(String(obj.source_id));
+                      }}
                       className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-blue-50/80 border-blue-400 shadow-sm ring-2 ring-blue-500/10'

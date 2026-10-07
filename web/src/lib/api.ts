@@ -3,8 +3,8 @@ import realSheetsData from './real-sheets-data.json';
 import uysotDomtutData from './uysot-domtut-data.json';
 import { getRegionName, getDistrictName, getRegionBySoato } from './regions';
 
-const uysotRows: any[] = (Array.isArray(uysotDomtutData) ? uysotDomtutData : (uysotDomtutData as any).rows || []) as any[];
-const realSheetsRows: any[] = (realSheetsData.rows as any[]) || [];
+export const uysotRows: any[] = (Array.isArray(uysotDomtutData) ? uysotDomtutData : (uysotDomtutData as any).rows || []) as any[];
+export const realSheetsRows: any[] = (realSheetsData.rows as any[]) || [];
 
 const SOATO_DISTRICT_MAP: Record<string, string> = {
   '1718401': 'Samarqand shahar',

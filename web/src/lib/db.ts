@@ -293,11 +293,24 @@ const localStore: LocalStore = {
   initialized: false
 };
 
+function findDataFile(filename: string): string | null {
+  const candidates = [
+    path.join(process.cwd(), 'src', 'lib', filename),
+    path.join(process.cwd(), 'web', 'src', 'lib', filename)
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch (_) {}
+  }
+  return null;
+}
+
 function initLocalStore() {
   if (localStore.initialized) return;
   try {
-    const samarqandPath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
-    if (fs.existsSync(samarqandPath)) {
+    const samarqandPath = findDataFile('real-sheets-data.json');
+    if (samarqandPath) {
       const raw = fs.readFileSync(samarqandPath, 'utf-8');
       const json = JSON.parse(raw);
       if (Array.isArray(json.rows)) {
@@ -307,8 +320,8 @@ function initLocalStore() {
       }
     }
 
-    const uysotPath = path.join(process.cwd(), 'src', 'lib', 'uysot-domtut-data.json');
-    if (fs.existsSync(uysotPath)) {
+    const uysotPath = findDataFile('uysot-domtut-data.json');
+    if (uysotPath) {
       const raw = fs.readFileSync(uysotPath, 'utf-8');
       const json = JSON.parse(raw);
       const rows = Array.isArray(json) ? json : (json.rows || []);

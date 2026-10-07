@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { exportAllObjectsFromSheet, getCompanyDataFromSheet, getUysotObjectsFromSheet } from '@/lib/googleSheets';
 import { dataCache } from '@/lib/dataCache';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -23,6 +24,18 @@ export async function GET(req: NextRequest) {
     const companyId = searchParams.get('company_id') || '';
     const targetId = (searchParams.get('id') || '').trim();
     const isUysot = companyId === 'uysot' || isUysotCompany(companyId) || (targetId ? targetId.startsWith('domtut_') : false);
+
+    // Direct single object query optimization (ultra-fast, ~10ms)
+    if (targetId) {
+      try {
+        const directList = await db.getObjects(companyId, isUysot, targetId);
+        if (directList && directList.length > 0) {
+          return NextResponse.json({ success: true, data: directList[0] });
+        }
+      } catch (directErr) {
+        console.warn('Direct getObjects single-item fetch warning:', directErr);
+      }
+    }
 
     // 2. Dedicated company isolation for UYSOT.UZ (Toshkent / Domtut dataset)
     if (isUysot) {
