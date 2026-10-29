@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   X, RotateCcw, Check, SlidersHorizontal, Home, Building2, 
-  Layers, MapPin, PhoneCall, Award, Calendar, CheckCircle2 
+  Layers, MapPin, PhoneCall, Award, Calendar, CheckCircle2, ArrowRight
 } from 'lucide-react';
 import { 
   AdvancedFilterState, 
@@ -36,14 +36,6 @@ export default function AdvancedFilterModal({
 
   const activeCount = countActiveFilters(filters);
 
-  const toggleRoom = (room: string) => {
-    const exists = filters.roomCount.includes(room);
-    const updated = exists 
-      ? filters.roomCount.filter(r => r !== room)
-      : [...filters.roomCount, room];
-    onChange({ ...filters, roomCount: updated });
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div 
@@ -67,7 +59,7 @@ export default function AdvancedFilterModal({
                 )}
               </div>
               <p className="text-xs text-slate-500">
-                Obyektlarni qavatlar, xonalar soni va B2B holati bo'yicha saralash
+                Obyektlarni qavatlar, xonalar soni va B2B holati bo'yicha aniq saralash
               </p>
             </div>
           </div>
@@ -83,63 +75,137 @@ export default function AdvancedFilterModal({
         {/* Modal Scrollable Body */}
         <div className="p-5 space-y-5 overflow-y-auto flex-1 text-xs">
           
-          {/* 1. Xonalar soni (Multi-select) */}
+          {/* 1. Xonalar soni (Custom Input + Quick Presets) */}
           <div className="space-y-2">
-            <label className="font-bold text-slate-800 flex items-center gap-1.5">
-              <Home className="w-3.5 h-3.5 text-blue-600" />
-              <span>Xonalar soni (Xonalar bo'yicha)</span>
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { id: '1', label: '1 xonali' },
-                { id: '2', label: '2 xonali' },
-                { id: '3', label: '3 xonali' },
-                { id: '4+', label: '4+ xonali' }
-              ].map(opt => {
-                const isSelected = filters.roomCount.includes(opt.id);
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                <Home className="w-3.5 h-3.5 text-blue-600" />
+                <span>Xonalar soni (Xona bo'yicha)</span>
+              </label>
+              {filters.roomCount && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...filters, roomCount: '' })}
+                  className="text-[11px] text-slate-400 hover:text-rose-600 font-semibold cursor-pointer"
+                >
+                  Tozalash
+                </button>
+              )}
+            </div>
+
+            {/* Custom Input */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Xonalar sonini kiriting (masalan: 1, 2, 3 yoki 4)..."
+                value={filters.roomCount}
+                onChange={(e) => onChange({ ...filters, roomCount: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+              />
+            </div>
+
+            {/* Quick Chips */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              <span className="text-[11px] text-slate-400 font-medium mr-1">Tezkor:</span>
+              {['1 xonali', '2 xonali', '3 xonali', '4 xonali', '5+ xonali'].map(opt => {
+                const num = opt.split(' ')[0];
+                const isSelected = filters.roomCount === num || filters.roomCount.includes(num);
                 return (
                   <button
-                    key={opt.id}
+                    key={opt}
                     type="button"
-                    onClick={() => toggleRoom(opt.id)}
-                    className={`px-3 py-2.5 rounded-xl border font-semibold text-xs flex items-center justify-between transition-all cursor-pointer ${
+                    onClick={() => {
+                      if (filters.roomCount === num) {
+                        onChange({ ...filters, roomCount: '' });
+                      } else {
+                        onChange({ ...filters, roomCount: num });
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs shadow-blue-500/20'
-                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
                     }`}
                   >
-                    <span>{opt.label}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 ml-1 shrink-0" />}
+                    {opt}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* 2. Xonadonlar umumiy soni */}
+          {/* 2. Qavatlar soni (Custom Min - Max Inputs) */}
           <div className="space-y-2">
-            <label className="font-bold text-slate-800 flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-blue-600" />
-              <span>Xonadonlar umumiy hajmi</span>
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-blue-600" />
+                <span>Qavatlar soni (Balandligi: Min - Max)</span>
+              </label>
+              {(filters.minFloors || filters.maxFloors) && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...filters, minFloors: '', maxFloors: '' })}
+                  className="text-[11px] text-slate-400 hover:text-rose-600 font-semibold cursor-pointer"
+                >
+                  Tozalash
+                </button>
+              )}
+            </div>
+
+            {/* Min / Max Inputs */}
+            <div className="grid grid-cols-2 gap-3 items-center">
+              <div>
+                <span className="block text-[11px] text-slate-500 font-medium mb-1">... dan (min qavat):</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  placeholder="Min (masalan: 5)"
+                  value={filters.minFloors}
+                  onChange={(e) => onChange({ ...filters, minFloors: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                />
+              </div>
+
+              <div>
+                <span className="block text-[11px] text-slate-500 font-medium mb-1">... gacha (max qavat):</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  placeholder="Max (masalan: 12)"
+                  value={filters.maxFloors}
+                  onChange={(e) => onChange({ ...filters, maxFloors: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
+            {/* Quick Floor Chips */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              <span className="text-[11px] text-slate-400 font-medium mr-1">Tezkor:</span>
               {[
-                { id: 'all', label: 'Barchasi' },
-                { id: '1-50', label: '1 - 50 ta' },
-                { id: '51-100', label: '51 - 100 ta' },
-                { id: '101-200', label: '101 - 200 ta' },
-                { id: '200+', label: '200+ ta' }
+                { label: '1 - 5 qavat', min: '1', max: '5' },
+                { label: '6 - 9 qavat', min: '6', max: '9' },
+                { label: '10 - 16 qavat', min: '10', max: '16' },
+                { label: '16+ qavat', min: '16', max: '' }
               ].map(opt => {
-                const isSelected = filters.apartmentRange === opt.id;
+                const isSelected = filters.minFloors === opt.min && filters.maxFloors === opt.max;
                 return (
                   <button
-                    key={opt.id}
+                    key={opt.label}
                     type="button"
-                    onClick={() => onChange({ ...filters, apartmentRange: opt.id })}
-                    className={`px-2.5 py-2 rounded-xl border font-semibold text-xs text-center transition-all cursor-pointer ${
+                    onClick={() => {
+                      if (isSelected) {
+                        onChange({ ...filters, minFloors: '', maxFloors: '' });
+                      } else {
+                        onChange({ ...filters, minFloors: opt.min, maxFloors: opt.max });
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
                     }`}
                   >
                     {opt.label}
@@ -149,30 +215,76 @@ export default function AdvancedFilterModal({
             </div>
           </div>
 
-          {/* 3. Qavatlar soni */}
+          {/* 3. Xonadonlar umumiy hajmi (Custom Min - Max Inputs) */}
           <div className="space-y-2">
-            <label className="font-bold text-slate-800 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-blue-600" />
-              <span>Qavatlar soni (Balandligi)</span>
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                <span>Xonadonlar umumiy hajmi (Min - Max xonadon)</span>
+              </label>
+              {(filters.minApartments || filters.maxApartments) && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...filters, minApartments: '', maxApartments: '' })}
+                  className="text-[11px] text-slate-400 hover:text-rose-600 font-semibold cursor-pointer"
+                >
+                  Tozalash
+                </button>
+              )}
+            </div>
+
+            {/* Min / Max Inputs */}
+            <div className="grid grid-cols-2 gap-3 items-center">
+              <div>
+                <span className="block text-[11px] text-slate-500 font-medium mb-1">... dan (min xonadon):</span>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Min (masalan: 30)"
+                  value={filters.minApartments}
+                  onChange={(e) => onChange({ ...filters, minApartments: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                />
+              </div>
+
+              <div>
+                <span className="block text-[11px] text-slate-500 font-medium mb-1">... gacha (max xonadon):</span>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Max (masalan: 150)"
+                  value={filters.maxApartments}
+                  onChange={(e) => onChange({ ...filters, maxApartments: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
+            {/* Quick Apartment Chips */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              <span className="text-[11px] text-slate-400 font-medium mr-1">Tezkor:</span>
               {[
-                { id: 'all', label: 'Barchasi' },
-                { id: '1-5', label: '1 - 5 qavat' },
-                { id: '6-9', label: '6 - 9 qavat' },
-                { id: '10-16', label: '10 - 16 qavat' },
-                { id: '16+', label: '16+ qavat' }
+                { label: '1 - 50 ta', min: '1', max: '50' },
+                { label: '51 - 100 ta', min: '51', max: '100' },
+                { label: '101 - 200 ta', min: '101', max: '200' },
+                { label: '200+ ta', min: '200', max: '' }
               ].map(opt => {
-                const isSelected = filters.floorRange === opt.id;
+                const isSelected = filters.minApartments === opt.min && filters.maxApartments === opt.max;
                 return (
                   <button
-                    key={opt.id}
+                    key={opt.label}
                     type="button"
-                    onClick={() => onChange({ ...filters, floorRange: opt.id })}
-                    className={`px-2.5 py-2 rounded-xl border font-semibold text-xs text-center transition-all cursor-pointer ${
+                    onClick={() => {
+                      if (isSelected) {
+                        onChange({ ...filters, minApartments: '', maxApartments: '' });
+                      } else {
+                        onChange({ ...filters, minApartments: opt.min, maxApartments: opt.max });
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
                     }`}
                   >
                     {opt.label}
@@ -190,9 +302,9 @@ export default function AdvancedFilterModal({
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'all', label: 'Barchasi', icon: null },
-                { id: 'visited', label: 'Borilgan (Tashrif qilingan)', color: 'emerald' },
-                { id: 'not_visited', label: 'Borilmagan (Kutilmoqda)', color: 'amber' }
+                { id: 'all', label: 'Barchasi' },
+                { id: 'visited', label: 'Borilgan (Tashrif qilingan)' },
+                { id: 'not_visited', label: 'Borilmagan (Kutilmoqda)' }
               ].map(opt => {
                 const isSelected = filters.visitStatus === opt.id;
                 return (
@@ -276,33 +388,54 @@ export default function AdvancedFilterModal({
             </div>
           </div>
 
-          {/* 7. Topshirish muddati (Yil) */}
+          {/* 7. Topshirish muddati (Custom Year Input + Presets) */}
           <div className="space-y-2">
-            <label className="font-bold text-slate-800 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-orange-600" />
-              <span>Topshirish muddati (Yil bo'yicha)</span>
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {[
-                { id: 'all', label: 'Barchasi' },
-                { id: '2024', label: '2024-yil' },
-                { id: '2025', label: '2025-yil' },
-                { id: '2026', label: '2026-yil' },
-                { id: '2027+', label: '2027+ yil' }
-              ].map(opt => {
-                const isSelected = filters.deadlineYear === opt.id;
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-orange-600" />
+                <span>Topshirish muddati (Yil bo'yicha)</span>
+              </label>
+              {filters.deadlineYear && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...filters, deadlineYear: '' })}
+                  className="text-[11px] text-slate-400 hover:text-rose-600 font-semibold cursor-pointer"
+                >
+                  Tozalash
+                </button>
+              )}
+            </div>
+
+            <input
+              type="text"
+              placeholder="Yilni kiriting (masalan: 2025, 2026, 2027)..."
+              value={filters.deadlineYear}
+              onChange={(e) => onChange({ ...filters, deadlineYear: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+            />
+
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              <span className="text-[11px] text-slate-400 font-medium mr-1">Tezkor:</span>
+              {['2024', '2025', '2026', '2027'].map(yr => {
+                const isSelected = filters.deadlineYear === yr;
                 return (
                   <button
-                    key={opt.id}
+                    key={yr}
                     type="button"
-                    onClick={() => onChange({ ...filters, deadlineYear: opt.id })}
-                    className={`px-2.5 py-2 rounded-xl border font-semibold text-xs text-center transition-all cursor-pointer ${
+                    onClick={() => {
+                      if (isSelected) {
+                        onChange({ ...filters, deadlineYear: '' });
+                      } else {
+                        onChange({ ...filters, deadlineYear: yr });
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
                     }`}
                   >
-                    {opt.label}
+                    {yr}-yil
                   </button>
                 );
               })}

@@ -1,31 +1,37 @@
 export interface AdvancedFilterState {
-  roomCount: string[]; // e.g. ['1', '2', '3', '4+']
-  apartmentRange: string; // 'all' | '1-50' | '51-100' | '101-200' | '200+'
-  floorRange: string; // 'all' | '1-5' | '6-9' | '10-16' | '16+'
+  roomCount: string; // custom room count string, e.g. '1', '2', '3', '4'
+  minApartments: string; // e.g. '50'
+  maxApartments: string; // e.g. '200'
+  minFloors: string; // e.g. '5'
+  maxFloors: string; // e.g. '12'
   visitStatus: 'all' | 'visited' | 'not_visited';
   crmStatus: 'all' | 'filled' | 'empty';
   difficulty: string; // 'all' | 'II' | 'III' | 'IV'
-  deadlineYear: string; // 'all' | '2024' | '2025' | '2026' | '2027+'
+  deadlineYear: string; // e.g. '2026'
 }
 
 export const INITIAL_ADVANCED_FILTERS: AdvancedFilterState = {
-  roomCount: [],
-  apartmentRange: 'all',
-  floorRange: 'all',
+  roomCount: '',
+  minApartments: '',
+  maxApartments: '',
+  minFloors: '',
+  maxFloors: '',
   visitStatus: 'all',
   crmStatus: 'all',
   difficulty: 'all',
-  deadlineYear: 'all'
+  deadlineYear: ''
 };
 
 export function countActiveFilters(filters: AdvancedFilterState): number {
   let count = 0;
-  if (filters.roomCount && filters.roomCount.length > 0) count += filters.roomCount.length;
-  if (filters.apartmentRange && filters.apartmentRange !== 'all') count += 1;
-  if (filters.floorRange && filters.floorRange !== 'all') count += 1;
+  if (filters.roomCount && filters.roomCount.trim() !== '') count += 1;
+  if (filters.minApartments && filters.minApartments.trim() !== '') count += 1;
+  if (filters.maxApartments && filters.maxApartments.trim() !== '') count += 1;
+  if (filters.minFloors && filters.minFloors.trim() !== '') count += 1;
+  if (filters.maxFloors && filters.maxFloors.trim() !== '') count += 1;
   if (filters.visitStatus && filters.visitStatus !== 'all') count += 1;
   if (filters.crmStatus && filters.crmStatus !== 'all') count += 1;
   if (filters.difficulty && filters.difficulty !== 'all') count += 1;
-  if (filters.deadlineYear && filters.deadlineYear !== 'all') count += 1;
+  if (filters.deadlineYear && filters.deadlineYear.trim() !== '' && filters.deadlineYear !== 'all') count += 1;
   return count;
 }

@@ -310,41 +310,37 @@ function HomeContent() {
         }
       }
 
-      // 4. Room Count Filter (Xonalar soni bo'yicha)
-      if (advancedFilters.roomCount && advancedFilters.roomCount.length > 0) {
+      // 4. Room count (Custom input matching)
+      if (advancedFilters.roomCount && advancedFilters.roomCount.trim() !== '') {
+        const query = advancedFilters.roomCount.trim();
         const rawName = ((m.object_name || '') + ' ' + (m.tjm_name || '')).toLowerCase();
-        const matchesAny = advancedFilters.roomCount.some(rc => {
-          if (rc === '1') return /(^|\D)1\s*[-–]?\s*xona|bir\s*xona/i.test(rawName);
-          if (rc === '2') return /(^|\D)2\s*[-–]?\s*xona|ikki\s*xona/i.test(rawName);
-          if (rc === '3') return /(^|\D)3\s*[-–]?\s*xona|uch\s*xona/i.test(rawName);
-          if (rc === '4+') return /(^|\D)[4-9]\s*[-–]?\s*xona|to['`]?rt\s*xona/i.test(rawName);
-          return false;
-        });
-        if (!matchesAny) return false;
-      }
-
-      // 5. Apartment Range (Xonadonlar hajmi)
-      if (advancedFilters.apartmentRange && advancedFilters.apartmentRange !== 'all') {
-        const cleanAp = parseInt(String(m.apartment_count || '0').replace(/\D+/g, '') || '0', 10);
-        if (advancedFilters.apartmentRange === '1-50' && (cleanAp < 1 || cleanAp > 50)) return false;
-        if (advancedFilters.apartmentRange === '51-100' && (cleanAp < 51 || cleanAp > 100)) return false;
-        if (advancedFilters.apartmentRange === '101-200' && (cleanAp < 101 || cleanAp > 200)) return false;
-        if (advancedFilters.apartmentRange === '200+' && cleanAp <= 200) return false;
-      }
-
-      // 6. Floor Range (Qavatlar soni)
-      if (advancedFilters.floorRange && advancedFilters.floorRange !== 'all') {
-        const floorStr = String(m.floors || '');
-        const cleanFloor = parseInt(floorStr.replace(/\D+/g, '') || '0', 10);
-        if (advancedFilters.floorRange === '1-5') {
-          if (cleanFloor < 1 || cleanFloor > 5) return false;
-        } else if (advancedFilters.floorRange === '6-9') {
-          if (cleanFloor < 6 || cleanFloor > 9) return false;
-        } else if (advancedFilters.floorRange === '10-16') {
-          if (cleanFloor < 10 || cleanFloor > 16) return false;
-        } else if (advancedFilters.floorRange === '16+') {
-          if (cleanFloor <= 16) return false;
+        const numbers = query.match(/\d+/g) || [];
+        if (numbers.length > 0) {
+          const matches = numbers.some(num => {
+            const word = num === '1' ? 'bir' : num === '2' ? 'ikki' : num === '3' ? 'uch' : num === '4' ? "to['`]?rt" : num;
+            const regex = new RegExp('(^|\\D)' + num + '\\s*[-–]?\\s*xona|' + word + '\\s*xona', 'i');
+            return regex.test(rawName);
+          });
+          if (!matches) return false;
+        } else {
+          if (!rawName.includes(query.toLowerCase())) return false;
         }
+      }
+
+      // 5. Apartment Range (Custom min/max)
+      if (advancedFilters.minApartments || advancedFilters.maxApartments) {
+        const cleanAp = parseInt(String(m.apartment_count || '0').replace(/\D+/g, '') || '0', 10);
+        const minAp = advancedFilters.minApartments ? parseInt(advancedFilters.minApartments, 10) : 0;
+        const maxAp = advancedFilters.maxApartments ? parseInt(advancedFilters.maxApartments, 10) : Infinity;
+        if (cleanAp < minAp || cleanAp > maxAp) return false;
+      }
+
+      // 6. Floor Range (Custom min/max)
+      if (advancedFilters.minFloors || advancedFilters.maxFloors) {
+        const cleanFloor = parseInt(String(m.floors || '').replace(/\D+/g, '') || '0', 10);
+        const minFl = advancedFilters.minFloors ? parseInt(advancedFilters.minFloors, 10) : 0;
+        const maxFl = advancedFilters.maxFloors ? parseInt(advancedFilters.maxFloors, 10) : Infinity;
+        if (cleanFloor < minFl || cleanFloor > maxFl) return false;
       }
 
       // 7. Visit Status (Tashrif holati)
@@ -368,14 +364,9 @@ function HomeContent() {
       }
 
       // 10. Deadline Year (Topshirish muddati)
-      if (advancedFilters.deadlineYear && advancedFilters.deadlineYear !== 'all') {
+      if (advancedFilters.deadlineYear && advancedFilters.deadlineYear.trim() !== '' && advancedFilters.deadlineYear !== 'all') {
         const dline = (m.deadline || '').toLowerCase();
-        if (advancedFilters.deadlineYear === '2027+') {
-          const hasFuture = dline.includes('2027') || dline.includes('2028') || dline.includes('2029') || dline.includes('2030');
-          if (!hasFuture) return false;
-        } else {
-          if (!dline.includes(advancedFilters.deadlineYear)) return false;
-        }
+        if (!dline.includes(advancedFilters.deadlineYear.trim().toLowerCase())) return false;
       }
 
       return true;
@@ -835,22 +826,22 @@ function HomeContent() {
                     <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
                     <span>Filtrlar:</span>
                   </span>
-                  {advancedFilters.roomCount.map(r => (
-                    <span key={r} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>{r} xonali</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, roomCount: prev.roomCount.filter(x => x !== r) }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  ))}
-                  {advancedFilters.apartmentRange !== 'all' && (
+                  {advancedFilters.roomCount && advancedFilters.roomCount.trim() !== '' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>Xonadon: {advancedFilters.apartmentRange}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, apartmentRange: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                      <span>Xona: {advancedFilters.roomCount}</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, roomCount: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
-                  {advancedFilters.floorRange !== 'all' && (
+                  {(advancedFilters.minApartments || advancedFilters.maxApartments) && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>Qavat: {advancedFilters.floorRange}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, floorRange: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                      <span>Xonadon: {advancedFilters.minApartments || '0'} - {advancedFilters.maxApartments || '∞'}</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, minApartments: '', maxApartments: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  )}
+                  {(advancedFilters.minFloors || advancedFilters.maxFloors) && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>Qavat: {advancedFilters.minFloors || '0'} - {advancedFilters.maxFloors || '∞'}</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, minFloors: '', maxFloors: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                   {advancedFilters.visitStatus !== 'all' && (
@@ -871,10 +862,10 @@ function HomeContent() {
                       <button onClick={() => setAdvancedFilters(prev => ({ ...prev, difficulty: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
-                  {advancedFilters.deadlineYear !== 'all' && (
+                  {advancedFilters.deadlineYear && advancedFilters.deadlineYear.trim() !== '' && advancedFilters.deadlineYear !== 'all' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>Muddati: {advancedFilters.deadlineYear}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, deadlineYear: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, deadlineYear: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                 </div>

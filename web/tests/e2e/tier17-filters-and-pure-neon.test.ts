@@ -22,23 +22,25 @@ defineTest(
 );
 
 defineTest(
-  'countActiveFilters correctly tallies multi-select rooms, floors, and statuses',
+  'countActiveFilters correctly tallies custom room count, min/max floors, apartments, and statuses',
   {
     tier: 17,
     milestone: 5,
     feature: 'FILTERS',
-    description: 'countActiveFilters accurately tallies all criteria'
+    description: 'countActiveFilters accurately tallies all custom criteria'
   },
   async () => {
     const filters = {
       ...INITIAL_ADVANCED_FILTERS,
-      roomCount: ['1', '2'],
-      floorRange: '6-9',
+      roomCount: '2',
+      minFloors: '5',
+      maxFloors: '12',
+      minApartments: '50',
       visitStatus: 'visited' as const,
       crmStatus: 'filled' as const
     };
     const active = countActiveFilters(filters);
-    assert.strictEqual(active, 5, '2 rooms + 1 floor + 1 visit + 1 crm = 5 active filters');
+    assert.strictEqual(active, 6, '1 room + 2 floor bounds + 1 apartment bound + 1 visit + 1 crm = 6 active filters');
   }
 );
 
