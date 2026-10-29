@@ -300,7 +300,7 @@ function findDataFile(filename: string): string | null {
   ];
   for (const c of candidates) {
     try {
-      if (fs.existsSync(c)) return c;
+      if (fs.existsSync(/*turbopackIgnore: true*/ c)) return c;
     } catch (_) {}
   }
   return null;
@@ -311,7 +311,7 @@ function initLocalStore() {
   try {
     const samarqandPath = findDataFile('real-sheets-data.json');
     if (samarqandPath) {
-      const raw = fs.readFileSync(samarqandPath, 'utf-8');
+      const raw = fs.readFileSync(/*turbopackIgnore: true*/ samarqandPath, 'utf-8');
       const json = JSON.parse(raw);
       if (Array.isArray(json.rows)) {
         json.rows.forEach((r: any) => {
@@ -322,7 +322,7 @@ function initLocalStore() {
 
     const uysotPath = findDataFile('uysot-domtut-data.json');
     if (uysotPath) {
-      const raw = fs.readFileSync(uysotPath, 'utf-8');
+      const raw = fs.readFileSync(/*turbopackIgnore: true*/ uysotPath, 'utf-8');
       const json = JSON.parse(raw);
       const rows = Array.isArray(json) ? json : (json.rows || []);
       rows.forEach((r: any) => {
@@ -586,6 +586,28 @@ export const db = {
     const ovKey = `${companyId}_${sourceId}`;
     const existing = localStore.companyData.get(ovKey) || {};
     localStore.companyData.set(ovKey, { ...existing, ...data, company_id: companyId, source_id: sourceId });
+    return true;
+  },
+
+  
+  /** Clear Company CRM overrides from PostgreSQL */
+  clearCompanyData: async (companyId: string, sourceId: string): Promise<boolean> => {
+    initLocalStore();
+    const sql = getSql();
+    if (sql) {
+      try {
+        await sql`
+          DELETE FROM company_data 
+          WHERE company_id = ${companyId} 
+            AND source_id = ${sourceId} 
+            AND (is_custom_tjm = false OR is_custom_tjm IS NULL)
+        `;
+      } catch (err) {
+        console.warn('Neon DB clearCompanyData error:', err);
+      }
+    }
+    const ovKey = `${companyId}_${sourceId}`;
+    localStore.companyData.delete(ovKey);
     return true;
   },
 
@@ -881,11 +903,11 @@ export const db = {
   },
 
   /** User Sessions */
-  getUserSessions: async (): Promise<UserSession[]> => {
+  getUserSessions: async (limit: number = 100): Promise<UserSession[]> => {
     const sql = getSql();
     if (sql) {
       try {
-        const rows = await sql`SELECT * FROM user_sessions ORDER BY created_at DESC LIMIT 100`;
+        const rows = await sql`SELECT * FROM user_sessions ORDER BY created_at DESC LIMIT ${limit}`;
         if (rows.length > 0) {
           return rows.map((r: any) => ({
             session_id: r.session_id,

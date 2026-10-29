@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { getUysotObjectsFromSheet } from '@/lib/googleSheets';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const objects = await getUysotObjectsFromSheet();
+    const objects = await db.getObjects('uysot', true);
     const localJsonPath = path.join(process.cwd(), 'src', 'lib', 'uysot-domtut-data.json');
     let lastUpdated = '';
     if (fs.existsSync(localJsonPath)) {

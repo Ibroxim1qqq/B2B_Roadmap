@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getRoutesFromSheet, saveRouteToSheet } from '@/lib/googleSheets';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const companyId = searchParams.get('company_id') || undefined;
 
-    const routes = await getRoutesFromSheet(companyId);
+    const routes = await db.getRoutes(companyId);
     return NextResponse.json({ success: true, count: routes.length, data: routes });
   } catch (err: any) {
     console.error('Routes GET error:', err);
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await saveRouteToSheet(body);
+    const result = await db.saveRoute(body);
     return NextResponse.json(result);
   } catch (err: any) {
     console.error('Routes POST error:', err);

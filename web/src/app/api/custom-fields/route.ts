@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCustomFieldsFromSheet, addCustomFieldToSheet, logActivity } from '@/lib/googleSheets';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,15 +18,14 @@ const DEFAULT_FIELDS = [
 
 export async function GET() {
   try {
-    const sheetFields = await getCustomFieldsFromSheet();
-    if (sheetFields && sheetFields.length > 0) {
-      // Merge with labels from DEFAULT_FIELDS if missing
-      const merged = sheetFields.map(sf => {
+    const fields = await db.getCustomFields();
+    if (fields && fields.length > 0) {
+      const merged = fields.map(sf => {
         const def = DEFAULT_FIELDS.find(df => df.field_name === sf.field_name);
         return {
           ...sf,
-          label: sf.label || def?.label || sf.field_name,
-          desc: sf.desc || def?.desc || ''
+          label: (sf as any).label || def?.label || sf.field_name,
+          desc: (sf as any).desc || def?.desc || ''
         };
       });
       return NextResponse.json({ success: true, data: merged });
@@ -49,27 +48,25 @@ export async function POST(request: Request) {
 
     const cleanKey = field_name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
-    const result = await addCustomFieldToSheet({
+    const result = await db.addCustomField({
       field_name: cleanKey,
       field_type: field_type || 'text',
-      label: (label || cleanKey).trim(),
-      desc: (desc || '').trim(),
       required: false,
       visible: true
     });
 
-    await logActivity({
+    await db.logActivity({
       action: 'ADD_FIELD',
       source_id: '-',
       object_name: (label || cleanKey).trim(),
       user: body.user || 'Administrator',
-      details: { field_name: cleanKey, field_type: field_type || 'text', label },
+      details: { field_name: cleanKey, field_type: field_type || 'text', label, desc },
       status: 'SUCCESS'
     });
 
     return NextResponse.json({ success: true, data: result });
   } catch (err: any) {
-    console.error('Failed to add custom field to Google Sheets:', err);
+    console.error('Failed to add custom field:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

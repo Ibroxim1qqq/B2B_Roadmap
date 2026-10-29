@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authenticateUserInSheet, recordUserSessionInSheet } from '@/lib/googleSheets';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await authenticateUserInSheet(login, password);
+    const user = await db.authenticateUser(login, password);
 
     if (!user) {
       return NextResponse.json(
@@ -27,8 +27,8 @@ export async function POST(req: Request) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
     const userAgent = req.headers.get('user-agent') || 'Unknown';
 
-    // Record login session in background without blocking response
-    recordUserSessionInSheet({
+    // Record login session in Neon PostgreSQL background task
+    db.recordUserSession({
       user_id: user.user_id || user.id,
       user_name: user.name,
       login: user.login || '',

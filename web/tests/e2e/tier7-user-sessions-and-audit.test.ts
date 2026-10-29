@@ -46,7 +46,7 @@ defineTest('/api/auth/login records session with action login', {
 }, () => {
   assert.ok(fileExistsInSrc('app/api/auth/login/route.ts'), 'app/api/auth/login/route.ts must exist');
   const content = readSrcFile('app/api/auth/login/route.ts');
-  assert.match(content, /recordUserSessionInSheet/, 'Login route must import and call recordUserSessionInSheet');
+  assert.ok(content.includes('recordUserSession') || content.includes('recordUserSessionInSheet'), 'Login route must call recordUserSession');
   assert.match(content, /action:\s*['"]login['"]/, 'Login route must record action as login');
   assert.ok(content.includes('x-forwarded-for') || content.includes('ip'), 'Login route must extract client IP');
   assert.ok(content.includes('user-agent'), 'Login route must extract user-agent header');
@@ -58,7 +58,7 @@ defineTest('/api/admin/users records audit log with action register', {
 }, () => {
   assert.ok(fileExistsInSrc('app/api/admin/users/route.ts'), 'app/api/admin/users/route.ts must exist');
   const content = readSrcFile('app/api/admin/users/route.ts');
-  assert.match(content, /recordUserSessionInSheet/, 'Admin users route must import and call recordUserSessionInSheet');
+  assert.ok(content.includes('recordUserSession') || content.includes('recordUserSessionInSheet'), 'Admin users route must call recordUserSession');
   assert.match(content, /action:\s*['"]register['"]/, 'Admin users route must record action as register');
 });
 
@@ -69,7 +69,7 @@ defineTest('/api/admin/sessions endpoint exists and exposes GET method', {
   assert.ok(fileExistsInSrc('app/api/admin/sessions/route.ts'), 'app/api/admin/sessions/route.ts must exist');
   const content = readSrcFile('app/api/admin/sessions/route.ts');
   assert.match(content, /export\s+async\s+function\s+GET/, 'route.ts must export GET handler');
-  assert.match(content, /getUserSessionsFromSheet/, 'GET handler must invoke getUserSessionsFromSheet');
+  assert.ok(content.includes('getUserSessions') || content.includes('getUserSessionsFromSheet'), 'GET handler must invoke getUserSessions');
 });
 
 defineTest('lib/api.ts includes getUserSessions method', {

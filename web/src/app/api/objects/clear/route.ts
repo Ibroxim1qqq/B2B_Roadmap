@@ -1,10 +1,23 @@
 import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs';
-import { updateObjectInSheet, logActivity, INTERNAL_COLUMNS } from '@/lib/googleSheets';
+import { db } from '@/lib/db';
 import { dataCache } from '@/lib/dataCache';
 
 export const dynamic = 'force-dynamic';
+
+const INTERNAL_COLUMNS = [
+  'tjm_name',
+  'phone',
+  'sales_office',
+  'manager_name',
+  'manager_phone',
+  'telegram',
+  'instagram',
+  'notes',
+  'priority',
+  'last_visit',
+  'visited_by',
+  'visit_lat_lng'
+];
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +28,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'source_id talab qilinadi' }, { status: 400 });
     }
 
+    const cleanSourceId = String(source_id);
+    const effectiveCompany = company_id || 'comp_default';
+
     // ONLY clear internal B2B columns; Government source data is 100% safeguarded!
     const clearedFields: Record<string, string> = {};
     INTERNAL_COLUMNS.forEach(col => {
@@ -22,65 +38,33 @@ export async function POST(request: Request) {
     });
 
     // 1. Update in-memory cache
-    dataCache.clearRowB2B(String(source_id), INTERNAL_COLUMNS);
+    dataCache.clearRowB2B(cleanSourceId, INTERNAL_COLUMNS);
 
-    // 2. Direct Google Sheets API update (Multi-company or Base)
-    try {
-      if (company_id) {
-        const { updateCompanyDataInSheet } = await import('@/lib/googleSheets');
-        await updateCompanyDataInSheet(
-          company_id,
-          user_id || '',
-          String(source_id),
-          clearedFields
-        );
-      } else {
-        await updateObjectInSheet(String(source_id), clearedFields);
-      }
-
-      // Log to ActivityLog sheet
-      await logActivity({
-        action: 'CLEAR',
-        source_id: String(source_id),
-        user: user || 'Menejer',
-        details: company_id ? `Kompaniya [${company_id}] uchun B2B ma'lumotlari tozalandi` : "Barcha B2B ma'lumotlari tozalandi",
-        status: 'SUCCESS'
-      });
-    } catch (sheetErr: any) {
-
-      console.error('Google Sheets clear error:', sheetErr);
-      await logActivity({
-        action: 'CLEAR',
-        source_id: String(source_id),
-        user: user || 'Menejer',
-        details: `Xatolik: ${sheetErr.message}`,
-        status: 'FAILED'
-      });
-      return NextResponse.json({ 
-        success: false, 
-        error: `Google Sheets xatosi: ${sheetErr.message}` 
-      }, { status: 500 });
+    // 2. Direct Neon PostgreSQL update
+    if (effectiveCompany !== 'system') {
+      await db.clearCompanyData(effectiveCompany, cleanSourceId);
+    } else {
+      await db.updateObject(cleanSourceId, clearedFields);
     }
 
-    // 3. Update local file backup if writable
-    try {
-      const filePath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
-      if (fs.existsSync(filePath)) {
-        const raw = fs.readFileSync(filePath, 'utf-8');
-        const json = JSON.parse(raw);
-        const rowIdx = json.rows.findIndex((r: any) => String(r.source_id).trim() === String(source_id).trim());
-        if (rowIdx !== -1) {
-          json.rows[rowIdx] = { ...json.rows[rowIdx], ...clearedFields };
-          fs.writeFileSync(filePath, JSON.stringify(json, null, 2), 'utf-8');
-        }
-      }
-    } catch (e) {
-      // Harmless
-    }
+    // 3. Log to activity logs
+    await db.logActivity({
+      action: 'CLEAR',
+      source_id: cleanSourceId,
+      user: user || 'Menejer',
+      details: effectiveCompany ? `Kompaniya [${effectiveCompany}] uchun B2B ma'lumotlari tozalandi` : "Barcha B2B ma'lumotlari tozalandi",
+      status: 'SUCCESS'
+    });
 
-    return NextResponse.json({ success: true, message: "O'chirildi" });
+    return NextResponse.json({
+      success: true,
+      message: "Obyekt B2B ma'lumotlari Neon PostgreSQL ma'lumotlar bazasida tozalandi"
+    });
   } catch (err: any) {
-    console.error('Clear route error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error('API /api/objects/clear error:', err);
+    return NextResponse.json({ 
+      success: false, 
+      error: err.message || "Tozalashda xatolik yuz berdi" 
+    }, { status: 500 });
   }
 }

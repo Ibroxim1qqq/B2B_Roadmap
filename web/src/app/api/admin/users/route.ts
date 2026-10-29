@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getUsersFromSheet, createUserInSheet, getCompaniesFromSheet, recordUserSessionInSheet } from '@/lib/googleSheets';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const [users, companies] = await Promise.all([
-      getUsersFromSheet(),
-      getCompaniesFromSheet()
+      db.getUsers(),
+      db.getCompanies()
     ]);
 
     const compMap = new Map<string, string>();
@@ -38,15 +38,15 @@ export async function POST(req: Request) {
     }
 
     // Check if login already exists
-    const existing = await getUsersFromSheet();
-    if (existing.some(u => u.login.toLowerCase() === login.trim().toLowerCase())) {
+    const existing = await db.getUsers();
+    if (existing.some((u: any) => u.login.toLowerCase() === login.trim().toLowerCase())) {
       return NextResponse.json(
         { success: false, error: 'Bunday login allaqachon mavjud. Boshqa login tanlang.' },
         { status: 400 }
       );
     }
 
-    const created = await createUserInSheet({
+    const created = await db.createUser({
       company_id: company_id.trim(),
       name: name.trim(),
       login: login.trim(),
@@ -54,19 +54,20 @@ export async function POST(req: Request) {
       role: role ? role.trim() : 'manager'
     });
 
-    // Record user registration session in background
+    // Record user registration session in Neon background
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
     const userAgent = req.headers.get('user-agent') || 'Admin Dashboard';
-    recordUserSessionInSheet({
+    db.recordUserSession({
       user_id: created.user_id,
       user_name: created.name,
       login: created.login,
       role: created.role,
       company_id: created.company_id,
+      company_name: company_id,
       action: 'register',
       ip_address: ip,
       user_agent: userAgent
-    }).catch(e => console.warn('Failed to record user registration audit log:', e));
+    }).catch(e => console.warn('Failed to record session:', e));
 
     return NextResponse.json({ success: true, data: created });
   } catch (err: any) {

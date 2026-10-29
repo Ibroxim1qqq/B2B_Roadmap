@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getNotificationsFromSheet, saveNotificationToSheet } from '@/lib/googleSheets';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const notifications = await getNotificationsFromSheet();
+    const notifications = await db.getNotifications();
     return NextResponse.json({
       success: true,
       count: notifications.length,
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, new_count, new_objects } = body;
+    const { title } = body;
 
     if (!title) {
       return NextResponse.json(
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await saveNotificationToSheet(body);
+    const result = await db.saveNotification(body);
     return NextResponse.json(result);
   } catch (err: any) {
     console.error('Notifications POST error:', err);

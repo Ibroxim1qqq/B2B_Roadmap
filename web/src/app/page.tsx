@@ -19,7 +19,12 @@ import BottomSheet from '../components/UI/BottomSheet';
 import ObjectsTableView from '../components/ObjectsTable/ObjectsTableView';
 import DashboardView from '../components/Dashboard/DashboardView';
 import CustomFieldManager from '../components/CustomFields/CustomFieldManager';
-import { Building2, MapPin, CheckCircle2, Clock, Bell, Navigation } from 'lucide-react';
+import { Building2, MapPin, CheckCircle2, Clock, Bell, Navigation, SlidersHorizontal } from 'lucide-react';
+import AdvancedFilterModal, { 
+  AdvancedFilterState, 
+  INITIAL_ADVANCED_FILTERS, 
+  countActiveFilters 
+} from '../components/Filters/AdvancedFilterModal';
 import MobileBottomNav from '../components/Navigation/MobileBottomNav';
 
 const CreateObjectModal = dynamic(() => import('../components/ObjectPanel/CreateObjectModal'), { 
@@ -111,6 +116,8 @@ function HomeContent() {
   const [syncing, setSyncing] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterState>(INITIAL_ADVANCED_FILTERS);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Object Selection & Details
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -303,9 +310,77 @@ function HomeContent() {
         }
       }
 
+      // 4. Room Count Filter (Xonalar soni bo'yicha)
+      if (advancedFilters.roomCount && advancedFilters.roomCount.length > 0) {
+        const rawName = ((m.object_name || '') + ' ' + (m.tjm_name || '')).toLowerCase();
+        const matchesAny = advancedFilters.roomCount.some(rc => {
+          if (rc === '1') return /(^|\D)1\s*[-–]?\s*xona|bir\s*xona/i.test(rawName);
+          if (rc === '2') return /(^|\D)2\s*[-–]?\s*xona|ikki\s*xona/i.test(rawName);
+          if (rc === '3') return /(^|\D)3\s*[-–]?\s*xona|uch\s*xona/i.test(rawName);
+          if (rc === '4+') return /(^|\D)[4-9]\s*[-–]?\s*xona|to['`]?rt\s*xona/i.test(rawName);
+          return false;
+        });
+        if (!matchesAny) return false;
+      }
+
+      // 5. Apartment Range (Xonadonlar hajmi)
+      if (advancedFilters.apartmentRange && advancedFilters.apartmentRange !== 'all') {
+        const cleanAp = parseInt(String(m.apartment_count || '0').replace(/\D+/g, '') || '0', 10);
+        if (advancedFilters.apartmentRange === '1-50' && (cleanAp < 1 || cleanAp > 50)) return false;
+        if (advancedFilters.apartmentRange === '51-100' && (cleanAp < 51 || cleanAp > 100)) return false;
+        if (advancedFilters.apartmentRange === '101-200' && (cleanAp < 101 || cleanAp > 200)) return false;
+        if (advancedFilters.apartmentRange === '200+' && cleanAp <= 200) return false;
+      }
+
+      // 6. Floor Range (Qavatlar soni)
+      if (advancedFilters.floorRange && advancedFilters.floorRange !== 'all') {
+        const floorStr = String(m.floors || '');
+        const cleanFloor = parseInt(floorStr.replace(/\D+/g, '') || '0', 10);
+        if (advancedFilters.floorRange === '1-5') {
+          if (cleanFloor < 1 || cleanFloor > 5) return false;
+        } else if (advancedFilters.floorRange === '6-9') {
+          if (cleanFloor < 6 || cleanFloor > 9) return false;
+        } else if (advancedFilters.floorRange === '10-16') {
+          if (cleanFloor < 10 || cleanFloor > 16) return false;
+        } else if (advancedFilters.floorRange === '16+') {
+          if (cleanFloor <= 16) return false;
+        }
+      }
+
+      // 7. Visit Status (Tashrif holati)
+      if (advancedFilters.visitStatus && advancedFilters.visitStatus !== 'all') {
+        const isVisited = Boolean(m.is_visited || m.last_visit);
+        if (advancedFilters.visitStatus === 'visited' && !isVisited) return false;
+        if (advancedFilters.visitStatus === 'not_visited' && isVisited) return false;
+      }
+
+      // 8. CRM Status (B2B ma'lumot to'ldirilganligi)
+      if (advancedFilters.crmStatus && advancedFilters.crmStatus !== 'all') {
+        const isFilled = Boolean(m.has_internal || m.phone || m.manager_name || m.tjm_name || m.sales_office);
+        if (advancedFilters.crmStatus === 'filled' && !isFilled) return false;
+        if (advancedFilters.crmStatus === 'empty' && isFilled) return false;
+      }
+
+      // 9. Difficulty / Category (Qurilish toifasi)
+      if (advancedFilters.difficulty && advancedFilters.difficulty !== 'all') {
+        const diff = (m.difficulty || '').toUpperCase();
+        if (!diff.includes(advancedFilters.difficulty)) return false;
+      }
+
+      // 10. Deadline Year (Topshirish muddati)
+      if (advancedFilters.deadlineYear && advancedFilters.deadlineYear !== 'all') {
+        const dline = (m.deadline || '').toLowerCase();
+        if (advancedFilters.deadlineYear === '2027+') {
+          const hasFuture = dline.includes('2027') || dline.includes('2028') || dline.includes('2029') || dline.includes('2030');
+          if (!hasFuture) return false;
+        } else {
+          if (!dline.includes(advancedFilters.deadlineYear)) return false;
+        }
+      }
+
       return true;
     });
-  }, [allMarkers, selectedRegion, searchQuery, selectedDistrict, selectedStatus]);
+  }, [allMarkers, effectiveCompanyId, selectedRegion, searchQuery, selectedDistrict, selectedStatus, advancedFilters]);
 
   // Calculate distances if user location exists
   const objectsWithDistance = useDistance(activeFilteredMarkers, location.lat, location.lng);
@@ -748,7 +823,69 @@ function HomeContent() {
               onStatusChange={setSelectedStatus}
               onMyLocation={handleLocateMe}
               locating={locating}
+              onOpenAdvancedFilters={() => setIsFilterModalOpen(true)}
+              activeAdvancedFilterCount={countActiveFilters(advancedFilters)}
             />
+
+            {/* Active Filters Pill Bar */}
+            {countActiveFilters(advancedFilters) > 0 && (
+              <div className="bg-blue-50/90 border-b border-blue-200/60 px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto text-xs shrink-0 select-none">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-blue-900 flex items-center gap-1 text-[11px] uppercase tracking-wider">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Filtrlar:</span>
+                  </span>
+                  {advancedFilters.roomCount.map(r => (
+                    <span key={r} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>{r} xonali</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, roomCount: prev.roomCount.filter(x => x !== r) }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  ))}
+                  {advancedFilters.apartmentRange !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>Xonadon: {advancedFilters.apartmentRange}</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, apartmentRange: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  )}
+                  {advancedFilters.floorRange !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>Qavat: {advancedFilters.floorRange}</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, floorRange: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  )}
+                  {advancedFilters.visitStatus !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>{advancedFilters.visitStatus === 'visited' ? 'Borilgan' : 'Borilmagan'}</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, visitStatus: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  )}
+                  {advancedFilters.crmStatus !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>{advancedFilters.crmStatus === 'filled' ? 'B2B to\'ldirilgan' : 'B2B kiritilmagan'}</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, crmStatus: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  )}
+                  {advancedFilters.difficulty !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>Toifa: {advancedFilters.difficulty}</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, difficulty: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  )}
+                  {advancedFilters.deadlineYear !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>Muddati: {advancedFilters.deadlineYear}</span>
+                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, deadlineYear: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setAdvancedFilters(INITIAL_ADVANCED_FILTERS)}
+                  className="text-rose-600 hover:text-rose-800 font-bold hover:underline shrink-0 cursor-pointer ml-auto text-xs"
+                >
+                  Tozalash
+                </button>
+              </div>
+            )}
 
             {/* 3. Fullscreen Map Area (Edge-to-edge on mobile) */}
             <div className="flex-1 p-0 lg:p-5 lg:pt-2 lg:pb-4 min-h-0 relative">
@@ -811,6 +948,8 @@ function HomeContent() {
               onDistrictChange={setSelectedDistrict}
               selectedStatus={selectedStatus}
               onStatusChange={setSelectedStatus}
+              onOpenAdvancedFilters={() => setIsFilterModalOpen(true)}
+              activeAdvancedFilterCount={countActiveFilters(advancedFilters)}
             />
           )}
 
@@ -971,6 +1110,17 @@ function HomeContent() {
       />
 
 
+
+      {/* Advanced Filter Modal */}
+      <AdvancedFilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        filters={advancedFilters}
+        onChange={setAdvancedFilters}
+        onReset={() => setAdvancedFilters(INITIAL_ADVANCED_FILTERS)}
+        filteredCount={displayList.length}
+        totalCount={allMarkers.length}
+      />
 
       {/* Weekly Sync Notification Drawer */}
       <NotificationDrawer

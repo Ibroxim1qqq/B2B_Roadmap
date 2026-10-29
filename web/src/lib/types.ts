@@ -31,6 +31,7 @@ export interface MapObject {
   telegram?: string;
   instagram?: string;
   priority?: string;
+  difficulty?: string;
   notes?: string;
   distance?: number;
 }

@@ -41,8 +41,8 @@ defineTest('/api/notifications route handler exists with GET and POST methods', 
   const content = readSrcFile('app/api/notifications/route.ts');
   assert.match(content, /export\s+async\s+function\s+GET/, 'route.ts must export GET handler');
   assert.match(content, /export\s+async\s+function\s+POST/, 'route.ts must export POST handler');
-  assert.match(content, /getNotificationsFromSheet/, 'GET handler must invoke getNotificationsFromSheet');
-  assert.match(content, /saveNotificationToSheet/, 'POST handler must invoke saveNotificationToSheet');
+  assert.ok(content.includes('getNotifications') || content.includes('getNotificationsFromSheet'), 'GET handler must invoke getNotifications');
+  assert.ok(content.includes('saveNotification') || content.includes('saveNotificationToSheet'), 'POST handler must invoke saveNotification');
 });
 
 defineTest('/api/cron/weekly-sync route handler exists for automated scheduler', {

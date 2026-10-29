@@ -46,8 +46,8 @@ defineTest('/api/routes route handler exists with GET and POST methods', {
   const content = readSrcFile('app/api/routes/route.ts');
   assert.match(content, /export\s+async\s+function\s+GET/, 'route.ts must export GET handler');
   assert.match(content, /export\s+async\s+function\s+POST/, 'route.ts must export POST handler');
-  assert.match(content, /getRoutesFromSheet/, 'GET handler must invoke getRoutesFromSheet');
-  assert.match(content, /saveRouteToSheet/, 'POST handler must invoke saveRouteToSheet');
+  assert.ok(content.includes('getRoutes') || content.includes('getRoutesFromSheet'), 'GET handler must invoke getRoutes');
+  assert.ok(content.includes('saveRoute') || content.includes('saveRouteToSheet'), 'POST handler must invoke saveRoute');
 });
 
 defineTest('lib/api.ts includes saveRoute and getSavedRoutes client methods', {

@@ -1,5 +1,5 @@
 'use client';
-import { MapPin, RefreshCw, Building, ChevronDown, Navigation, Check, Globe } from 'lucide-react';
+import { MapPin, RefreshCw, Building, ChevronDown, Navigation, Check, Globe, SlidersHorizontal } from 'lucide-react';
 import { useState, useRef, useMemo } from 'react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { REGION_LIST, getDistrictsForRegion, getRegionName } from '../../lib/regions';
@@ -13,6 +13,8 @@ interface FilterToolbarProps {
   onStatusChange: (status: string) => void;
   onMyLocation: () => void;
   locating?: boolean;
+  onOpenAdvancedFilters?: () => void;
+  activeAdvancedFilterCount?: number;
 }
 
 export default function FilterToolbar({
@@ -23,7 +25,9 @@ export default function FilterToolbar({
   selectedStatus,
   onStatusChange,
   onMyLocation,
-  locating = false
+  locating = false,
+  onOpenAdvancedFilters,
+  activeAdvancedFilterCount = 0
 }: FilterToolbarProps) {
   const [regionOpen, setRegionOpen] = useState(false);
   const [districtOpen, setDistrictOpen] = useState(false);
@@ -205,6 +209,28 @@ export default function FilterToolbar({
             </div>
           )}
         </div>
+
+        {/* Advanced Filters Button */}
+        {onOpenAdvancedFilters && (
+          <button
+            type="button"
+            onClick={onOpenAdvancedFilters}
+            className={`flex items-center gap-2 px-3 py-1.5 sm:px-3.5 border rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer shrink-0 ${
+              activeAdvancedFilterCount > 0
+                ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+            }`}
+            title="Kengaytirilgan filtrlar (Xonalar, qavatlar, tashrif va B2B holati)"
+          >
+            <SlidersHorizontal className={`w-3.5 h-3.5 shrink-0 ${activeAdvancedFilterCount > 0 ? 'text-white' : 'text-blue-600'}`} />
+            <span className="hidden sm:inline">Filtrlar</span>
+            {activeAdvancedFilterCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-white text-blue-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                {activeAdvancedFilterCount}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Locate Me Action Button */}

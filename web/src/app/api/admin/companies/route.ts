@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
-import { getCompaniesFromSheet, createCompanyInSheet, getUsersFromSheet } from '@/lib/googleSheets';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const [companies, users] = await Promise.all([
-      getCompaniesFromSheet(),
-      getUsersFromSheet()
+      db.getCompanies(),
+      db.getUsers()
     ]);
 
     // Attach user count per company
     const enriched = companies.map(c => ({
       ...c,
-      user_count: users.filter(u => u.company_id === c.company_id).length
+      user_count: users.filter((u: any) => u.company_id === c.company_id).length
     }));
 
     return NextResponse.json({ success: true, count: enriched.length, data: enriched });
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const created = await createCompanyInSheet(name.trim(), status || 'active');
+    const created = await db.createCompany(name.trim(), status || 'active');
     return NextResponse.json({ success: true, data: created });
   } catch (err: any) {
     console.error('Admin companies POST error:', err);

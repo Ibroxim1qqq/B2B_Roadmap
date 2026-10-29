@@ -1,9 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { exportAllObjectsFromSheet, getCompanyDataFromSheet, getUysotObjectsFromSheet } from '@/lib/googleSheets';
-import { dataCache } from '@/lib/dataCache';
 import { db } from '@/lib/db';
+import { getRegionName, getDistrictName } from '@/lib/regions';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,172 +22,43 @@ export async function GET(req: NextRequest) {
     const targetId = (searchParams.get('id') || '').trim();
     const isUysot = companyId === 'uysot' || isUysotCompany(companyId) || (targetId ? targetId.startsWith('domtut_') : false);
 
-    // Direct single object query optimization (ultra-fast, ~10ms)
+    // 100% Direct Neon PostgreSQL database query
+    const rawList = await db.getObjects(companyId, isUysot, targetId || undefined);
+
     if (targetId) {
-      try {
-        const directList = await db.getObjects(companyId, isUysot, targetId);
-        if (directList && directList.length > 0) {
-          return NextResponse.json({ success: true, data: directList[0] });
-        }
-      } catch (directErr) {
-        console.warn('Direct getObjects single-item fetch warning:', directErr);
-      }
-    }
-
-    // 2. Dedicated company isolation for UYSOT.UZ (Toshkent / Domtut dataset)
-    if (isUysot) {
-      const uysotObjects = await getUysotObjectsFromSheet();
-      // Enforce 100% strict isolation: only Domtut objects
-      let pureUysot = uysotObjects.filter((r: any) => String(r.source_id || '').startsWith('domtut_') || r.is_uysot);
-
-      // Merge company-specific overrides if companyId is provided
-      if (companyId) {
-        try {
-          const { overrides, customObjects } = await getCompanyDataFromSheet(companyId);
-          if (overrides.size > 0) {
-            pureUysot = pureUysot.map((r: any) => {
-              const ov = overrides.get(String(r.source_id));
-              return ov ? { ...r, ...ov } : r;
-            });
-          }
-          if (customObjects.length > 0) {
-            const pureCustom = customObjects.filter((c: any) => String(c.source_id || '').startsWith('domtut_') || c.is_uysot);
-            pureUysot = [...pureCustom, ...pureUysot];
-          }
-        } catch (_) {}
-      }
-
-      // If single ID requested
-      if (targetId) {
-        const found = pureUysot.find((r: any) => String(r.source_id).trim() === targetId);
-        if (found) {
-          return NextResponse.json({ success: true, data: found });
-        }
-        return NextResponse.json({ success: false, error: 'Obyekt topilmadi' }, { status: 404 });
-      }
-
-      return NextResponse.json({ success: true, count: pureUysot.length, data: pureUysot });
-    }
-
-    // 1. Get base rows (from in-memory cache, live sheets, or local backup)
-    let baseRows: any[] = dataCache.getRows() || [];
-    if (!baseRows || baseRows.length === 0) {
-      try {
-        const sheetsResult = await exportAllObjectsFromSheet();
-        if (sheetsResult.success && sheetsResult.rows && sheetsResult.rows.length > 0) {
-          baseRows = sheetsResult.rows;
-        }
-      } catch (sheetErr) {
-        console.warn('Google Sheets live fetch warning, falling back to local file backup:', sheetErr);
-      }
-    }
-
-    if (!baseRows || baseRows.length === 0) {
-      try {
-        const filePath = path.join(process.cwd(), 'src', 'lib', 'real-sheets-data.json');
-        if (fs.existsSync(filePath)) {
-          const raw = fs.readFileSync(filePath, 'utf-8');
-          const json = JSON.parse(raw);
-          if (json.rows && json.rows.length > 0) {
-            baseRows = json.rows;
-            dataCache.setAll(json.headers || [], json.rows);
-          }
-        }
-      } catch (fsErr) {
-        console.warn('Local backup read failed:', fsErr);
-      }
-    }
-
-    // Ensure non-UYSOT companies NEVER receive Domtut objects
-    baseRows = baseRows.filter((r: any) => !String(r.source_id || '').startsWith('domtut_') && !r.is_uysot);
-
-    // 2. If no company_id provided, return base objects as is
-    if (!companyId || companyId === 'system') {
-      if (targetId) {
-        const found = baseRows.find((r: any) => String(r.source_id).trim() === targetId);
-        if (found) {
-          return NextResponse.json({ success: true, data: found });
-        }
-        return NextResponse.json({ success: false, error: 'Obyekt topilmadi' }, { status: 404 });
-      }
-      return NextResponse.json({ success: true, count: baseRows.length, data: baseRows });
-    }
-
-    // 3. Fetch company-specific overrides and custom TJMs from Company_Data
-    const { overrides, customObjects } = await getCompanyDataFromSheet(companyId);
-
-    // 4. Merge company overrides onto base objects (clean company isolation)
-    const mergedRows = baseRows.map((r: any) => {
-      const override = overrides.get(String(r.source_id));
-      if (override) {
-        return {
-          ...r,
-          tjm_name: override.tjm_name || '',
-          phone: override.phone || '',
-          sales_office: override.sales_office || '',
-          manager_name: override.manager_name || '',
-          manager_phone: override.manager_phone || '',
-          telegram: override.telegram || '',
-          instagram: override.instagram || '',
-          notes: override.notes || '',
-          priority: override.priority || '',
-          last_visit: override.last_visit || '',
-          visited_by: override.visited_by || ''
+      if (rawList && rawList.length > 0) {
+        const item = rawList[0];
+        const isVisited = Boolean(item.last_visit || item.is_visited);
+        const hasInternal = Boolean(item.phone || item.manager_name || item.tjm_name || item.notes || item.has_internal);
+        const formatted = {
+          ...item,
+          latitude: typeof item.latitude === 'string' ? parseFloat(item.latitude) : item.latitude,
+          longitude: typeof item.longitude === 'string' ? parseFloat(item.longitude) : item.longitude,
+          region_name: item.region_name || getRegionName(item.region_soato),
+          district_name: item.district_name || getDistrictName(item.district_soato),
+          is_visited: isVisited,
+          has_internal: hasInternal
         };
-      }
-      // Return base without other companies' CRM data
-      return {
-        ...r,
-        tjm_name: '',
-        phone: '',
-        sales_office: '',
-        manager_name: '',
-        manager_phone: '',
-        telegram: '',
-        instagram: '',
-        notes: '',
-        priority: '',
-        last_visit: '',
-        visited_by: ''
-      };
-    });
-
-    // 5. Append company's custom added TJMs
-    const customList = customObjects.map((c: any) => ({
-      source_id: c.source_id,
-      object_name: c.object_name || c.tjm_name || 'Maxsus TJM',
-      tjm_name: c.tjm_name || c.object_name || 'Maxsus TJM',
-      latitude: parseFloat(c.latitude) || 39.6542,
-      longitude: parseFloat(c.longitude) || 66.9597,
-      district_soato: c.district_soato || '1718401',
-      status: 'Qurilish jarayonida',
-      status_id: 1,
-      sphere_id: '57',
-      phone: c.phone || '',
-      sales_office: c.sales_office || '',
-      manager_name: c.manager_name || '',
-      manager_phone: c.manager_phone || '',
-      telegram: c.telegram || '',
-      instagram: c.instagram || '',
-      notes: c.notes || '',
-      priority: c.priority || 'Normal',
-      last_visit: c.last_visit || '',
-      visited_by: c.visited_by || '',
-      is_custom: true
-    }));
-
-    const pureCustomList = customList.filter((c: any) => !String(c.source_id || '').startsWith('domtut_') && !c.is_uysot);
-    const finalData = [...pureCustomList, ...mergedRows];
-
-    if (targetId) {
-      const found = finalData.find((r: any) => String(r.source_id).trim() === targetId);
-      if (found) {
-        return NextResponse.json({ success: true, data: found });
+        return NextResponse.json({ success: true, data: formatted });
       }
       return NextResponse.json({ success: false, error: 'Obyekt topilmadi' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, count: finalData.length, data: finalData });
+    const data = rawList.map((item: any) => {
+      const isVisited = Boolean(item.last_visit || item.is_visited);
+      const hasInternal = Boolean(item.phone || item.manager_name || item.tjm_name || item.notes || item.has_internal);
+      return {
+        ...item,
+        latitude: typeof item.latitude === 'string' ? parseFloat(item.latitude) : item.latitude,
+        longitude: typeof item.longitude === 'string' ? parseFloat(item.longitude) : item.longitude,
+        region_name: item.region_name || getRegionName(item.region_soato),
+        district_name: item.district_name || getDistrictName(item.district_soato),
+        is_visited: isVisited,
+        has_internal: hasInternal
+      };
+    });
+
+    return NextResponse.json({ success: true, count: data.length, data });
   } catch (err: any) {
     console.error('API /api/objects error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

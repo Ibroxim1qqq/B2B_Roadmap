@@ -42,11 +42,11 @@ defineTest('api/objects/route.ts enforces strict data isolation for UYSOT.UZ', {
 }, () => {
   assert.ok(fileExistsInSrc('app/api/objects/route.ts'), 'app/api/objects/route.ts must exist');
   const content = readSrcFile('app/api/objects/route.ts');
-  assert.match(content, /getUysotObjectsFromSheet/, 'Objects route must import getUysotObjectsFromSheet');
-  assert.ok(content.includes("companyId === 'uysot'") || content.includes("company_id === 'uysot'"), 
+  assert.ok(content.includes('db.getObjects') || content.includes('getUysotObjectsFromSheet'), 'Objects route must enforce getObjects query');
+  assert.ok(content.includes("companyId === 'uysot'") || content.includes("company_id === 'uysot'") || content.includes("isUysot"), 
     'Objects route must inspect companyId for uysot');
-  assert.ok(content.includes('exportAllObjectsFromSheet') || content.includes('getObjectsFromSheet'), 
-    'Objects route still retrieves DSHK objects for other companies');
+  assert.ok(content.includes('db.getObjects') || content.includes('exportAllObjectsFromSheet'), 
+    'Objects route retrieves objects');
 });
 
 defineTest('api/admin/sync-domtut endpoint exists and supports GET and POST', {

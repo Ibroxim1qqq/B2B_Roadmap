@@ -123,6 +123,7 @@ function formatRowToMapObject(r: any): MapObject {
     telegram: String(r.telegram || '').trim(),
     instagram: String(r.instagram || '').trim(),
     priority: String(r.priority || '').trim(),
+    difficulty: String(r.difficulty || '—').trim(),
     notes: String(r.notes || '').trim()
   };
 }

@@ -18,6 +18,7 @@ import './tier13-api-endpoints-contract.test.ts';
 import './tier14-geospatial-routing-math.test.ts';
 import './tier15-concurrency-stress-resilience.test.ts';
 import './tier16-real-world-100-cases.test.ts';
+import './tier17-filters-and-pure-neon.test.ts';
 
 // --- CLI Parsing ---
 const args = process.argv.slice(2);

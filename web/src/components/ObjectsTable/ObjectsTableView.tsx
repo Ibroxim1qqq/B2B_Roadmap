@@ -5,7 +5,7 @@ import { MapObject } from '../../lib/types';
 import { 
   Building, Phone, MapPin, Search, ChevronLeft, ChevronRight, 
   Map as MapIcon, Send, CheckCircle2, ArrowUpDown, Eye, ChevronDown, Check, X,
-  Building2, Clock, ShieldCheck, Layers, Tag
+  Building2, Clock, ShieldCheck, Layers, Tag, SlidersHorizontal
 } from 'lucide-react';
 import { getNavigationUrl, getCallUrl } from '../../lib/utils';
 import { REGION_LIST, getDistrictsForRegion, getRegionName } from '../../lib/regions';
@@ -24,6 +24,8 @@ interface ObjectsTableViewProps {
   onDistrictChange: (d: string) => void;
   selectedStatus: string;
   onStatusChange: (s: string) => void;
+  onOpenAdvancedFilters?: () => void;
+  activeAdvancedFilterCount?: number;
 }
 
 export default function ObjectsTableView({
@@ -39,7 +41,9 @@ export default function ObjectsTableView({
   selectedDistrict,
   onDistrictChange,
   selectedStatus,
-  onStatusChange
+  onStatusChange,
+  onOpenAdvancedFilters,
+  activeAdvancedFilterCount = 0
 }: ObjectsTableViewProps) {
   const [dataFilter, setDataFilter] = useState<'all' | 'visited' | 'filled' | 'pending'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'district' | 'floors' | 'apartments' | 'visit'>('name');
@@ -347,7 +351,27 @@ export default function ObjectsTableView({
             )}
           </div>
 
-          {/* Status Selector */}
+          {/* Advanced Filters Button */}
+          {onOpenAdvancedFilters && (
+            <button
+              type="button"
+              onClick={onOpenAdvancedFilters}
+              className={`flex items-center gap-2 px-3 py-2 border rounded-xl font-semibold transition-all cursor-pointer shrink-0 ${
+                activeAdvancedFilterCount > 0
+                  ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+              }`}
+              title="Kengaytirilgan filtrlar (Xonalar, qavatlar, tashrif va B2B holati)"
+            >
+              <SlidersHorizontal className={`w-3.5 h-3.5 shrink-0 ${activeAdvancedFilterCount > 0 ? 'text-white' : 'text-blue-600'}`} />
+              <span>Filtrlar</span>
+              {activeAdvancedFilterCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-white text-blue-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                  {activeAdvancedFilterCount}
+                </span>
+              )}
+            </button>
+          )}
           <div ref={statusRef} className="relative">
             <button
               onClick={() => { setStatusOpen(!statusOpen); setDistrictOpen(false); }}
