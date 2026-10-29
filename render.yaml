@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: b2b-samarqand-map
+    env: node
+    plan: free
+    region: oregon
+    rootDir: web
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_cEL2WJZwG7Ps@ep-calm-cloud-b4ltc7bt-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require
+      - key: POSTGRES_URL
+        value: postgresql://neondb_owner:npg_cEL2WJZwG7Ps@ep-calm-cloud-b4ltc7bt-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require
+      - key: NEXT_PUBLIC_APP_NAME
+        value: Samarqand Qurilish Xaritasi
+      - key: NODE_VERSION
+        value: 20.18.0
