@@ -16,11 +16,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Ruxsat berilmadi (Unauthorized)' }, { status: 401 });
     }
 
-    const scriptPath = path.resolve(process.cwd(), '..', 'scraper', 'weekly_sync.py');
-    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+    // Primary sync script: scripts/sync-dshk-to-neon.mjs (Neon DB direct)
+    // Legacy fallback reference: scraper/weekly_sync.py
+    const scriptPath = path.resolve(process.cwd(), 'scripts', 'sync-dshk-to-neon.mjs');
 
-    // Launch weekly_sync in background
-    const child = spawn(pythonCmd, [scriptPath, '--workers', '4'], {
+    // Launch DSHK sync to Neon in background
+    const child = spawn(process.execPath, [scriptPath], {
       detached: true,
       stdio: 'ignore'
     });
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Haftalik O'zbekiston bo'ylab yangilanish fonda ishga tushirildi (Weekly sync started in background)"
+      message: "Haftalik O'zbekiston bo'ylab DSHK yangilanishi Neon DB ga fonda ishga tushirildi (Weekly DSHK sync to Neon started in background)"
     });
   } catch (err: any) {
     console.error('Weekly sync route error:', err);
