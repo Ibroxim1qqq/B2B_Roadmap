@@ -5,8 +5,12 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'B2B MAP | O\'zbekiston Qurilish Obyektlari Xaritasi',
-  description: 'O\'zbekiston bo\'yicha barcha ko\'p xonadonli uy-joylar va qurilish obyektlari xaritasi platformasi',
+  title: 'UYSOT B2B',
+  description: 'UYSOT B2B - O\'zbekiston bo\'yicha barcha ko\'p xonadonli uy-joylar va qurilish obyektlari xaritasi platformasi',
+  icons: {
+    icon: '/uysot-logo.png',
+    apple: '/uysot-logo.png',
+  },
 };
 
 

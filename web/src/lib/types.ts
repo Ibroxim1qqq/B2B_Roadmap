@@ -125,9 +125,11 @@ export interface UserProfile {
   role: 'superadmin' | 'company_admin' | 'manager' | string;
   phone?: string;
   avatarInitials: string;
+  avatar_url?: string;
   company_id?: string;
   company_name?: string;
   login?: string;
+  password?: string;
 }
 
 export interface SavedRoute {

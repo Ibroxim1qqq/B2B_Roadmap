@@ -1,4 +1,4 @@
-import { Building2, RefreshCw, Plus, LogOut, ChevronDown, UserCheck, ChevronRight, Map, Navigation, BarChart3, SlidersHorizontal, Shield, Bell } from 'lucide-react';
+import { Building2, RefreshCw, Plus, LogOut, ChevronDown, UserCheck, ChevronRight, Map, Navigation, BarChart3, SlidersHorizontal, Shield, Bell, Sparkles, User } from 'lucide-react';
 import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { UserProfile } from '../../lib/types';
@@ -13,6 +13,7 @@ interface NavbarProps {
   onLogout?: () => void;
   onOpenNotifications?: () => void;
   unreadNotificationCount?: number;
+  onOpenAI?: () => void;
 }
 
 const TAB_INFO: Record<string, { title: string; icon: any }> = {
@@ -31,7 +32,8 @@ export default function Navbar({
   currentUser,
   onLogout,
   onOpenNotifications,
-  unreadNotificationCount = 0
+  unreadNotificationCount = 0,
+  onOpenAI
 }: NavbarProps) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -59,10 +61,10 @@ export default function Navbar({
       <div className="flex items-center gap-3">
         {/* Mobile Brand */}
         <div className="flex items-center gap-2 lg:hidden shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shadow-blue-500/20">
-            <Building2 className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-xl overflow-hidden shadow-xs shadow-emerald-600/20 bg-[#1b815f] flex items-center justify-center">
+            <img src="/uysot-logo.png" alt="UYSOT B2B" className="w-full h-full object-cover" />
           </div>
-          <span className="font-black text-slate-900 text-sm tracking-wider">B2B MAP</span>
+          <span className="font-black text-slate-900 text-sm tracking-tight">UYSOT B2B</span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
         </div>
 
@@ -101,6 +103,19 @@ export default function Navbar({
           </Link>
         )}
 
+        {/* AI Assistant button */}
+        {onOpenAI && (
+          <button
+            type="button"
+            onClick={onOpenAI}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs shadow-indigo-500/20 transition-all cursor-pointer active:scale-95"
+            title="AI Yordamchi (Sun'iy Intellekt)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span className="hidden sm:inline">AI Yordamchi</span>
+          </button>
+        )}
+
         {/* Add Object button */}
         {onOpenCreate && (
           <button
@@ -127,74 +142,19 @@ export default function Navbar({
           </button>
         )}
 
-        {/* User Pill with Dropdown */}
+        {/* Person Icon Only (User-requested: only person icon, not letters, not photo, clicking does nothing for now) */}
         <div ref={dropdownRef} className="relative pl-1 sm:pl-2 border-l border-slate-200">
-          <button
-            onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-            className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer text-left"
+          <div 
+            className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shadow-2xs select-none cursor-default"
+            title={displayName}
           >
-            <div className={`w-9 h-9 rounded-full ${isSuperAdmin ? 'bg-amber-600' : 'bg-slate-800'} text-white font-semibold text-xs flex items-center justify-center shadow-xs`}>
-              {displayInitials}
-            </div>
-            <div className="hidden sm:block">
-              <div className="text-xs font-bold text-slate-800 leading-tight flex items-center gap-1">
-                <span>{displayName}</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </div>
-              <div className="text-[11px] text-slate-400 leading-tight">{displayRole}</div>
-            </div>
-          </button>
+            <User className="w-4 h-4 text-slate-600" />
+          </div>
 
-          {/* User Dropdown Menu */}
+          {/* Dormant dropdown closure handler retained for lifecycle integrity */}
           {userDropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                <div className={`w-11 h-11 rounded-xl ${isSuperAdmin ? 'bg-amber-600' : 'bg-blue-600'} text-white font-bold text-sm flex items-center justify-center shadow-sm`}>
-                  {displayInitials}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold text-slate-900 text-xs truncate flex items-center gap-1">
-                    <span>{displayName}</span>
-                    <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  </div>
-                  <div className="text-[11px] text-blue-600 font-semibold truncate">{displayRole}</div>
-                  <div className="text-[10px] text-slate-500 font-medium truncate mt-0.5 flex items-center gap-1">
-                    <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span>{displayCompany}</span>
-                  </div>
-                  {currentUser?.login && (
-                    <div className="text-[10px] text-slate-400 truncate mt-0.5">Login: @{currentUser.login}</div>
-                  )}
-                </div>
-              </div>
-
-              {isSuperAdmin && (
-                <div className="pt-2 pb-1 border-b border-slate-100">
-                  <Link
-                    href="/admin"
-                    onClick={() => setUserDropdownOpen(false)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors cursor-pointer"
-                  >
-                    <Shield className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Admin Panelga o'tish</span>
-                  </Link>
-                </div>
-              )}
-
-              {onLogout && (
-                <div className="pt-2">
-                  <button
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      onLogout();
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Tizimdan chiqish</span>
-                  </button>
-                </div>
-              )}
+            <div className="hidden" aria-hidden="true">
+              <button type="button" onClick={() => setUserDropdownOpen(false)}>Yopish</button>
             </div>
           )}
         </div>

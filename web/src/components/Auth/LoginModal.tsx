@@ -75,18 +75,18 @@ export default function LoginModal({ onLogin, onClose }: LoginModalProps) {
         )}
         
         {/* Header Banner */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 p-8 text-white text-center relative overflow-hidden">
+        <div className="bg-[#1b815f] p-7 text-white text-center relative overflow-hidden">
           <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
           <div className="absolute -left-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
 
-          <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md mx-auto flex items-center justify-center border border-white/20 shadow-lg mb-4">
-            <Building2 className="w-9 h-9 text-white" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-md mb-3 border border-emerald-400/40">
+            <img src="/uysot-logo.png" alt="UYSOT B2B" className="w-full h-full object-cover" />
           </div>
 
           <h1 className="text-xl font-black tracking-tight">
-            B2B Samarqand
+            UYSOT B2B
           </h1>
-          <p className="text-blue-200 text-xs mt-1">
+          <p className="text-emerald-100 text-xs mt-0.5 font-medium">
             Tizimga kirish
           </p>
         </div>
@@ -145,7 +145,7 @@ export default function LoginModal({ onLogin, onClose }: LoginModalProps) {
           <div className="pt-1">
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-xl text-sm font-bold shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              className="w-full py-3 bg-[#1b815f] hover:bg-[#15694c] active:scale-[0.98] text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <span>Kirish</span>
               <ArrowRight className="w-4 h-4" />

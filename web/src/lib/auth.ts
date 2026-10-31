@@ -70,6 +70,28 @@ export function setCurrentUser(user: UserProfile): void {
   }
 }
 
+export function updateUserProfile(updates: Partial<UserProfile>): UserProfile | null {
+  const current = getCurrentUser();
+  if (!current) return null;
+  const updated: UserProfile = {
+    ...current,
+    ...updates,
+    avatarInitials: updates.name ? getInitials(updates.name) : current.avatarInitials
+  };
+  setCurrentUser(updated);
+
+  if (updates.login || updates.password) {
+    const cred = SEED_CREDENTIALS.find(c => c.user.id === updated.id || c.login.toLowerCase() === (current.login || '').toLowerCase());
+    if (cred) {
+      if (updates.login) cred.login = updates.login;
+      if (updates.password) cred.password = updates.password;
+      cred.user = updated;
+    }
+  }
+
+  return updated;
+}
+
 export function logout(): void {
   if (typeof window === 'undefined') return;
   try {

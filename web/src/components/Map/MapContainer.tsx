@@ -298,33 +298,71 @@ export default function MapContainer({
 
       // Custom Popup DOM element to avoid innerHTML click issues
       const popupDiv = document.createElement('div');
-      popupDiv.className = 'p-1.5 flex items-center gap-3 cursor-pointer min-w-[240px] hover:bg-slate-50 transition-colors rounded-xl';
+      popupDiv.className = 'cursor-pointer min-w-[240px] max-w-[280px] bg-white rounded-2xl overflow-hidden hover:shadow-lg transition-all border border-slate-200/80';
+
+      // 1. Status text & badge class (Upper part of form between borders)
+      let statusText = marker.status || "Qurilish jarayonida";
+      let statusBadgeClass = "bg-blue-50 text-blue-700 border border-blue-200";
+
+      if (marker.is_visited || marker.last_visit) {
+        statusText = "✓ Borilgan";
+        statusBadgeClass = "bg-emerald-50 text-emerald-700 border border-emerald-300";
+      } else if (marker.has_internal || marker.phone) {
+        statusText = "To'ldirilgan";
+        statusBadgeClass = "bg-indigo-50 text-indigo-700 border border-indigo-200";
+      } else {
+        statusText = marker.status || "To'ldirilmagan";
+        statusBadgeClass = "bg-amber-50 text-amber-700 border border-amber-300";
+      }
+
+      // 2. Short address: City & District
+      const regionClean = (marker.region_name || '').replace(/viloyati|vil/i, '').trim();
+      const districtClean = marker.district_name || '';
+      const shortAddress = districtClean 
+        ? (regionClean ? `${regionClean}, ${districtClean}` : districtClean)
+        : (marker.address || "Samarqand");
+
+      // 3. Apartments, Floors, Deadline
+      const aptClean = marker.apartment_count && String(marker.apartment_count).trim() !== '' && String(marker.apartment_count).trim() !== '0' && String(marker.apartment_count).trim() !== '—'
+        ? `${marker.apartment_count} ta`
+        : '—';
+
+      const floorClean = marker.floors && String(marker.floors).trim() !== '' && String(marker.floors).trim() !== '—'
+        ? `${marker.floors}`
+        : '—';
+
+      const deadlineClean = marker.deadline && String(marker.deadline).trim() !== '' && String(marker.deadline).trim() !== '—'
+        ? String(marker.deadline)
+        : '—';
+
       popupDiv.innerHTML = `
-        ${marker.image_url 
-          ? `<img src="${marker.image_url}" alt="" class="w-12 h-12 rounded-lg object-cover border border-slate-100 shrink-0" />`
-          : `<div class="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
-              <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M3 7v14M21 7v14M6 7V3h12v4M9 21v-4h6v4M9 7h6M9 11h6M9 15h6"/>
-              </svg>
-            </div>`
-        }
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-1.5 mb-1">
-            ${Boolean(marker.is_visited || marker.last_visit)
-              ? '<span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-md border border-emerald-300">✓ Borgan</span>'
-              : Boolean(marker.has_internal || marker.phone)
-                ? '<span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-md border border-blue-300">To\'ldirilgan</span>'
-                : '<span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-md border border-amber-300">To\'ldirilmagan</span>'
-            }
-          </div>
-          <h4 class="font-bold text-slate-900 text-xs truncate">
+        <div class="px-3 py-1.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Holat</span>
+          <span class="px-2 py-0.5 rounded-md text-[10px] font-black ${statusBadgeClass}">
+            ${escapeHtml(statusText)}
+          </span>
+        </div>
+        <div class="p-3">
+          <h4 class="font-bold text-slate-900 text-xs truncate leading-snug">
             ${escapeHtml(marker.tjm_name || marker.object_name)}
           </h4>
-          <div class="text-[11px] text-slate-500 truncate mt-0.5">
-            ${escapeHtml(marker.address || marker.district_name || "Samarqand")}
+          <div class="text-[11px] text-slate-600 flex items-center gap-1.5 mt-1 truncate">
+            <span class="text-slate-400 shrink-0">📍</span>
+            <span class="truncate font-medium">${escapeHtml(shortAddress)}</span>
           </div>
-          <div class="flex items-center gap-1 text-[11px] font-semibold text-blue-600 mt-1">
-            <span>📍 ${dist}</span>
+          <div class="grid grid-cols-3 gap-1.5 mt-2.5 pt-2 border-t border-slate-100 text-[11px]">
+            <div class="bg-slate-50 border border-slate-200/60 rounded-lg p-1.5 flex flex-col">
+              <span class="text-[9px] text-slate-400 font-medium">Xonadon</span>
+              <span class="font-bold text-slate-900 truncate">${escapeHtml(aptClean)}</span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200/60 rounded-lg p-1.5 flex flex-col">
+              <span class="text-[9px] text-slate-400 font-medium">Qavat</span>
+              <span class="font-bold text-slate-900 truncate">${escapeHtml(floorClean)}</span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200/60 rounded-lg p-1.5 flex flex-col">
+              <span class="text-[9px] text-slate-400 font-medium">Muddati</span>
+              <span class="font-bold text-slate-900 truncate">${escapeHtml(deadlineClean)}</span>
+            </div>
           </div>
         </div>
       `;

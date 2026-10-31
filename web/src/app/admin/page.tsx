@@ -251,7 +251,7 @@ export default function AdminPage() {
           </div>
           <div>
             <h1 className="text-base font-black tracking-tight leading-tight flex items-center gap-2">
-              <span>B2B MAP</span>
+              <span>UYSOT B2B</span>
               <span className="text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/30">
                 SuperAdmin
               </span>

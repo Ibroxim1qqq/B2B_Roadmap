@@ -26,6 +26,7 @@ import AdvancedFilterModal, {
   countActiveFilters 
 } from '../components/Filters/AdvancedFilterModal';
 import MobileBottomNav from '../components/Navigation/MobileBottomNav';
+import UserProfileModal from '../components/User/UserProfileModal';
 
 const CreateObjectModal = dynamic(() => import('../components/ObjectPanel/CreateObjectModal'), { 
   ssr: false 
@@ -130,6 +131,8 @@ function HomeContent() {
   // Notifications State (Weekly Sync)
   const [notifications, setNotifications] = useState<WeeklySyncNotification[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   useEffect(() => {
@@ -667,7 +670,7 @@ function HomeContent() {
       <div className="h-screen w-screen flex items-center justify-center bg-slate-900">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
-          <p className="text-slate-400 text-sm font-medium">B2B MAP yuklanmoqda...</p>
+          <p className="text-slate-400 text-sm font-medium">UYSOT B2B yuklanmoqda...</p>
         </div>
 
       </div>
@@ -694,6 +697,8 @@ function HomeContent() {
         <LeftSidebar
           activeTab={activeTab}
           onTabChange={handleTabChange}
+          currentUser={currentUser}
+          onOpenProfile={() => setIsProfileOpen(true)}
         />
       </div>
 
@@ -712,6 +717,7 @@ function HomeContent() {
             handleMarkAllAsRead();
           }}
           unreadNotificationCount={unreadNotifCount}
+          onOpenAI={() => setIsAIOpen(true)}
         />
 
         {/* Workspace Body (Center Canvas + Right Panel) */}
@@ -1167,6 +1173,19 @@ function HomeContent() {
         onViewOnMap={handleSelectObjectFromCopilot}
         onApplyRoute={handleApplyAIRouteFromCopilot}
         onApplyFilter={handleApplyFilterFromCopilot}
+        isOpen={isAIOpen}
+        onClose={() => setIsAIOpen(false)}
+      />
+
+      {/* User Profile Settings Modal */}
+      <UserProfileModal
+        currentUser={currentUser}
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        onUserUpdated={(updatedUser) => {
+          saveCurrentUser(updatedUser);
+          setLocalCurrentUser(updatedUser);
+        }}
       />
     </div>
   );
@@ -1179,7 +1198,7 @@ export default function Home() {
         <div className="h-screen w-screen flex items-center justify-center bg-slate-900">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
-            <p className="text-slate-400 text-sm font-medium">B2B MAP yuklanmoqda...</p>
+            <p className="text-slate-400 text-sm font-medium">UYSOT B2B yuklanmoqda...</p>
           </div>
 
         </div>

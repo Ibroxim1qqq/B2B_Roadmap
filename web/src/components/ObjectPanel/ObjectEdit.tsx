@@ -293,18 +293,8 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
           </div>
         )}
 
-        {/* Buttons (Bitta qatorda: [Trash icon] [Bekor qilish] [Saqlash]) */}
-        <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleClear}
-            disabled={clearing || loading}
-            className="p-2.5 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
-            title="Ma'lumotlarni o'chirish"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-
+        {/* Buttons: [Bekor qilish] [Saqlash] */}
+        <div className="pt-3 border-t border-slate-100 flex items-center gap-2.5">
           <button
             type="button"
             onClick={onCancel}
@@ -316,7 +306,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
           <button
             type="submit"
             disabled={loading || clearing}
-            className="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center justify-center gap-1.5 shadow-xs shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer text-center text-xs"
+            className="flex-1 py-2.5 px-3 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl font-semibold flex items-center justify-center gap-1.5 shadow-xs shadow-emerald-600/20 transition-all disabled:opacity-50 cursor-pointer text-center text-xs"
           >
             <Save className="w-4 h-4" />
             <span>{loading ? "Saqlanmoqda..." : "Saqlash"}</span>

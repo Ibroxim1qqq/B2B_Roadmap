@@ -184,7 +184,7 @@ const DISTRICT_REGISTRY: DistrictMeta[] = [
     shortName: 'Shayxontohur',
     regionName: 'Toshkent shahri',
     regionSoato: '1726',
-    keywords: ['shayxontohur', 'shayhantahur', 'шайхантахур', 'шайхонтохур'],
+    keywords: ['shayxontohur', 'shayhontohur', 'shayhantahur', 'шайхантахур', 'шайхонтохур', 'shayhon', 'shayxon', 'шайхон', 'shayxontoxur', 'shayhontoxur'],
     center: [41.3200, 69.2300],
     soato: ['1726287'],
     radiusKm: 5.0
@@ -435,7 +435,7 @@ function analyzeAndSearchDatabase(
 
     // Filter candidates in this district
     const candidates = pool.filter(o => {
-      const dName = (o.district_name || '').toLowerCase();
+      const dName = (o.district_name || o.district || '').toLowerCase();
       const addr = (o.address || '').toLowerCase();
       const name = (o.object_name || '').toLowerCase();
       const tjm = (o.tjm_name || '').toLowerCase();
@@ -463,43 +463,162 @@ function analyzeAndSearchDatabase(
     });
 
     if (candidates.length > 0) {
-      const sorted = candidates.map(o => {
+      // Extract multi-criteria parameters from user query
+      const floorExact = q.match(/(\d+)\s*-?\s*qavat(?:li|lik)?(?:\s|$|bino|uy)/i);
+      const floorMin = q.match(/(\d+)\s*-?\s*qavat(?:dan)?\s*(?:ko'p|ortiq|baland|ziyod)/i);
+      const floorMax = q.match(/(\d+)\s*-?\s*qavat(?:gacha|dan\s*kam|dan\s*past)/i);
+      const targetFloor = floorExact ? parseInt(floorExact[1], 10) : null;
+      const minFloor = floorMin ? parseInt(floorMin[1], 10) : null;
+      const maxFloor = floorMax ? parseInt(floorMax[1], 10) : null;
+
+      const aptMin = q.match(/(?:xonadon|honadon|kvartira|uy)[^\d]*(\d+)\s*(?:ta)?(?:dan)?\s*(?:ko'p|ortiq|ziyod)/i) ||
+                     q.match(/(\d+)\s*(?:ta)?(?:dan)?\s*(?:ko'p|ortiq|ziyod)\s*(?:xonadon|honadon|kvartira|uy)/i);
+      const aptMax = q.match(/(?:xonadon|honadon|kvartira|uy)[^\d]*(\d+)\s*(?:ta)?(?:dan)?\s*(?:kam|gacha)/i) ||
+                     q.match(/(\d+)\s*(?:ta)?(?:dan)?\s*(?:kam|gacha)\s*(?:xonadon|honadon|kvartira|uy)/i);
+      const minApts = aptMin ? parseInt(aptMin[1], 10) : null;
+      const maxApts = aptMax ? parseInt(aptMax[1], 10) : null;
+
+      const yearMatch = q.match(/(202[3-9]|203\d)/i);
+      const targetYear = yearMatch ? yearMatch[1] : null;
+
+      const reqPhone = q.includes('telefon') || q.includes('aloqa') || q.includes('nomer');
+      const reqNotVisited = q.includes('borilmagan') || q.includes('tashrif qilinmagan');
+
+      const hasComplexCriteria = targetFloor !== null || minFloor !== null || maxFloor !== null || targetYear !== null || minApts !== null || reqPhone || reqNotVisited;
+
+      const scoredCandidates = candidates.map(o => {
+        let score = 50;
+
+        // Check floor match
+        const flStr = String(o.floors || '');
+        const flNums = (flStr.match(/\d+/g) || []).map(n => parseInt(n, 10));
+        let matchedF = false;
+        if (flNums.length > 0) {
+          const minF = Math.min(...flNums);
+          const maxF = Math.max(...flNums);
+          if (targetFloor !== null) {
+            if ((minF <= targetFloor && targetFloor <= maxF) || maxF >= targetFloor) {
+              score += 35;
+              matchedF = true;
+            }
+          } else if (minFloor !== null) {
+            if (maxF >= minFloor) {
+              score += 35;
+              matchedF = true;
+            }
+          } else if (maxFloor !== null) {
+            if (minF <= maxFloor) {
+              score += 35;
+              matchedF = true;
+            }
+          }
+        }
+
+        // Check year match
+        const dlStr = (String(o.deadline || '') + ' ' + String(o.created_at || '')).toLowerCase();
+        let matchedY = false;
+        if (targetYear) {
+          if (dlStr.includes(targetYear)) {
+            score += 35;
+            matchedY = true;
+          }
+        }
+
+        // Check apartment match
+        const apNum = parseInt(String(o.apartment_count || '0').replace(/\D/g, '') || '0', 10);
+        let matchedA = false;
+        if (minApts !== null) {
+          if (apNum >= minApts) {
+            score += 30;
+            matchedA = true;
+          }
+        } else if (maxApts !== null) {
+          if (apNum > 0 && apNum <= maxApts) {
+            score += 30;
+            matchedA = true;
+          }
+        }
+
+        // Phone match
+        if (reqPhone && (o.phone || o.manager_phone)) {
+          score += 20;
+        }
+        // Visit match
+        if (reqNotVisited && !o.last_visit && !o.is_visited) {
+          score += 20;
+        }
+
         const lat = parseFloat(o.latitude) || refLat;
         const lng = parseFloat(o.longitude) || refLng;
         const dist_m = haversineMeters(refLat, refLng, lat, lng);
+
         return {
           ...o,
+          score,
+          matchedF,
+          matchedY,
+          matchedA,
           dist_m,
           dist_km: (dist_m / 1000).toFixed(2)
         };
-      }).sort((a, b) => a.dist_m - b.dist_m).slice(0, requestedLimit);
+      });
+
+      const sorted = scoredCandidates
+        .sort((a, b) => {
+          if (hasComplexCriteria) {
+            if (b.score !== a.score) return b.score - a.score;
+          }
+          return a.dist_m - b.dist_m;
+        })
+        .slice(0, requestedLimit);
 
       suggestedObjects = sorted.map(o => ({
         source_id: String(o.source_id),
         object_name: o.tjm_name ? `${o.tjm_name} (${o.object_name})` : o.object_name,
-        district_name: o.district_name || matchedDistrict.shortName,
+        district_name: o.district_name || o.district || matchedDistrict.shortName,
         floors: o.floors || '—',
         apartment_count: o.apartment_count || '0',
+        deadline: o.deadline || '',
         phone: o.phone || o.manager_phone || '',
         manager_name: o.manager_name || '',
-        builder: o.builder || '—',
+        builder: o.builder || o.developer || '—',
         latitude: parseFloat(o.latitude),
         longitude: parseFloat(o.longitude),
         dist_km: o.dist_km
       }));
 
-      const locationNote = isUserNearby
-        ? `Sizning joriy joylashuvingizga ko'ra`
-        : `**${matchedDistrict.name}** markaziga nisbatan`;
+      if (hasComplexCriteria) {
+        const criteriaDescs: string[] = [];
+        criteriaDescs.push(`**${matchedDistrict.name}**`);
+        if (targetFloor !== null) criteriaDescs.push(`**${targetFloor} qavatli**`);
+        if (minFloor !== null) criteriaDescs.push(`**kamida ${minFloor} qavatli**`);
+        if (minApts !== null) criteriaDescs.push(`**${minApts} tadan ko'p xonadonli**`);
+        if (targetYear !== null) criteriaDescs.push(`**${targetYear}-yil bitadigan**`);
+        if (reqPhone) criteriaDescs.push(`**telefon raqami mavjud**`);
 
-      replyText = `📍 ${locationNote} eng yaqin **${suggestedObjects.length} ta** qurilish obyekti va turar-joy majmuasi topildi:\n\n` +
-        suggestedObjects.map((s, idx) => {
-          const ph = s.phone ? `\n   📞 Aloqa: **${s.phone}**` : '';
-          const bld = s.builder && s.builder !== '—' ? `\n   🏗️ Quruvchi: ${s.builder}` : '';
-          return `${idx + 1}. 🏢 **${s.object_name}** (~${s.dist_km} km)\n` +
-                 `   📍 Manzil: ${s.district_name}${s.floors !== '—' ? `, ${s.floors} qavat` : ''}${s.apartment_count !== '0' ? `, ${s.apartment_count} xonadon` : ''}${bld}${ph}`;
-        }).join('\n\n') +
-        `\n\nQuyidagi tugmalar orqali xaritada marshrut chizishingiz yoki bino tafsilotlarini ochishingiz mumkin:`;
+        replyText = `📍 ${criteriaDescs.join(', ')} bo'yicha bazadan saralangan eng mos **${suggestedObjects.length} ta** qurilish obyekti topildi:\n\n` +
+          suggestedObjects.map((s, idx) => {
+            const ph = s.phone ? `\n   📞 Aloqa: **${s.phone}**` : '';
+            const bld = s.builder && s.builder !== '—' ? `\n   🏗️ Quruvchi: ${s.builder}` : '';
+            const dl = s.deadline ? `\n   📅 Topshirish: **${s.deadline}**` : '';
+            return `${idx + 1}. 🏢 **${s.object_name}** (~${s.dist_km} km)\n` +
+                   `   📍 Manzil: ${s.district_name}${s.floors !== '—' ? `, ${s.floors} qavat` : ''}${s.apartment_count !== '0' ? `, ${s.apartment_count} xonadon` : ''}${dl}${bld}${ph}`;
+          }).join('\n\n') +
+          `\n\nQuyidagi tugmalar orqali ushbu binolarni xaritada ko'rishingiz yoki marshrut tuzishingiz mumkin:`;
+      } else {
+        const locationNote = isUserNearby
+          ? `Sizning joriy joylashuvingizga ko'ra`
+          : `**${matchedDistrict.name}** markaziga nisbatan`;
+
+        replyText = `📍 ${locationNote} eng yaqin **${suggestedObjects.length} ta** qurilish obyekti va turar-joy majmuasi topildi:\n\n` +
+          suggestedObjects.map((s, idx) => {
+            const ph = s.phone ? `\n   📞 Aloqa: **${s.phone}**` : '';
+            const bld = s.builder && s.builder !== '—' ? `\n   🏗️ Quruvchi: ${s.builder}` : '';
+            return `${idx + 1}. 🏢 **${s.object_name}** (~${s.dist_km} km)\n` +
+                   `   📍 Manzil: ${s.district_name}${s.floors !== '—' ? `, ${s.floors} qavat` : ''}${s.apartment_count !== '0' ? `, ${s.apartment_count} xonadon` : ''}${bld}${ph}`;
+          }).join('\n\n') +
+          `\n\nQuyidagi tugmalar orqali xaritada marshrut chizishingiz yoki bino tafsilotlarini ochishingiz mumkin:`;
+      }
 
       actions.push({
         type: 'apply_route',
@@ -934,13 +1053,31 @@ export async function POST(req: Request) {
     // Connect AI directly to the full live PostgreSQL database!
     let pool: any[] = [];
     if (Array.isArray(body.objects_pool) && body.objects_pool.length >= 100) {
-      pool = body.objects_pool;
+      pool = [...body.objects_pool];
     } else {
       pool = await getFullDatabasePool(body.company_id);
     }
 
     if (pool.length === 0) {
       pool = await getFullDatabasePool(body.company_id);
+    }
+
+    // Ensure cross-district queries (e.g. asking about Shayxontohur, Yunusobod or Samarqand) search across full database
+    const userMsgLower = (body.message || body.prompt || '').toLowerCase();
+    const hasDistrictKeyword = DISTRICT_REGISTRY.some(d => 
+      d.keywords.some(kw => userMsgLower.includes(kw))
+    );
+    if (hasDistrictKeyword || pool.length < 500) {
+      const full = await getFullDatabasePool();
+      if (full && full.length > 0) {
+        const seen = new Set(pool.map(p => String(p.source_id)));
+        full.forEach(f => {
+          if (!seen.has(String(f.source_id))) {
+            pool.push(f);
+            seen.add(String(f.source_id));
+          }
+        });
+      }
     }
 
     // ACTION A: Interactive Global Chat & Search

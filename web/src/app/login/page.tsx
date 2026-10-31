@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Lock, User, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CloudSun } from 'lucide-react';
 import { validateCredentials, setCurrentUser, getCurrentUser } from '../../lib/auth';
 import { api } from '../../lib/api';
 
@@ -12,10 +12,33 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isShaking, setIsShaking] = useState(false);
-
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, redirect to appropriate page
+  // Live Clock & Date for Left Panel
+  const [currentTime, setCurrentTime] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
+
+  useEffect(() => {
+    const updateDateTime = () => {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      setCurrentTime(`${hours}:${minutes}`);
+
+      const daysUz = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const dayName = daysUz[now.getDay()];
+      setCurrentDate(`${day}.${month}.${year} • ${dayName}`);
+    };
+
+    updateDateTime();
+    const timer = setInterval(updateDateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // If already logged in, redirect
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
@@ -42,7 +65,7 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      // 1. Authenticate with Google Sheets / API
+      // 1. Authenticate with API / DB
       const res = await api.login(login.trim(), password);
       if (res && res.success && res.user) {
         setCurrentUser(res.user);
@@ -75,110 +98,117 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200/30 rounded-full blur-3xl"></div>
-      </div>
+    <div className="min-h-screen bg-slate-100 flex p-3 sm:p-5 select-none font-sans">
+      <div className="w-full flex bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200/80">
+        
+        {/* Left Column: Modern Building Photo with Live Time & Weather */}
+        <div className="hidden lg:flex lg:w-7/12 relative flex-col justify-between p-8 sm:p-10 overflow-hidden bg-slate-900 rounded-3xl m-2.5">
+          {/* Background Photo with dark overlay */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
+            style={{ backgroundImage: `url('/login-bg.jpg')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/30 to-slate-900/40" />
 
-      <div className={`relative w-full max-w-sm ${isShaking ? 'animate-shake' : ''}`}>
-        {/* Card */}
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 overflow-hidden">
-          
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 px-8 py-10 text-white text-center relative overflow-hidden">
-            <div className="absolute -right-10 -bottom-10 w-36 h-36 bg-white/10 rounded-full blur-2xl"></div>
-            <div className="absolute -left-10 -top-10 w-36 h-36 bg-white/10 rounded-full blur-2xl"></div>
-
-            <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md mx-auto flex items-center justify-center border border-white/20 shadow-lg mb-4">
-              <Building2 className="w-9 h-9 text-white" />
+          {/* Top Bar: Live Clock on Left, Weather on Right */}
+          <div className="relative z-10 flex items-start justify-between w-full">
+            <div>
+              <div className="text-5xl sm:text-6xl font-light text-white tracking-tight drop-shadow-md">
+                {currentTime || '16:55'}
+              </div>
+              <div className="text-sm font-medium text-white/90 mt-1 drop-shadow-xs">
+                {currentDate || '31.10.2026 • Shanba'}
+              </div>
             </div>
 
-            <h1 className="text-2xl font-black tracking-tight">
-              B2B MAP
-            </h1>
-            <p className="text-blue-200 text-sm mt-1">
-              Qurilish Obyektlari & Monitoring Platformasi
-            </p>
+            {/* Weather Badge */}
+            <div className="flex items-center gap-2 px-3.5 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white shadow-lg text-xs font-semibold">
+              <CloudSun className="w-5 h-5 text-amber-300" />
+              <div>
+                <div className="leading-tight">16.8 °C</div>
+                <div className="text-[10px] text-white/80 font-normal leading-tight">O'zbekiston/Toshkent</div>
+              </div>
+            </div>
           </div>
 
+          {/* Bottom left: Empty per user's red cross out */}
+          <div className="relative z-10" />
+        </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Right Column: Clean Centered Login Form */}
+        <div className="w-full lg:w-5/12 flex flex-col items-center justify-center p-6 sm:p-12 md:p-16">
+          <div className={`w-full max-w-sm flex flex-col items-center text-center ${isShaking ? 'animate-shake' : ''}`}>
+            
+            {/* UYSOT Official Logo */}
+            <div className="w-20 h-20 rounded-3xl overflow-hidden shadow-lg shadow-emerald-700/20 bg-[#1b815f] flex items-center justify-center mb-5 p-1 border border-emerald-500/30">
+              <img src="/uysot-logo.png" alt="UYSOT B2B" className="w-full h-full object-cover rounded-2xl" />
+            </div>
+
+            {/* Title */}
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-8">
+              Xush kelibsiz
+            </h1>
+
+            {/* Error banner */}
             {error && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 text-xs rounded-xl font-medium text-center">
+              <div className="w-full mb-4 px-3.5 py-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-semibold text-left">
                 {error}
               </div>
             )}
 
-            {/* Login */}
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1.5">
-                Login
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            {/* Login Form */}
+            <form onSubmit={handleSubmit} className="w-full space-y-4 text-left">
+              <div>
                 <input
                   type="text"
-                  placeholder="Login kiriting"
                   value={login}
-                  onChange={(e) => { setLogin(e.target.value); setError(null); }}
-                  autoFocus
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-sm outline-none transition-all"
+                  onChange={(e) => setLogin(e.target.value)}
+                  placeholder="Loginni kiriting"
+                  autoComplete="username"
+                  disabled={loading}
+                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-[#1b815f]/15 transition-all text-slate-800 font-medium placeholder:text-slate-400"
                 />
               </div>
-            </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1.5">
-                Parol
-              </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Parol kiriting"
                   value={password}
-                  onChange={(e) => { setPassword(e.target.value); setError(null); }}
-                  className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-sm outline-none transition-all"
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Parolni kiriting"
+                  autoComplete="current-password"
+                  disabled={loading}
+                  className="w-full px-4 py-3.5 pr-11 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-[#1b815f]/15 transition-all text-slate-800 font-medium placeholder:text-slate-400"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-            </div>
 
-            {/* Submit */}
-            <div className="pt-2">
+              {/* Submit Button in UYSOT Brand Green */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full py-3.5 px-4 bg-[#1b815f] hover:bg-[#166b4f] disabled:bg-slate-300 text-white font-bold text-sm rounded-xl shadow-md shadow-emerald-700/20 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
               >
-                <span>{loading ? 'Kirilmoqda...' : 'Kirish'}</span>
-                <ArrowRight className="w-4 h-4" />
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Kirilmoqda...</span>
+                  </>
+                ) : (
+                  <span>Kirish</span>
+                )}
               </button>
-            </div>
-
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 text-center pt-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Xavfsiz va himoyalangan tizim</span>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-slate-400 mt-4">
-          © 2025 B2B MAP. Barcha huquqlar himoyalangan.
-        </p>
       </div>
     </div>
   );
 }
-
