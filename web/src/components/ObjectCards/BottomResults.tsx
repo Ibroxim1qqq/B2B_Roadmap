@@ -79,7 +79,7 @@ export default function BottomResults({
           onClick={() => { setActiveFilter('all'); setCurrentPage(1); }}
           className={`px-3.5 py-1.5 rounded-full font-semibold transition-all ${
             activeFilter === 'all'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-[#1b815f] text-white shadow-xs'
               : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -120,11 +120,11 @@ export default function BottomResults({
           onClick={() => { setActiveFilter('nearby'); setCurrentPage(1); }}
           className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 transition-all ${
             activeFilter === 'nearby'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-[#1b815f] text-white shadow-xs'
               : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
           }`}
         >
-          <MapPin className="w-3.5 h-3.5 text-blue-500" />
+          <MapPin className="w-3.5 h-3.5 text-emerald-600" />
           <span>Faqat yaqin</span>
         </button>
 
@@ -164,11 +164,11 @@ export default function BottomResults({
               onClick={onLocate}
               className="w-full flex items-center gap-2.5 text-left group"
             >
-              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#1b815f] flex items-center justify-center group-hover:bg-[#1b815f] group-hover:text-white transition-colors">
                 <MapPin className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                <div className="text-xs font-bold text-slate-800 group-hover:text-[#1b815f] transition-colors">
                   Mening joylashuvim
                 </div>
                 <div className="text-[11px] text-slate-400">Eng yaqin obyektlarni ko'rish</div>
@@ -186,7 +186,7 @@ export default function BottomResults({
               </div>
               <div className="flex justify-between items-center text-slate-600">
                 <span>Tashrif qilingan</span>
-                <span className="font-bold text-blue-600">{countVisited}</span>
+                <span className="font-bold text-[#1b815f]">{countVisited}</span>
               </div>
             </div>
           </div>
@@ -214,7 +214,7 @@ export default function BottomResults({
                 <div
                   key={obj.source_id}
                   className={`bg-white border rounded-2xl p-3.5 flex flex-col justify-between transition-all shadow-2xs hover:shadow-md ${
-                    isSelected ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-slate-200'
+                    isSelected ? 'border-[#1b815f] ring-2 ring-emerald-500/10' : 'border-slate-200'
                   }`}
                 >
                   <div>
@@ -239,7 +239,7 @@ export default function BottomResults({
                           </h3>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
-                          <MapPin className="w-3 h-3 text-blue-500 shrink-0" />
+                          <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
                           <span>{obj.district_name || 'Samarqand'} • {dist}</span>
                         </div>
                         <div className="mt-1.5">
@@ -274,7 +274,7 @@ export default function BottomResults({
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
                   <button
                     onClick={() => onSelect(obj.source_id)}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                    className="flex-1 bg-[#1b815f] hover:bg-[#15674c] text-white py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
                   >
                     <span>Ochish</span>
                   </button>
@@ -286,7 +286,7 @@ export default function BottomResults({
                     className="flex items-center justify-center gap-1 py-1.5 px-2.5 bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs transition-colors"
                     title="Google Maps Marshrut"
                   >
-                    <Send className="w-3 h-3 text-blue-600" />
+                    <Send className="w-3 h-3 text-[#1b815f]" />
                     <span>Navigatsiya</span>
                   </a>
                 </div>

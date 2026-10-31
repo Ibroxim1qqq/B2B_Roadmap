@@ -62,14 +62,14 @@ export default function AdvancedFilterModal({
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-[#1b815f] text-white flex items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
               <SlidersHorizontal className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900">Kengaytirilgan filtrlar</h3>
                 {activeCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-700">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700">
                     {activeCount} ta faol
                   </span>
                 )}
@@ -92,13 +92,13 @@ export default function AdvancedFilterModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                <MapPin className="w-3.5 h-3.5 text-[#1b815f]" />
                 <span>Tuman</span>
               </label>
               <select
                 value={selectedDistrict}
                 onChange={(e) => onDistrictChange?.(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all text-slate-800 cursor-pointer"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all text-slate-800 cursor-pointer"
               >
                 <option value="">Barcha tumanlar</option>
                 {districts.map(d => (
@@ -109,13 +109,13 @@ export default function AdvancedFilterModal({
 
             <div className="space-y-1.5">
               <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+                <RefreshCw className="w-3.5 h-3.5 text-[#1b815f]" />
                 <span>Qurilish holati</span>
               </label>
               <select
                 value={selectedStatus}
                 onChange={(e) => onStatusChange?.(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all text-slate-800 cursor-pointer"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all text-slate-800 cursor-pointer"
               >
                 <option value="">Barcha statuslar</option>
                 <option value="Jarayonda">Jarayonda</option>
@@ -130,7 +130,7 @@ export default function AdvancedFilterModal({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                <Home className="w-3.5 h-3.5 text-blue-600" />
+                <Home className="w-3.5 h-3.5 text-[#1b815f]" />
                 <span>Xonalar soni</span>
               </label>
               {filters.roomCount && (
@@ -149,7 +149,7 @@ export default function AdvancedFilterModal({
               placeholder="Xonalar sonini kiriting (masalan: 1, 2, 3 yoki 4)..."
               value={filters.roomCount}
               onChange={(e) => onChange({ ...filters, roomCount: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
             />
           </div>
 
@@ -157,7 +157,7 @@ export default function AdvancedFilterModal({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-blue-600" />
+                <Layers className="w-3.5 h-3.5 text-[#1b815f]" />
                 <span>Qavatlar soni</span>
               </label>
               {(filters.minFloors || filters.maxFloors) && (
@@ -181,7 +181,7 @@ export default function AdvancedFilterModal({
                   placeholder="Min (masalan: 5)"
                   value={filters.minFloors}
                   onChange={(e) => onChange({ ...filters, minFloors: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
                 />
               </div>
 
@@ -194,7 +194,7 @@ export default function AdvancedFilterModal({
                   placeholder="Max (masalan: 12)"
                   value={filters.maxFloors}
                   onChange={(e) => onChange({ ...filters, maxFloors: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -204,7 +204,7 @@ export default function AdvancedFilterModal({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                <Building2 className="w-3.5 h-3.5 text-[#1b815f]" />
                 <span>Xonadonlar soni</span>
               </label>
               {(filters.minApartments || filters.maxApartments) && (
@@ -227,7 +227,7 @@ export default function AdvancedFilterModal({
                   placeholder="Min (masalan: 30)"
                   value={filters.minApartments}
                   onChange={(e) => onChange({ ...filters, minApartments: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
                 />
               </div>
 
@@ -239,7 +239,7 @@ export default function AdvancedFilterModal({
                   placeholder="Max (masalan: 150)"
                   value={filters.maxApartments}
                   onChange={(e) => onChange({ ...filters, maxApartments: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -254,7 +254,7 @@ export default function AdvancedFilterModal({
             <select
               value={filters.visitStatus}
               onChange={(e) => onChange({ ...filters, visitStatus: e.target.value as any })}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all text-slate-800 cursor-pointer"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all text-slate-800 cursor-pointer"
             >
               <option value="all">Barchasi</option>
               <option value="visited">Borilgan (Tashrif qilingan)</option>
@@ -271,7 +271,7 @@ export default function AdvancedFilterModal({
             <select
               value={filters.crmStatus}
               onChange={(e) => onChange({ ...filters, crmStatus: e.target.value as any })}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all text-slate-800 cursor-pointer"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all text-slate-800 cursor-pointer"
             >
               <option value="all">Barchasi</option>
               <option value="filled">Ma&apos;lumot to&apos;ldirilgan</option>
@@ -302,7 +302,7 @@ export default function AdvancedFilterModal({
               placeholder="Yilni kiriting (masalan: 2025, 2026, 2027)..."
               value={filters.deadlineYear}
               onChange={(e) => onChange({ ...filters, deadlineYear: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
             />
           </div>
 
@@ -327,7 +327,7 @@ export default function AdvancedFilterModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-5 py-2 bg-[#1b815f] hover:bg-[#15674c] active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>Ko&apos;rsatish ({filteredCount.toLocaleString()} ta obyekt)</span>

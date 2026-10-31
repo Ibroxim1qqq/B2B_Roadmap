@@ -106,7 +106,7 @@ export default function NotificationDrawer({
         {/* Sleek Minimal Header */}
         <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-2xs">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shadow-blue-500/25">
+            <div className="w-9 h-9 rounded-xl bg-[#1b815f] flex items-center justify-center text-white shadow-xs shadow-emerald-600/20">
               <Bell className="w-4 h-4" />
             </div>
             <div>
@@ -114,7 +114,7 @@ export default function NotificationDrawer({
                 <h3 className="text-sm font-black text-slate-900 tracking-tight">
                   Yangi TJM-lar
                 </h3>
-                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold rounded-full">
+                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-full">
                   {validBuildings.length} ta
                 </span>
               </div>
@@ -129,7 +129,7 @@ export default function NotificationDrawer({
               <button
                 type="button"
                 onClick={onMarkAllAsRead}
-                className="px-2 py-1 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                className="px-2 py-1 text-[11px] font-semibold text-[#1b815f] hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                 title="Barchasini o'qilgan deb belgilash"
               >
                 <Check className="w-3.5 h-3.5" />
@@ -155,7 +155,7 @@ export default function NotificationDrawer({
               onClick={() => setSelectedRegion('all')}
               className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedRegion === 'all'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-[#1b815f] text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -168,7 +168,7 @@ export default function NotificationDrawer({
                 onClick={() => setSelectedRegion(r.soato)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   selectedRegion === r.soato
-                    ? 'bg-blue-600 text-white shadow-xs'
+                    ? 'bg-[#1b815f] text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -208,7 +208,7 @@ export default function NotificationDrawer({
                   {/* Top line: Region Badge & Date */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/80 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-bold">
                         {regName}
                       </span>
                       {building.district_name && (
@@ -263,7 +263,7 @@ export default function NotificationDrawer({
                         onSelectBuilding(building);
                         onClose();
                       }}
-                      className="w-full sm:w-auto px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs shadow-blue-500/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      className="w-full sm:w-auto px-3.5 py-1.5 bg-[#1b815f] hover:bg-[#15674c] active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs shadow-emerald-600/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                     >
                       <span>Xaritada ko'rish</span>
                       <ExternalLink className="w-3.5 h-3.5" />

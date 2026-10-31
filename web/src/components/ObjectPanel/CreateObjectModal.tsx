@@ -108,13 +108,13 @@ export default function CreateObjectModal({
         className: 'custom-picker-pin',
         html: `
           <div class="relative flex items-center justify-center">
-            <div class="w-9 h-9 rounded-full bg-blue-600 border-2 border-white shadow-lg flex items-center justify-center text-white ring-4 ring-blue-500/30">
+            <div class="w-9 h-9 rounded-full bg-[#1b815f] border-2 border-white shadow-lg flex items-center justify-center text-white ring-4 ring-emerald-500/30">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                 <polyline points="9 22 9 12 15 12 15 22"></polyline>
               </svg>
             </div>
-            <div class="absolute -bottom-1 w-2.5 h-2.5 bg-blue-600 rotate-45"></div>
+            <div class="absolute -bottom-1 w-2.5 h-2.5 bg-[#1b815f] rotate-45"></div>
           </div>
         `,
         iconSize: [36, 40],
@@ -267,7 +267,7 @@ export default function CreateObjectModal({
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+            <div className="w-10 h-10 rounded-xl bg-[#1b815f] text-white flex items-center justify-center shadow-md shadow-emerald-600/20">
               <Plus className="w-5 h-5" />
             </div>
             <div>
@@ -294,7 +294,7 @@ export default function CreateObjectModal({
             onClick={() => setActiveTab('basic')}
             className={`py-3 px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
               activeTab === 'basic'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-[#1b815f] text-[#1b815f]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -306,7 +306,7 @@ export default function CreateObjectModal({
             onClick={() => setActiveTab('crm')}
             className={`py-3 px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
               activeTab === 'crm'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-[#1b815f] text-[#1b815f]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -330,7 +330,7 @@ export default function CreateObjectModal({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                    <MapPin className="w-3.5 h-3.5 text-[#1b815f]" />
                     <span>Xaritadan joylashuvni belgilang</span>
                     <span className="text-rose-500">*</span>
                   </label>
@@ -338,7 +338,7 @@ export default function CreateObjectModal({
                     <button
                       type="button"
                       onClick={handleCenterOnUser}
-                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                      className="text-[11px] font-semibold text-[#1b815f] hover:text-emerald-700 flex items-center gap-1"
                     >
                       <Navigation className="w-3 h-3" />
                       <span>Mening joylashuvim</span>
@@ -370,7 +370,7 @@ export default function CreateObjectModal({
                     placeholder="Masalan: Registon Plaza, Afrosiyob City..."
                     value={tjmName}
                     onChange={(e) => setTjmName(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl px-3 py-2.5 outline-none transition-all"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl px-3 py-2.5 outline-none transition-all"
                   />
                 </div>
 
@@ -382,7 +382,7 @@ export default function CreateObjectModal({
                   <select
                     value={districtSoato}
                     onChange={(e) => setDistrictSoato(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   >
                     {DISTRICT_OPTIONS.map(d => (
                       <option key={d.id} value={d.id}>{d.name}</option>
@@ -398,7 +398,7 @@ export default function CreateObjectModal({
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   >
                     <option value="Qurilish jarayonida">Qurilish jarayonida</option>
                     <option value="Foydalanishga topshirilgan">Foydalanishga topshirilgan</option>
@@ -417,7 +417,7 @@ export default function CreateObjectModal({
                     placeholder="Masalan: Beruniy ko'chasi, 24-uy"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   />
                 </div>
 
@@ -431,7 +431,7 @@ export default function CreateObjectModal({
                     placeholder="Masalan: 9 yoki 12"
                     value={floors}
                     onChange={(e) => setFloors(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   />
                 </div>
 
@@ -445,7 +445,7 @@ export default function CreateObjectModal({
                     placeholder="Masalan: 72"
                     value={apartments}
                     onChange={(e) => setApartments(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   />
                 </div>
 
@@ -459,7 +459,7 @@ export default function CreateObjectModal({
                     placeholder="Quruvchi korxona nomi"
                     value={builder}
                     onChange={(e) => setBuilder(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   />
                 </div>
 
@@ -473,7 +473,7 @@ export default function CreateObjectModal({
                     placeholder="Buyurtmachi kompaniya"
                     value={customer}
                     onChange={(e) => setCustomer(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   />
                 </div>
 
@@ -487,7 +487,7 @@ export default function CreateObjectModal({
                     placeholder="Masalan: 2026-yil IV-chorak"
                     value={deadline}
                     onChange={(e) => setDeadline(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   />
                 </div>
 
@@ -501,7 +501,7 @@ export default function CreateObjectModal({
                     placeholder="Masalan: 2"
                     value={blocks}
                     onChange={(e) => setBlocks(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   />
                 </div>
               </div>
@@ -520,7 +520,7 @@ export default function CreateObjectModal({
                   placeholder="+998 90 123 45 67"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                 />
               </div>
 
@@ -532,7 +532,7 @@ export default function CreateObjectModal({
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                 >
                   <option value="Yuqori">🔴 Yuqori</option>
                   <option value="O'rta">🟡 O'rta</option>
@@ -550,7 +550,7 @@ export default function CreateObjectModal({
                   placeholder="Masalan: Obyekt hududida 1-qavatda"
                   value={salesOffice}
                   onChange={(e) => setSalesOffice(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                 />
               </div>
 
@@ -564,7 +564,7 @@ export default function CreateObjectModal({
                   placeholder="Ism Familiya"
                   value={managerName}
                   onChange={(e) => setManagerName(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                 />
               </div>
 
@@ -578,7 +578,7 @@ export default function CreateObjectModal({
                   placeholder="+998 99 876 54 32"
                   value={managerPhone}
                   onChange={(e) => setManagerPhone(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                 />
               </div>
 
@@ -592,7 +592,7 @@ export default function CreateObjectModal({
                   placeholder="@kanal_yoki_profil"
                   value={telegram}
                   onChange={(e) => setTelegram(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                 />
               </div>
 
@@ -606,7 +606,7 @@ export default function CreateObjectModal({
                   placeholder="https://instagram.com/..."
                   value={instagram}
                   onChange={(e) => setInstagram(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl px-3 py-2.5 outline-none"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                 />
               </div>
 
@@ -620,7 +620,7 @@ export default function CreateObjectModal({
                   placeholder="Muzokaralar, narxlar yoki boshqa foydali ma'lumotlar..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl p-3 outline-none resize-none"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl p-3 outline-none resize-none"
                 />
               </div>
             </div>
@@ -634,7 +634,7 @@ export default function CreateObjectModal({
               <button
                 type="button"
                 onClick={() => setActiveTab('crm')}
-                className="text-blue-600 hover:text-blue-700 font-semibold"
+                className="text-[#1b815f] hover:text-emerald-700 font-semibold"
               >
                 Keyingisi: CRM ma'lumotlari &rarr;
               </button>
@@ -662,7 +662,7 @@ export default function CreateObjectModal({
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="px-5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all disabled:opacity-50"
+              className="px-5 py-2 rounded-xl text-xs font-bold bg-[#1b815f] hover:bg-[#15674c] text-white shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all disabled:opacity-50"
             >
               {submitting ? (
                 <>

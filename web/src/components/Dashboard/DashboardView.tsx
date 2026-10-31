@@ -121,9 +121,9 @@ export default function DashboardView({
       badge: '100%',
       desc: "Samarqand viloyati reyestridagi barcha obyektlar", 
       icon: Building2, 
-      color: 'text-blue-600', 
-      bg: 'bg-blue-50', 
-      border: 'border-blue-100' 
+      color: 'text-[#1b815f]', 
+      bg: 'bg-emerald-50', 
+      border: 'border-emerald-100' 
     },
     { 
       title: 'Borilgan TJM-lar', 
@@ -239,7 +239,7 @@ export default function DashboardView({
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <BarChart2 className="w-4 h-4 text-blue-600" />
+                  <BarChart2 className="w-4 h-4 text-[#1b815f]" />
                   <span>Tumanlar bo'yicha TJM va Tashriflar (Progress Bar)</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">

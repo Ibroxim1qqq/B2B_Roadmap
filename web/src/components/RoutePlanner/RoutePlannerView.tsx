@@ -26,7 +26,7 @@ const RoutePlannerMap = dynamic(() => import('./RoutePlannerMap'), {
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-slate-100">
       <div className="text-slate-500 font-semibold text-xs flex items-center gap-2">
-        <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+        <div className="w-4 h-4 rounded-full border-2 border-[#1b815f] border-t-transparent animate-spin"></div>
         <span>Marshrut xaritasi yuklanmoqda...</span>
       </div>
     </div>
@@ -242,7 +242,7 @@ export default function RoutePlannerView({
     } else if (distMeters <= 150) {
       return {
         label: `↩ Qisqa burilish (+${distMeters} m)`,
-        className: "bg-blue-500/20 text-blue-300 border-blue-500/30"
+        className: "bg-[#1b815f]/20 text-emerald-400 border-[#1b815f]/30"
       };
     } else {
       return {
@@ -863,7 +863,7 @@ export default function RoutePlannerView({
         <div className="p-4 border-b border-slate-100 bg-white space-y-3 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shadow-blue-500/20">
+              <div className="w-8 h-8 rounded-xl bg-[#1b815f] text-white flex items-center justify-center shadow-xs shadow-emerald-600/20">
                 <Navigation className="w-4 h-4" />
               </div>
               <div>
@@ -876,7 +876,7 @@ export default function RoutePlannerView({
               <button
                 type="button"
                 onClick={() => setShowAIRouteModal(true)}
-                className="px-2.5 py-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                className="px-2.5 py-1.5 bg-gradient-to-r from-[#1b815f] via-teal-600 to-purple-600 hover:from-[#15674c] hover:to-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
                 title="Sun'iy intellekt yordamida aqlli marshrut tuzish (Bepul)"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
@@ -887,10 +887,10 @@ export default function RoutePlannerView({
               <button
                 type="button"
                 onClick={() => setShowSavedRoutesModal(true)}
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer shadow-2xs"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-[#1b815f] rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer shadow-2xs"
                 title="Google Sheets'da saqlangan marshrutlar"
               >
-                <Bookmark className="w-3.5 h-3.5 text-blue-600" />
+                <Bookmark className="w-3.5 h-3.5 text-[#1b815f]" />
                 <span>Saqlanganlar</span>
               </button>
 
@@ -899,7 +899,7 @@ export default function RoutePlannerView({
                 <button
                   onClick={() => setActiveMobileTab('list')}
                   className={`px-3 py-1 rounded-lg transition-colors ${
-                    activeMobileTab === 'list' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
+                    activeMobileTab === 'list' ? 'bg-white text-[#1b815f] shadow-xs' : 'text-slate-500'
                   }`}
                 >
                   Ro'yxat
@@ -907,7 +907,7 @@ export default function RoutePlannerView({
                 <button
                   onClick={() => setActiveMobileTab('map')}
                   className={`px-3 py-1 rounded-lg transition-colors ${
-                    activeMobileTab === 'map' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
+                    activeMobileTab === 'map' ? 'bg-white text-[#1b815f] shadow-xs' : 'text-slate-500'
                   }`}
                 >
                   Xarita
@@ -1003,7 +1003,7 @@ export default function RoutePlannerView({
                   <button
                     type="button"
                     onClick={handleUseRegiston}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-blue-50 text-blue-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-emerald-50 text-emerald-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
                   >
                     <span>🏛️ {isUysot ? 'Toshkent markazi (Amir Temur)' : 'Samarqand markazi (Registon)'}</span>
                   </button>
@@ -1041,7 +1041,7 @@ export default function RoutePlannerView({
               <button
                 type="button"
                 onClick={handleSwap}
-                className="w-7 h-7 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300 shadow-xs flex items-center justify-center transition-all cursor-pointer"
+                className="w-7 h-7 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-[#1b815f] hover:border-emerald-300 shadow-xs flex items-center justify-center transition-all cursor-pointer"
                 title="A va B o'rnini almashtirish"
               >
                 <ArrowDownUp className="w-3.5 h-3.5" />
@@ -1149,7 +1149,7 @@ export default function RoutePlannerView({
                     onClick={() => setBufferRadius(r)}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                       bufferRadius === r
-                        ? 'bg-blue-600 text-white shadow-xs'
+                        ? 'bg-[#1b815f] text-white shadow-xs'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
@@ -1175,7 +1175,7 @@ export default function RoutePlannerView({
                   type="button"
                   onClick={() => handleCalculateRoute(startPoint, endPoint)}
                   disabled={calculating || !startPoint || !endPoint}
-                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-1.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs shadow-emerald-600/20 transition-all disabled:opacity-50 cursor-pointer"
                   title="Marshrutni hisoblash"
                 >
                   <RouteIcon className="w-3.5 h-3.5" />
@@ -1188,11 +1188,11 @@ export default function RoutePlannerView({
 
         {/* Route Stats Summary Banner with Real In-Car Navigation Button */}
         {routeResult && (
-          <div className="p-3 bg-blue-50/70 border-b border-blue-100 shrink-0 space-y-2.5">
+          <div className="p-3 bg-emerald-50/70 border-b border-emerald-100 shrink-0 space-y-2.5">
             {/* Active Route Persistent Indicator & Clear (X) Button */}
-            <div className="flex items-center justify-between pb-1.5 border-b border-blue-200/50">
-              <span className="text-[11px] font-bold text-blue-900 flex items-center gap-1.5">
-                <RouteIcon className="w-3.5 h-3.5 text-blue-600" />
+            <div className="flex items-center justify-between pb-1.5 border-b border-emerald-200/50">
+              <span className="text-[11px] font-bold text-emerald-950 flex items-center gap-1.5">
+                <RouteIcon className="w-3.5 h-3.5 text-[#1b815f]" />
                 <span>Faol yo&apos;nalish (Akkountda saqlangan)</span>
               </span>
               <button
@@ -1215,19 +1215,19 @@ export default function RoutePlannerView({
             )}
 
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-white p-2 rounded-xl border border-blue-100/80 shadow-2xs">
+              <div className="bg-white p-2 rounded-xl border border-emerald-100/80 shadow-2xs">
                 <p className="text-[10px] text-slate-400 font-semibold uppercase">Masofa</p>
-                <p className="text-xs font-black text-blue-700 mt-0.5">
+                <p className="text-xs font-black text-emerald-700 mt-0.5">
                   {formatDistance(routeResult.distanceMeters)}
                 </p>
               </div>
-              <div className="bg-white p-2 rounded-xl border border-blue-100/80 shadow-2xs">
+              <div className="bg-white p-2 rounded-xl border border-emerald-100/80 shadow-2xs">
                 <p className="text-[10px] text-slate-400 font-semibold uppercase">Vaqt</p>
-                <p className="text-xs font-black text-blue-700 mt-0.5">
+                <p className="text-xs font-black text-emerald-700 mt-0.5">
                   {formatDuration(routeResult.durationSeconds)}
                 </p>
               </div>
-              <div className="bg-white p-2 rounded-xl border border-blue-100/80 shadow-2xs">
+              <div className="bg-white p-2 rounded-xl border border-emerald-100/80 shadow-2xs">
                 <p className="text-[10px] text-slate-400 font-semibold uppercase">Yo'ldagi TJM</p>
                 <p className="text-xs font-black text-emerald-600 mt-0.5">
                   {matchedTJMs.length} ta
@@ -1290,10 +1290,10 @@ export default function RoutePlannerView({
                   <div
                     key={obj.source_id}
                     onClick={() => onSelectObject(String(obj.source_id))}
-                    className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-xs transition-all flex items-center justify-between gap-3 cursor-pointer"
+                    className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-emerald-300 hover:shadow-xs transition-all flex items-center justify-between gap-3 cursor-pointer"
                   >
                     {/* Number Badge: 1, 2, 3, 4, 5... */}
-                    <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
                       {index + 1}
                     </div>
 
@@ -1310,7 +1310,7 @@ export default function RoutePlannerView({
                         e.stopPropagation();
                         handleSetPointFromObject(obj, 'B');
                       }}
-                      className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl text-[10px] font-bold border border-blue-200 transition-colors shrink-0 cursor-pointer"
+                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-[#1b815f] text-emerald-700 hover:text-white rounded-xl text-[10px] font-bold border border-emerald-200 transition-colors shrink-0 cursor-pointer"
                       title="Borish manzili (B) qilib tanlash"
                     >
                       B qilib tanlash →
@@ -1334,7 +1334,7 @@ export default function RoutePlannerView({
                   type="checkbox"
                   checked={showAllMarkers}
                   onChange={(e) => setShowAllMarkers(e.target.checked)}
-                  className="rounded text-blue-600 focus:ring-blue-500"
+                  className="rounded text-[#1b815f] focus:ring-emerald-500"
                 />
                 <span>Boshqalarni ham ko'rsatish</span>
               </label>
@@ -1346,7 +1346,7 @@ export default function RoutePlannerView({
                 type="button"
                 onClick={() => setStopsDrawerFilter('all')}
                 className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                  stopsDrawerFilter === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  stopsDrawerFilter === 'all' ? 'bg-[#1b815f] text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                 }`}
               >
                 Barchasi ({matchedTJMs.length})
@@ -1411,14 +1411,14 @@ export default function RoutePlannerView({
                       }}
                       className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-50/80 border-blue-400 shadow-sm ring-2 ring-blue-500/10'
+                          ? 'bg-emerald-50/80 border-emerald-400 shadow-sm ring-2 ring-emerald-500/10'
                           : 'bg-white hover:bg-slate-50/90 border-slate-200'
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         {/* Order Number Badge */}
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs text-white shrink-0 shadow-2xs ${
-                          isVisited ? 'bg-emerald-600' : 'bg-blue-600'
+                          isVisited ? 'bg-emerald-600' : 'bg-[#1b815f]'
                         }`}>
                           #{orderNumber}
                         </div>
@@ -1439,7 +1439,7 @@ export default function RoutePlannerView({
 
                           {/* Distance Badges */}
                           <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px]">
-                            <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                            <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
                               Yo'l boshidan: {formatDistance(distAlongRouteMeters)}
                             </span>
                             <span className="text-slate-500">
@@ -1483,7 +1483,7 @@ export default function RoutePlannerView({
                                   e.stopPropagation();
                                   onSelectObject(String(obj.source_id));
                                 }}
-                                className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                className="p-1 rounded-lg text-slate-400 hover:text-[#1b815f] hover:bg-emerald-50 transition-colors cursor-pointer"
                                 title="Batafsil ma'lumot"
                               >
                                 <ChevronRight className="w-4 h-4" />
@@ -1510,7 +1510,7 @@ export default function RoutePlannerView({
               onClick={() => setShowSidebarInNav(!showSidebarInNav)}
               className="px-3.5 py-2 bg-slate-950/90 hover:bg-slate-900 text-white rounded-2xl text-xs font-bold shadow-xl flex items-center gap-2 backdrop-blur-md cursor-pointer border border-white/15 transition-all"
             >
-              <Layers className="w-4 h-4 text-blue-400" />
+              <Layers className="w-4 h-4 text-emerald-500" />
               <span>{showSidebarInNav ? "Xaritani to'liq yoyish" : `TJM Ro'yxati (${matchedTJMs.length})`}</span>
             </button>
           </div>
@@ -1571,7 +1571,7 @@ export default function RoutePlannerView({
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                  <span className="text-[11px] font-bold text-[#1b815f] bg-emerald-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
                     <span>Ochish</span>
                     <ChevronDown className="w-3.5 h-3.5" />
                   </span>
@@ -1581,7 +1581,7 @@ export default function RoutePlannerView({
               <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-xl rounded-2xl p-2.5 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
-                    <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                    <div className="w-6 h-6 rounded-lg bg-[#1b815f] text-white flex items-center justify-center shadow-xs">
                       <Navigation className="w-3.5 h-3.5" />
                     </div>
                     <span className="text-xs font-black text-slate-900 tracking-tight">Yo&apos;l-yo&apos;lakay</span>
@@ -1591,7 +1591,7 @@ export default function RoutePlannerView({
                     <button
                       type="button"
                       onClick={() => setShowAIRouteModal(true)}
-                      className="px-2 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs active:scale-95 cursor-pointer"
+                      className="px-2 py-1 bg-gradient-to-r from-[#1b815f] to-teal-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs active:scale-95 cursor-pointer"
                       title="AI Marshrut"
                     >
                       <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
@@ -1603,7 +1603,7 @@ export default function RoutePlannerView({
                       className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1 border border-slate-200 cursor-pointer"
                       title="Saqlanganlar"
                     >
-                      <Bookmark className="w-3 h-3 text-blue-600" />
+                      <Bookmark className="w-3 h-3 text-[#1b815f]" />
                       <span>Saqlanganlar</span>
                     </button>
                     <button
@@ -1684,7 +1684,7 @@ export default function RoutePlannerView({
                         <button
                           type="button"
                           onClick={handleUseRegiston}
-                          className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-blue-50 text-blue-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
+                          className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-emerald-50 text-emerald-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
                         >
                           <span>🏛️ {isUysot ? 'Toshkent markazi' : 'Samarqand markazi (Registon)'}</span>
                         </button>
@@ -1785,9 +1785,9 @@ export default function RoutePlannerView({
                   <button
                     type="button"
                     onClick={handleQuickNearestAIRoute}
-                    className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg shrink-0 flex items-center gap-1 border border-blue-200 active:scale-95 cursor-pointer"
+                    className="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg shrink-0 flex items-center gap-1 border border-emerald-200 active:scale-95 cursor-pointer"
                   >
-                    <Sparkles className="w-3 h-3 text-blue-600" />
+                    <Sparkles className="w-3 h-3 text-[#1b815f]" />
                     <span>⚡ AI Eng yaqin 5</span>
                   </button>
 
@@ -1798,7 +1798,7 @@ export default function RoutePlannerView({
                       type="button"
                       onClick={() => setBufferRadius(r)}
                       className={`px-1.5 py-0.5 rounded-md shrink-0 font-bold transition-all cursor-pointer ${
-                        bufferRadius === r ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                        bufferRadius === r ? 'bg-[#1b815f] text-white' : 'bg-slate-100 text-slate-600'
                       }`}
                     >
                       {r}m
@@ -1860,7 +1860,7 @@ export default function RoutePlannerView({
                       📏 {formatDistance(routeResult.distanceMeters)}
                     </span>
                     <span className="text-slate-500">•</span>
-                    <span className="text-blue-400 font-bold">
+                    <span className="text-emerald-500 font-bold">
                       ⏱️ {formatDuration(routeResult.durationSeconds)}
                     </span>
                     <span className="text-slate-500">•</span>
@@ -1920,7 +1920,7 @@ export default function RoutePlannerView({
 
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-7 h-7 rounded-xl bg-blue-600 text-white text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
+                          <span className="w-7 h-7 rounded-xl bg-[#1b815f] text-white text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
                             #{currentTJM.orderNumber}
                           </span>
                           <div 
@@ -1932,7 +1932,7 @@ export default function RoutePlannerView({
                             title="Batafsil ma'lumotni ochish"
                           >
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">
+                              <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">
                                 To&apos;xtash {mobileActiveStopIndex + 1}/{matchedTJMs.length}
                               </span>
                               <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
@@ -2079,7 +2079,7 @@ export default function RoutePlannerView({
                       triggerHaptic(25);
                       handleQuickNearestAIRoute();
                     }}
-                    className="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-bold rounded-lg shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer"
+                    className="px-2.5 py-1 bg-gradient-to-r from-[#1b815f] to-teal-700 text-white text-[10px] font-bold rounded-lg shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer"
                   >
                     <Sparkles className="w-3 h-3 text-amber-300" />
                     <span>AI 5 ta TJM</span>
@@ -2096,10 +2096,10 @@ export default function RoutePlannerView({
                         triggerHaptic(20);
                         handleSetDestinationFromNearest(item.object);
                       }}
-                      className="bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 p-2 rounded-2xl shrink-0 text-left min-w-[140px] max-w-[180px] space-y-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                      className="bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 p-2 rounded-2xl shrink-0 text-left min-w-[140px] max-w-[180px] space-y-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className="text-[9px] font-bold text-blue-600 bg-blue-100/70 px-1.5 py-0.2 rounded-md">
+                        <span className="text-[9px] font-bold text-[#1b815f] bg-emerald-100/70 px-1.5 py-0.2 rounded-md">
                           {formatDistance(item.dist)}
                         </span>
                         <span className="text-[9px] text-slate-400 truncate">
@@ -2154,7 +2154,7 @@ export default function RoutePlannerView({
                   type="button"
                   onClick={() => { triggerHaptic(15); setStopsDrawerFilter('all'); }}
                   className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                    stopsDrawerFilter === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
+                    stopsDrawerFilter === 'all' ? 'bg-[#1b815f] text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
                   }`}
                 >
                   Barchasi ({matchedTJMs.length})
@@ -2213,14 +2213,14 @@ export default function RoutePlannerView({
                         }}
                         className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                           isCurrent 
-                            ? 'bg-blue-50/90 border-blue-400 ring-2 ring-blue-500/20' 
+                            ? 'bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500/20' 
                             : 'bg-white border-slate-200 hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shrink-0 ${
-                              isCurrent ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+                              isCurrent ? 'bg-[#1b815f] text-white' : 'bg-slate-100 text-slate-700'
                             }`}>
                               #{tjm.orderNumber}
                             </span>
@@ -2343,7 +2343,7 @@ export default function RoutePlannerView({
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {loadingSavedRoutes ? (
                 <div className="py-16 text-center text-slate-400 space-y-2">
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" />
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#1b815f]" />
                   <p className="text-xs font-semibold">Google Sheets&apos;dan yuklanmoqda...</p>
                 </div>
               ) : savedRoutes.length === 0 ? (
@@ -2360,7 +2360,7 @@ export default function RoutePlannerView({
                   return (
                     <div
                       key={rt.id}
-                      className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-xs transition-all space-y-2.5"
+                      className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-emerald-300 hover:shadow-xs transition-all space-y-2.5"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1 min-w-0 flex-1">
@@ -2406,7 +2406,7 @@ export default function RoutePlannerView({
                         <button
                           type="button"
                           onClick={() => handleLoadSavedRoute(rt)}
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs shadow-blue-500/20 transition-all cursor-pointer"
+                          className="px-3 py-1.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs shadow-emerald-600/20 transition-all cursor-pointer"
                           title="Ushbu marshrutni xaritaga yuklash"
                         >
                           <RouteIcon className="w-3.5 h-3.5" />
@@ -2428,7 +2428,7 @@ export default function RoutePlannerView({
                           <button
                             type="button"
                             onClick={() => setExpandedRouteId(isExpanded ? null : rt.id)}
-                            className="ml-auto text-[10px] text-blue-600 hover:underline cursor-pointer"
+                            className="ml-auto text-[10px] text-[#1b815f] hover:underline cursor-pointer"
                           >
                             {isExpanded ? "TJM ro'yxatini yashirish" : "TJM ro'yxatini ko'rish"}
                           </button>

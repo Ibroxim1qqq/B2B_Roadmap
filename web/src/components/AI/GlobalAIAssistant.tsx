@@ -149,7 +149,7 @@ export default function GlobalAIAssistant({
       {/* Minimalist Clean Header */}
       <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-xs">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#1b815f] to-teal-700 flex items-center justify-center shadow-xs">
             <Sparkles className="w-4 h-4 text-amber-300" />
           </div>
           <div>
@@ -190,7 +190,7 @@ export default function GlobalAIAssistant({
               <div
                 className={`max-w-[90%] p-3.5 rounded-2xl text-xs leading-relaxed ${
                   isUser
-                    ? 'bg-blue-600 text-white rounded-br-xs shadow-xs'
+                    ? 'bg-[#1b815f] text-white rounded-br-xs shadow-xs'
                     : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-xs shadow-xs'
                 }`}
               >
@@ -218,7 +218,7 @@ export default function GlobalAIAssistant({
                         type="button"
                         disabled={loading}
                         onClick={() => handleSendMessage(p.text)}
-                        className="text-left p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200/80 hover:border-blue-200 text-xs font-medium text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs"
+                        className="text-left p-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-200 text-xs font-medium text-slate-700 hover:text-emerald-700 transition-all cursor-pointer shadow-2xs"
                       >
                         {p.label}
                       </button>
@@ -235,13 +235,13 @@ export default function GlobalAIAssistant({
                     {msg.suggested_objects.map((obj, i) => (
                       <div 
                         key={i}
-                        className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5 hover:border-blue-300 transition-colors"
+                        className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5 hover:border-emerald-300 transition-colors"
                       >
                         <div className="flex items-start justify-between gap-1.5">
                           <span className="font-bold text-slate-900 text-xs line-clamp-1">
                             {i + 1}. {obj.object_name}
                           </span>
-                          <span className="text-[10px] text-blue-600 font-semibold shrink-0 bg-blue-50 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] text-[#1b815f] font-semibold shrink-0 bg-emerald-50 px-1.5 py-0.5 rounded">
                             {obj.district_name}
                           </span>
                         </div>
@@ -288,9 +288,9 @@ export default function GlobalAIAssistant({
                               onClick={() => {
                                 onViewOnMap(obj.source_id);
                               }}
-                              className="flex-1 py-1 px-2 bg-white hover:bg-blue-50 text-blue-600 hover:text-blue-700 border border-slate-200 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
+                              className="flex-1 py-1 px-2 bg-white hover:bg-emerald-50 text-[#1b815f] hover:text-emerald-700 border border-slate-200 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
                             >
-                              <MapPin className="w-3 h-3 text-blue-500" />
+                              <MapPin className="w-3 h-3 text-emerald-600" />
                               <span>Xaritada ochish</span>
                             </button>
                           )}
@@ -308,7 +308,7 @@ export default function GlobalAIAssistant({
                                   longitude: obj.longitude
                                 }]);
                               }}
-                              className="flex-1 py-1 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
+                              className="flex-1 py-1 px-2 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
                             >
                               <Navigation className="w-3 h-3" />
                               <span>Marshrutga</span>
@@ -336,7 +336,7 @@ export default function GlobalAIAssistant({
                             onViewOnMap(act.source_id);
                           }
                         }}
-                        className="w-full py-2 px-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                        className="w-full py-2 px-3 bg-gradient-to-r from-[#1b815f] via-teal-600 to-purple-600 hover:from-[#15674c] hover:to-teal-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
                       >
                         <span>{act.label}</span>
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -356,7 +356,7 @@ export default function GlobalAIAssistant({
         {/* Loading Indicator */}
         {loading && (
           <div className="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-2xl rounded-bl-xs text-xs text-slate-500 shadow-xs max-w-[200px] animate-pulse">
-            <Bot className="w-4 h-4 text-blue-600 animate-spin" />
+            <Bot className="w-4 h-4 text-[#1b815f] animate-spin" />
             <span className="font-semibold">Baza tahlil qilinmoqda...</span>
           </div>
         )}
@@ -379,12 +379,12 @@ export default function GlobalAIAssistant({
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder="Savol yoki tuman nomini yozing..."
             disabled={loading}
-            className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all font-medium"
+            className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 transition-all font-medium"
           />
           <button
             type="submit"
             disabled={!inputMessage.trim() || loading}
-            className="w-10 h-10 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed shadow-xs shrink-0"
+            className="w-10 h-10 rounded-2xl bg-[#1b815f] hover:bg-[#15674c] disabled:bg-slate-200 text-white flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed shadow-xs shrink-0"
           >
             <Send className="w-4 h-4" />
           </button>

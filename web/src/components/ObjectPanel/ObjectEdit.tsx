@@ -125,7 +125,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
               placeholder="Masalan: Samarqand Residence"
               value={data.tjm_name || ''}
               onChange={(e) => handleChange('tjm_name', e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none"
             />
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
               placeholder="+998 90 123 45 67"
               value={data.phone || ''}
               onChange={(e) => handleChange('phone', e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none"
             />
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
               placeholder="Masalan: Registon ko'chasi 12-uy"
               value={data.sales_office || ''}
               onChange={(e) => handleChange('sales_office', e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none"
             />
           </div>
         </div>
@@ -168,7 +168,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
                 placeholder="Ism Familiya"
                 value={data.manager_name || ''}
                 onChange={(e) => handleChange('manager_name', e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
+                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none"
               />
             </div>
           </div>
@@ -182,7 +182,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
                 placeholder="+998 90 ..."
                 value={data.manager_phone || ''}
                 onChange={(e) => handleChange('manager_phone', e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
+                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none"
               />
             </div>
           </div>
@@ -197,7 +197,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
               placeholder="@username"
               value={data.telegram || ''}
               onChange={(e) => handleChange('telegram', e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none"
             />
           </div>
         </div>
@@ -211,7 +211,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
               placeholder="instagram.com/..."
               value={data.instagram || ''}
               onChange={(e) => handleChange('instagram', e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none"
             />
           </div>
         </div>
@@ -221,7 +221,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
           <select
             value={data.priority || ''}
             onChange={(e) => handleChange('priority', e.target.value)}
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none bg-white"
+            className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none bg-white"
           >
             <option value="">Tanlang...</option>
             <option value="Yuqori">Yuqori (5)</option>
@@ -238,7 +238,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
               value={data.notes || ''}
               onChange={(e) => handleChange('notes', e.target.value)}
               rows={3}
-              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none resize-none"
+              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none resize-none"
             />
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
         {additionalCustomFields.length > 0 && (
           <div className="pt-3 border-t border-slate-200 space-y-3">
             <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-blue-600" />
+              <Tag className="w-3.5 h-3.5 text-[#1b815f]" />
               <span>Qo'shimcha maxsus maydonlar</span>
             </h3>
 
@@ -262,7 +262,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
                     value={data[f.field_name] || ''}
                     onChange={(e) => handleChange(f.field_name, e.target.value)}
                     rows={2}
-                    className="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none resize-none"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none resize-none"
                   />
                 ) : f.field_type === 'number' ? (
                   <input
@@ -270,14 +270,14 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
                     placeholder={f.desc || `${f.label || f.field_name} kiriting...`}
                     value={data[f.field_name] || ''}
                     onChange={(e) => handleChange(f.field_name, e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none"
                   />
                 ) : f.field_type === 'date' ? (
                   <input
                     type="date"
                     value={data[f.field_name] || ''}
                     onChange={(e) => handleChange(f.field_name, e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none bg-white"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none bg-white"
                   />
                 ) : (
                   <input
@@ -285,7 +285,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
                     placeholder={f.desc || `${f.label || f.field_name} kiriting...`}
                     value={data[f.field_name] || ''}
                     onChange={(e) => handleChange(f.field_name, e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/10 focus:border-[#1b815f] outline-none"
                   />
                 )}
               </div>

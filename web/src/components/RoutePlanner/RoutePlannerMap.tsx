@@ -1097,11 +1097,11 @@ export default function RoutePlannerMap({
             /* Next Upcoming TJM Banner */
             <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-2xl shadow-xl border border-white/15 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-[#1b815f] text-white font-black text-xs flex items-center justify-center shrink-0">
                   #{nextUpcomingTJM.tjm.orderNumber}
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-blue-400 block uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-emerald-500 block uppercase tracking-wider">
                     Keyingi manzil ({formatDistance(nextUpcomingTJM.distanceMeters)}):
                   </span>
                   <p className="text-xs font-bold text-white truncate">
@@ -1169,7 +1169,7 @@ export default function RoutePlannerMap({
                 <div className="text-base font-black text-white truncate">
                   {formatDistance(remainingDistance || totalDistance)}
                 </div>
-                <p className="text-[10px] text-blue-400 font-semibold">
+                <p className="text-[10px] text-emerald-500 font-semibold">
                   Yo'lda: {matchedTJMs.length} ta TJM
                 </p>
               </div>
@@ -1209,7 +1209,7 @@ export default function RoutePlannerMap({
                   onClick={handleRecenter}
                   className={`p-1.5 rounded-xl border flex items-center gap-1 text-[11px] font-bold transition-colors cursor-pointer ${
                     autoFollow 
-                      ? 'bg-blue-600/30 border-blue-500 text-blue-400' 
+                      ? 'bg-[#1b815f]/30 border-[#1b815f] text-emerald-500' 
                       : 'bg-white/5 border-white/10 text-slate-400'
                   }`}
                   title="Mashinani markazlashtirish (Yaqinlashtirish)"
@@ -1284,8 +1284,8 @@ export default function RoutePlannerMap({
           )}
 
           {startPoint && endPoint && (
-            <div className="bg-white/95 backdrop-blur-md border border-blue-200 px-3.5 py-2 rounded-2xl shadow-lg flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2">
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+            <div className="bg-white/95 backdrop-blur-md border border-emerald-200 px-3.5 py-2 rounded-2xl shadow-lg flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2">
+              <div className="w-6 h-6 rounded-full bg-[#1b815f] text-white font-black text-xs flex items-center justify-center shrink-0">
                 ✓
               </div>
               <div className="min-w-0 flex-1">
@@ -1328,7 +1328,7 @@ export default function RoutePlannerMap({
         <button
           onClick={() => setMapType('map')}
           className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-            mapType === 'map' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            mapType === 'map' ? 'bg-[#1b815f] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           Xarita
@@ -1336,7 +1336,7 @@ export default function RoutePlannerMap({
         <button
           onClick={() => setMapType('satellite')}
           className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-            mapType === 'satellite' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            mapType === 'satellite' ? 'bg-[#1b815f] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           Yo'ldosh

@@ -41,7 +41,7 @@ const DynamicMap = dynamic(() => import('../components/Map/MapContainer'), {
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-2xl border border-slate-200">
       <div className="text-slate-500 font-semibold text-sm flex items-center gap-2">
-        <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+        <div className="w-4 h-4 rounded-full border-2 border-[#1b815f] border-t-transparent animate-spin"></div>
         <span>Xarita yuklanmoqda...</span>
       </div>
     </div>
@@ -53,7 +53,7 @@ const RoutePlannerView = dynamic(() => import('../components/RoutePlanner/RouteP
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-slate-100 p-8">
       <div className="flex flex-col items-center gap-2">
-        <div className="w-6 h-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+        <div className="w-6 h-6 rounded-full border-2 border-[#1b815f] border-t-transparent animate-spin" />
         <span className="text-xs font-semibold text-slate-500">Navigator yuklanmoqda...</span>
       </div>
     </div>
@@ -669,7 +669,7 @@ function HomeContent() {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-slate-900">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-3 border-[#1b815f] border-t-transparent animate-spin" />
           <p className="text-slate-400 text-sm font-medium">UYSOT B2B yuklanmoqda...</p>
         </div>
 
@@ -746,7 +746,7 @@ function HomeContent() {
             <div className="hidden lg:grid grid-cols-4 gap-3 px-5 pt-4 pb-2 shrink-0">
               {/* Card 1: Jami TJM-lar */}
               <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#1b815f] flex items-center justify-center shrink-0">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -800,7 +800,7 @@ function HomeContent() {
             {/* Mobile Compact Horizontal Stats Strip (Yandex Maps style) */}
             <div className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-slate-50 border-b border-slate-200/80 overflow-x-auto no-scrollbar shrink-0 text-[11px] font-semibold text-slate-600">
               <span className="flex items-center gap-1 bg-white border border-slate-200/90 px-2.5 py-1 rounded-xl shrink-0 text-slate-800 shadow-2xs font-bold">
-                🏢 Jami: <span className="text-blue-600 font-black">{stats.total}</span> ta
+                🏢 Jami: <span className="text-[#1b815f] font-black">{stats.total}</span> ta
               </span>
               <span className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl shrink-0 text-emerald-800 shadow-2xs">
                 ✅ Borilgan: {stats.visited}
@@ -832,62 +832,62 @@ function HomeContent() {
 
             {/* Active Filters Pill Bar */}
             {countActiveFilters(advancedFilters) > 0 && (
-              <div className="bg-blue-50/90 border-b border-blue-200/60 px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto text-xs shrink-0 select-none">
+              <div className="bg-emerald-50/90 border-b border-emerald-200/60 px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto text-xs shrink-0 select-none">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-bold text-blue-900 flex items-center gap-1 text-[11px] uppercase tracking-wider">
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="font-bold text-emerald-950 flex items-center gap-1 text-[11px] uppercase tracking-wider">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#1b815f]" />
                     <span>Filtrlar:</span>
                   </span>
                   {selectedDistrict && selectedDistrict !== 'Barcha tumanlar' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>Tuman: {selectedDistrict}</span>
                       <button onClick={() => setSelectedDistrict('')} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                   {selectedStatus && selectedStatus !== 'Barcha statuslar' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>Status: {selectedStatus}</span>
                       <button onClick={() => setSelectedStatus('')} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                   {advancedFilters.roomCount && advancedFilters.roomCount.trim() !== '' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>Xona: {advancedFilters.roomCount}</span>
                       <button onClick={() => setAdvancedFilters(prev => ({ ...prev, roomCount: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                   {(advancedFilters.minApartments || advancedFilters.maxApartments) && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>Xonadon: {advancedFilters.minApartments || '0'} - {advancedFilters.maxApartments || '∞'}</span>
                       <button onClick={() => setAdvancedFilters(prev => ({ ...prev, minApartments: '', maxApartments: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                   {(advancedFilters.minFloors || advancedFilters.maxFloors) && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>Qavat: {advancedFilters.minFloors || '0'} - {advancedFilters.maxFloors || '∞'}</span>
                       <button onClick={() => setAdvancedFilters(prev => ({ ...prev, minFloors: '', maxFloors: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                   {advancedFilters.visitStatus !== 'all' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>{advancedFilters.visitStatus === 'visited' ? 'Borilgan' : 'Borilmagan'}</span>
                       <button onClick={() => setAdvancedFilters(prev => ({ ...prev, visitStatus: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                   {advancedFilters.crmStatus !== 'all' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>{advancedFilters.crmStatus === 'filled' ? 'B2B to\'ldirilgan' : 'B2B kiritilmagan'}</span>
                       <button onClick={() => setAdvancedFilters(prev => ({ ...prev, crmStatus: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                   {advancedFilters.difficulty !== 'all' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>Toifa: {advancedFilters.difficulty}</span>
                       <button onClick={() => setAdvancedFilters(prev => ({ ...prev, difficulty: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
                   )}
                   {advancedFilters.deadlineYear && advancedFilters.deadlineYear.trim() !== '' && advancedFilters.deadlineYear !== 'all' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>Muddati: {advancedFilters.deadlineYear}</span>
                       <button onClick={() => setAdvancedFilters(prev => ({ ...prev, deadlineYear: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
                     </span>
@@ -928,7 +928,7 @@ function HomeContent() {
                 <button
                   type="button"
                   onClick={() => handleTabChange('route')}
-                  className="lg:hidden absolute bottom-4 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 px-4 py-2.5 bg-blue-600 active:bg-blue-700 text-white rounded-full shadow-lg shadow-blue-500/30 text-xs font-bold tracking-wide active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
+                  className="lg:hidden absolute bottom-4 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 px-4 py-2.5 bg-[#1b815f] active:bg-[#15674c] text-white rounded-full shadow-lg shadow-emerald-600/30 text-xs font-bold tracking-wide active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
                 >
                   <Navigation className="w-4 h-4 text-white fill-white/20 animate-pulse" />
                   <span>Yo&apos;l-yo&apos;lakay reja</span>
@@ -995,7 +995,7 @@ function HomeContent() {
             {detailLoading && !objectDetail ? (
               <div className="w-full h-full flex items-center justify-center bg-white border-l border-slate-200">
                 <div className="text-xs font-semibold text-slate-400 flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+                  <div className="w-4 h-4 rounded-full border-2 border-[#1b815f] border-t-transparent animate-spin"></div>
                   <span>Yuklanmoqda...</span>
                 </div>
               </div>
@@ -1075,7 +1075,7 @@ function HomeContent() {
           <div className="bg-white w-full max-w-xl h-[85vh] rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col animate-in zoom-in-95 duration-150">
             {detailLoading && !objectDetail ? (
               <div className="p-12 flex flex-col items-center justify-center gap-3 h-full">
-                <div className="w-6 h-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+                <div className="w-6 h-6 rounded-full border-2 border-[#1b815f] border-t-transparent animate-spin"></div>
                 <p className="text-xs text-slate-400 font-semibold">Yuklanmoqda...</p>
               </div>
             ) : objectDetail ? (
@@ -1105,7 +1105,7 @@ function HomeContent() {
                 <button
                   type="button"
                   onClick={() => { setSelectedId(null); setIsEditing(false); }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Yopish
                 </button>
@@ -1200,7 +1200,7 @@ export default function Home() {
       fallback={
         <div className="h-screen w-screen flex items-center justify-center bg-slate-900">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
+            <div className="w-8 h-8 rounded-full border-3 border-[#1b815f] border-t-transparent animate-spin" />
             <p className="text-slate-400 text-sm font-medium">UYSOT B2B yuklanmoqda...</p>
           </div>
 

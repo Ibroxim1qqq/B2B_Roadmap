@@ -27,14 +27,14 @@ export default function MobileBottomNav({ activeTab, onTabChange }: MobileBottom
               onClick={() => onTabChange(item.id)}
               className={`flex flex-col items-center justify-center py-1 px-1 min-w-0 flex-1 transition-all rounded-2xl active:scale-90 cursor-pointer ${
                 isActive
-                  ? 'text-blue-600'
+                  ? 'text-[#1b815f]'
                   : 'text-slate-400 hover:text-slate-600 active:text-slate-700'
               }`}
             >
-              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-blue-100/70 text-blue-600' : ''}`}>
-                <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600 stroke-[2.5]' : 'text-slate-400'}`} />
+              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-emerald-100/70 text-[#1b815f]' : ''}`}>
+                <Icon className={`w-5 h-5 ${isActive ? 'text-[#1b815f] stroke-[2.5]' : 'text-slate-400'}`} />
               </div>
-              <span className={`text-[10px] mt-0.5 truncate leading-tight ${isActive ? 'font-black text-blue-600' : 'font-semibold text-slate-400'}`}>
+              <span className={`text-[10px] mt-0.5 truncate leading-tight ${isActive ? 'font-black text-[#1b815f]' : 'font-semibold text-slate-400'}`}>
                 {item.label}
               </span>
             </button>

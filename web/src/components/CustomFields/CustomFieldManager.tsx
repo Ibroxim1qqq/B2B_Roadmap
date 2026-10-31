@@ -142,7 +142,7 @@ export default function CustomFieldManager() {
       <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-slate-900 flex items-center gap-2.5">
-            <SlidersHorizontal className="w-6 h-6 text-blue-600" />
+            <SlidersHorizontal className="w-6 h-6 text-[#1b815f]" />
             <span>Qo'shimcha B2B Maydonlar Sozlamasi</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
@@ -152,7 +152,7 @@ export default function CustomFieldManager() {
 
         <button
           onClick={() => setIsAddOpen(true)}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs shadow-blue-500/20 transition-all cursor-pointer"
+          className="px-4 py-2.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs shadow-emerald-600/20 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Yangi maydon qo'shish</span>
@@ -221,7 +221,7 @@ export default function CustomFieldManager() {
                           onClick={() => toggleVisibility(i)}
                           className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                             field.visible
-                              ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
+                              ? 'bg-emerald-50 border-emerald-200 text-[#1b815f] hover:bg-emerald-100'
                               : 'bg-slate-100 border-slate-200 text-slate-400 hover:bg-slate-200'
                           }`}
                           title={field.visible ? "Yashirish" : "Ko'rsatish"}
@@ -259,7 +259,7 @@ export default function CustomFieldManager() {
           <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-200 p-6 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-600" />
+                <Plus className="w-5 h-5 text-[#1b815f]" />
                 <span>Yangi maydon qo'shish</span>
               </h3>
               <button
@@ -279,7 +279,7 @@ export default function CustomFieldManager() {
                   placeholder="Masalan: Qurilish litsenziyasi, Bosh muhandis..."
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl outline-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl outline-none"
                 />
               </div>
 
@@ -288,7 +288,7 @@ export default function CustomFieldManager() {
                 <select
                   value={newType}
                   onChange={(e) => setNewType(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl outline-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl outline-none"
                 >
                   <option value="text">Matn (Oddiy qisqa matn)</option>
                   <option value="phone">Telefon raqam</option>
@@ -306,7 +306,7 @@ export default function CustomFieldManager() {
                   placeholder="Maydon nima haqidaligi haqida qisqa izoh..."
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl outline-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl outline-none"
                 />
               </div>
 
@@ -320,7 +320,7 @@ export default function CustomFieldManager() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
+                  className="px-5 py-2.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
                 >
                   Saqlash
                 </button>

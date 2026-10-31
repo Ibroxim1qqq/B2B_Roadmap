@@ -131,11 +131,11 @@ export default function MapContainer({
         </svg>
       `;
     } else if (hasInternal) {
-      // 2. Ma'lumot to'ldirilgan bo'lsa: Ko'k (Blue)
-      bg = 'bg-blue-600';
-      ringColor = 'ring-blue-500/40';
+      // 2. Ma'lumot to'ldirilgan bo'lsa: Teal / Zumrad
+      bg = 'bg-teal-600';
+      ringColor = 'ring-teal-500/40';
       badgeHtml = `
-        <div class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-400 border border-white rounded-full shadow-xs"></div>
+        <div class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-teal-400 border border-white rounded-full shadow-xs"></div>
       `;
     } else if (isPaused) {
       // 3. To'xtatilgan / Muzlatilgan: Kulrang (Slate)
@@ -172,8 +172,8 @@ export default function MapContainer({
     return L.divIcon({
       html: `
         <div class="relative flex items-center justify-center cursor-pointer">
-          <div class="absolute w-12 h-12 rounded-full bg-blue-500/20 animate-pulse"></div>
-          <div class="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center border-2 border-white shadow-md">
+          <div class="absolute w-12 h-12 rounded-full bg-emerald-500/20 animate-pulse"></div>
+          <div class="w-10 h-10 rounded-full bg-[#1b815f] text-white font-bold text-xs flex items-center justify-center border-2 border-white shadow-md">
             <span>${count}</span>
           </div>
         </div>
@@ -188,8 +188,8 @@ export default function MapContainer({
     className: 'user-location-icon',
     html: `
       <div class="relative flex items-center justify-center">
-        <div class="w-8 h-8 rounded-full bg-blue-500/30 animate-ping absolute"></div>
-        <div class="w-5 h-5 bg-blue-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
+        <div class="w-8 h-8 rounded-full bg-emerald-500/30 animate-ping absolute"></div>
+        <div class="w-5 h-5 bg-[#1b815f] rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
           <div class="w-2 h-2 bg-white rounded-full"></div>
         </div>
       </div>
@@ -302,7 +302,7 @@ export default function MapContainer({
 
       // 1. Status text & badge class (Upper part of form between borders)
       let statusText = marker.status || "Qurilish jarayonida";
-      let statusBadgeClass = "bg-blue-50 text-blue-700 border border-blue-200";
+      let statusBadgeClass = "bg-emerald-50 text-emerald-700 border border-emerald-200";
 
       if (marker.is_visited || marker.last_visit) {
         statusText = "✓ Borilgan";

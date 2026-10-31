@@ -121,7 +121,7 @@ export default function LoginModal({ onLogin, onClose }: LoginModalProps) {
                 value={login}
                 onChange={(e) => { setLogin(e.target.value); setError(null); }}
                 autoFocus
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-sm outline-none transition-all"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-sm outline-none transition-all"
               />
             </div>
           </div>
@@ -138,7 +138,7 @@ export default function LoginModal({ onLogin, onClose }: LoginModalProps) {
                 placeholder="Parol kiriting"
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(null); }}
-                className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-sm outline-none transition-all"
+                className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-sm outline-none transition-all"
               />
               <button
                 type="button"

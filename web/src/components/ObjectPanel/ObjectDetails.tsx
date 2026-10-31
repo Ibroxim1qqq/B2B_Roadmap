@@ -120,7 +120,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
         </button>
 
         <div className="flex items-start gap-3.5 pr-8">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0 shadow-2xs">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#1b815f] shrink-0 shadow-2xs">
             <Building className="w-7 h-7" />
           </div>
           <div className="min-w-0 flex-1">
@@ -136,8 +136,8 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
                 {source.district_name || 'Samarqand'}
               </span>
               {distText !== '—' && (
-                <span className="flex items-center gap-1 font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-[10px]">
-                  <MapPin className="w-3 h-3 text-blue-500" />
+                <span className="flex items-center gap-1 font-semibold text-[#1b815f] bg-emerald-50 px-2 py-0.5 rounded-md text-[10px]">
+                  <MapPin className="w-3 h-3 text-emerald-600" />
                   {distText}
                 </span>
               )}
@@ -173,10 +173,10 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
             <button
               type="button"
               onClick={onPlanRoute}
-              className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="flex-1 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
               title="Yo'l-yo'lakay marshrutga qo'shish"
             >
-              <RouteIcon className="w-3.5 h-3.5 text-blue-600" />
+              <RouteIcon className="w-3.5 h-3.5 text-[#1b815f]" />
               <span>Marshrut</span>
             </button>
           )}
@@ -332,7 +332,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
                   href={getTelegramUrl(internal.telegram)} 
                   target="_blank" 
                   rel="noreferrer"
-                  className="font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                  className="font-semibold text-[#1b815f] hover:underline flex items-center gap-1"
                 >
                   <Send className="w-3 h-3" />
                   <span>{internal.telegram}</span>
@@ -398,7 +398,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
               Manba ma'lumotlari
             </h3>
-            <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
+            <span className="bg-emerald-50 text-[#1b815f] text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-100">
               {isDomtut ? 'Domtut.uz' : 'Shaffof Qurilish'}
             </span>
           </div>
@@ -469,7 +469,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
                   href={String(source.passport_url)}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                  className="font-semibold text-[#1b815f] hover:underline flex items-center gap-1"
                 >
                   <span>Xulosa PDF</span>
                   <ExternalLink className="w-3 h-3" />
@@ -487,7 +487,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
                 href={source.source_url || (isDomtut ? 'https://domtut.uz' : `https://dshk.shaffofqurilish.uz/object/${source.source_id}`)}
                 target="_blank"
                 rel="noreferrer"
-                className="font-semibold text-blue-600 hover:underline truncate max-w-[180px]"
+                className="font-semibold text-[#1b815f] hover:underline truncate max-w-[180px]"
               >
                 {isDomtut ? `Domtut.uz #${source.source_id}` : `Shaffof Qurilish #${source.source_id}`}
               </a>
@@ -501,7 +501,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
       <div className="p-4 border-t border-slate-200 bg-white space-y-2.5 shrink-0">
         {/* AI Briefing Card */}
         {aiBriefing && (
-          <div className="p-3.5 bg-gradient-to-br from-indigo-50/90 to-blue-50/90 border border-indigo-200/90 rounded-2xl space-y-2 text-xs shadow-xs animate-in fade-in duration-150">
+          <div className="p-3.5 bg-gradient-to-br from-emerald-50/90 to-teal-50/90 border border-emerald-200/90 rounded-2xl space-y-2 text-xs shadow-xs animate-in fade-in duration-150">
             <div className="flex items-center justify-between">
               <span className="font-bold text-indigo-950 flex items-center gap-1.5 text-[11px]">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
@@ -547,7 +547,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
           type="button"
           onClick={handleToggleAIBriefing}
           disabled={loadingBriefing}
-          className="w-full py-2 px-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+          className="w-full py-2 px-3 bg-gradient-to-r from-[#1b815f] via-teal-600 to-purple-600 hover:from-[#15674c] hover:to-teal-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
         >
           {loadingBriefing ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -563,7 +563,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
             href={getNavigationUrl(source.latitude, source.longitude)}
             target="_blank"
             rel="noreferrer"
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 px-1.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold shadow-xs transition-colors"
+            className="bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl py-2 px-1.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold shadow-xs transition-colors"
           >
             <Navigation className="w-4 h-4" />
             <span>Xarita</span>

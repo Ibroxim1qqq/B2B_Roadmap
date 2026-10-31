@@ -186,12 +186,12 @@ export default function VisitsView({
           onClick={() => handleCardFilterClick('all')}
           className={`rounded-2xl border p-4 shadow-2xs cursor-pointer transition-all flex items-center gap-3.5 ${
             filterType === 'all'
-              ? 'bg-blue-50/90 border-blue-500 ring-2 ring-blue-500/20 shadow-sm'
-              : 'bg-white border-slate-200/90 hover:border-blue-300 hover:bg-blue-50/30'
+              ? 'bg-emerald-50/90 border-[#1b815f] ring-2 ring-emerald-500/20 shadow-sm'
+              : 'bg-white border-slate-200/90 hover:border-emerald-300 hover:bg-emerald-50/30'
           }`}
         >
           <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-            filterType === 'all' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+            filterType === 'all' ? 'bg-[#1b815f] text-white' : 'bg-emerald-100 text-emerald-700'
           }`}>
             <Building2 className="w-6 h-6" />
           </div>
@@ -200,7 +200,7 @@ export default function VisitsView({
             <div className="text-xl font-black text-slate-900 leading-tight mt-0.5">
               {totalObjectsCount} <span className="text-xs font-normal text-slate-400">ta</span>
             </div>
-            <div className="text-[10px] text-blue-600 font-semibold mt-0.5">
+            <div className="text-[10px] text-[#1b815f] font-semibold mt-0.5">
               {filterType === 'all' ? '● Tanlangan' : 'Filtrlash uchun bosing'}
             </div>
           </div>
@@ -217,7 +217,7 @@ export default function VisitsView({
               placeholder="TJM nomi, manzil, telefon, mas'ul xodim..."
               value={query}
               onChange={(e) => { setQuery(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs outline-none transition-all"
+              className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs outline-none transition-all"
             />
             {query && (
               <button
@@ -236,7 +236,7 @@ export default function VisitsView({
               onClick={() => setDistrictOpen(!districtOpen)}
               className="px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-2 transition-all cursor-pointer"
             >
-              <MapPin className="w-3.5 h-3.5 text-blue-600" />
+              <MapPin className="w-3.5 h-3.5 text-[#1b815f]" />
               <span>{selectedDistrict}</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
@@ -248,11 +248,11 @@ export default function VisitsView({
                     key={d}
                     onClick={() => { setSelectedDistrict(d); setDistrictOpen(false); setCurrentPage(1); }}
                     className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
-                      selectedDistrict === d ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                      selectedDistrict === d ? 'bg-emerald-50 text-emerald-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
                     }`}
                   >
                     <span>{d}</span>
-                    {selectedDistrict === d && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                    {selectedDistrict === d && <Check className="w-3.5 h-3.5 text-[#1b815f]" />}
                   </button>
                 ))}
               </div>
@@ -296,7 +296,7 @@ export default function VisitsView({
                   return (
                     <tr
                       key={obj.source_id}
-                      className="hover:bg-blue-50/40 transition-colors group cursor-pointer"
+                      className="hover:bg-emerald-50/40 transition-colors group cursor-pointer"
                       onClick={() => onSelect(obj.source_id)}
                     >
                       {/* 1. ID */}
@@ -306,7 +306,7 @@ export default function VisitsView({
 
                       {/* 2. Title & Status */}
                       <td className="py-3 px-4 min-w-[220px] max-w-[320px]">
-                        <div className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1" title={obj.tjm_name || obj.object_name}>
+                        <div className="font-bold text-slate-900 group-hover:text-[#1b815f] transition-colors line-clamp-1" title={obj.tjm_name || obj.object_name}>
                           {obj.tjm_name || obj.object_name}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
@@ -325,7 +325,7 @@ export default function VisitsView({
                       {/* 3. District & Address */}
                       <td className="py-3 px-4 text-slate-600 min-w-[180px] max-w-[240px]">
                         <div className="font-semibold text-slate-800 flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                           <span className="truncate">{obj.district_name || 'Samarqand'}</span>
                         </div>
                         <div className="text-[11px] text-slate-400 truncate mt-0.5">
@@ -397,7 +397,7 @@ export default function VisitsView({
                                 e.stopPropagation();
                                 onRecordVisit(obj.source_id);
                               }}
-                              className="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                              className="text-[11px] font-bold text-[#1b815f] hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
                             >
                               + Tashrif
                             </button>
@@ -411,7 +411,7 @@ export default function VisitsView({
                           <button
                             type="button"
                             onClick={() => onSelect(obj.source_id)}
-                            className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                             title="Tafsilot"
                           >
                             <Eye className="w-3.5 h-3.5" />

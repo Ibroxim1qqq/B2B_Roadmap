@@ -267,7 +267,7 @@ export default function AdminPage() {
           {/* Link to Map */}
           <Link
             href="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1b815f] hover:bg-[#1b815f] text-white rounded-xl text-xs font-bold transition-all shadow-xs"
           >
             <Building2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Xaritaga o'tish</span>
@@ -335,7 +335,7 @@ export default function AdminPage() {
         {/* 1. Stat Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#1b815f] flex items-center justify-center shrink-0">
               <Building2 className="w-6 h-6" />
             </div>
             <div>
@@ -383,7 +383,7 @@ export default function AdminPage() {
             onClick={() => setActiveTab('companies')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'companies'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#1b815f] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-200/70'
             }`}
           >
@@ -395,7 +395,7 @@ export default function AdminPage() {
             onClick={() => setActiveTab('users')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'users'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#1b815f] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-200/70'
             }`}
           >
@@ -407,7 +407,7 @@ export default function AdminPage() {
             onClick={() => setActiveTab('sessions')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'sessions'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#1b815f] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-200/70'
             }`}
           >
@@ -419,7 +419,7 @@ export default function AdminPage() {
             onClick={() => setActiveTab('view_as')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'view_as'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#1b815f] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-200/70'
             }`}
           >
@@ -442,7 +442,7 @@ export default function AdminPage() {
                   placeholder="Kompaniya nomi yoki ID bo'yicha qidiruv..."
                   value={companySearch}
                   onChange={(e) => setCompanySearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 shadow-2xs"
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 shadow-2xs"
                 />
               </div>
 
@@ -451,7 +451,7 @@ export default function AdminPage() {
                   setFormError(null);
                   setIsCompanyModalOpen(true);
                 }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1b815f] hover:bg-[#15674c] text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Yangi Kompaniya Qo'shish</span>
@@ -483,7 +483,7 @@ export default function AdminPage() {
                       filteredCompanies.map((c) => (
                         <tr key={c.company_id} className="hover:bg-slate-50/80 transition-colors">
                           <td className="py-3.5 px-4 sm:px-6 font-bold text-slate-900 flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#1b815f] flex items-center justify-center shrink-0">
                               <Building2 className="w-4 h-4" />
                             </div>
                             <div>
@@ -501,7 +501,7 @@ export default function AdminPage() {
                             {c.company_id}
                           </td>
                           <td className="py-3.5 px-4 text-center">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
                               {c.user_count || 0} ta
                             </span>
                           </td>
@@ -520,7 +520,7 @@ export default function AdminPage() {
                           <td className="py-3.5 px-4 text-right">
                             <Link
                               href={`/?company_id=${encodeURIComponent(c.company_id)}`}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 font-semibold rounded-lg text-xs transition-colors"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 font-semibold rounded-lg text-xs transition-colors"
                               title="Ushbu kompaniya xaritasiga o'tish"
                             >
                               <span>Xaritada ochish</span>
@@ -549,7 +549,7 @@ export default function AdminPage() {
                   placeholder="Ism, login yoki kompaniya bo'yicha qidiruv..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 shadow-2xs"
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 shadow-2xs"
                 />
               </div>
 
@@ -558,7 +558,7 @@ export default function AdminPage() {
                   setFormError(null);
                   setIsUserModalOpen(true);
                 }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1b815f] hover:bg-[#15674c] text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Yangi Foydalanuvchi Yaratish</span>
@@ -597,7 +597,7 @@ export default function AdminPage() {
                               <div className="text-[10px] text-slate-400 font-normal">{u.user_id}</div>
                             </div>
                           </td>
-                          <td className="py-3.5 px-4 font-mono text-xs font-bold text-blue-600">
+                          <td className="py-3.5 px-4 font-mono text-xs font-bold text-[#1b815f]">
                             @{u.login}
                           </td>
                           <td className="py-3.5 px-4 text-slate-700">
@@ -642,7 +642,7 @@ export default function AdminPage() {
                   placeholder="Foydalanuvchi, login, kompaniya yoki IP bo'yicha qidiruv..."
                   value={sessionSearch}
                   onChange={(e) => setSessionSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 shadow-2xs"
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 shadow-2xs"
                 />
               </div>
 
@@ -685,7 +685,7 @@ export default function AdminPage() {
             </div>
 
             {/* Google Sheets Live Sync Notice */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600 bg-blue-50/70 border border-blue-100 rounded-xl px-4 py-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600 bg-emerald-50/70 border border-emerald-100 rounded-xl px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 <span className="font-semibold text-slate-800">Google Sheets «Sessions» varag'iga real vaqtda yozib borilmoqda</span>
@@ -726,7 +726,7 @@ export default function AdminPage() {
                             </div>
                             <div>
                               <span>{s.user_name || 'Noma\'lum'}</span>
-                              <div className="text-[10px] text-blue-600 font-mono font-normal">@{s.login || '—'}</div>
+                              <div className="text-[10px] text-[#1b815f] font-mono font-normal">@{s.login || '—'}</div>
                             </div>
                           </td>
                           <td className="py-3.5 px-4 text-slate-700">
@@ -812,7 +812,7 @@ export default function AdminPage() {
               {companies.map((c) => (
                 <div
                   key={c.company_id}
-                  className="p-5 bg-slate-50 border border-slate-200 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between"
+                  className="p-5 bg-slate-50 border border-slate-200 rounded-2xl hover:border-emerald-400 hover:shadow-md transition-all flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -834,7 +834,7 @@ export default function AdminPage() {
                   <div className="pt-4 mt-4 border-t border-slate-200/80">
                     <Link
                       href={`/?company_id=${encodeURIComponent(c.company_id)}`}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Xaritani shu kompaniya sifatida ko'rish</span>
@@ -853,7 +853,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#1b815f] flex items-center justify-center">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-black text-slate-900">Yangi Kompaniya Qo'shish</h3>
@@ -882,7 +882,7 @@ export default function AdminPage() {
                   placeholder="Masalan: Samarqand Modern Stroy MCHJ"
                   value={newCompanyName}
                   onChange={(e) => setNewCompanyName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10"
                   autoFocus
                   required
                 />
@@ -895,7 +895,7 @@ export default function AdminPage() {
                 <select
                   value={newCompanyStatus}
                   onChange={(e: any) => setNewCompanyStatus(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10"
                 >
                   <option value="active">Faol (Active)</option>
                   <option value="inactive">Faol emas (Inactive)</option>
@@ -913,7 +913,7 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={formSubmitting}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex-1 py-2.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {formSubmitting ? 'Saqlanmoqda...' : 'Kompaniya Yaratish'}
                 </button>
@@ -957,7 +957,7 @@ export default function AdminPage() {
                 <select
                   value={newUserCompanyId}
                   onChange={(e) => setNewUserCompanyId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10"
                   required
                 >
                   {companies.map((c) => (
@@ -978,7 +978,7 @@ export default function AdminPage() {
                   placeholder="Masalan: Rustam Rahimov"
                   value={newUserName}
                   onChange={(e) => setNewUserName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10"
                   required
                 />
               </div>
@@ -993,7 +993,7 @@ export default function AdminPage() {
                   placeholder="Masalan: rustam_mgr"
                   value={newUserLogin}
                   onChange={(e) => setNewUserLogin(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10"
                   required
                 />
               </div>
@@ -1008,7 +1008,7 @@ export default function AdminPage() {
                   placeholder="Kamida 6 ta belgi"
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10"
                   required
                 />
               </div>
@@ -1021,7 +1021,7 @@ export default function AdminPage() {
                 <select
                   value={newUserRole}
                   onChange={(e: any) => setNewUserRole(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10"
                 >
                   <option value="manager">👤 Menejer (Field Sales / CRM)</option>
                   <option value="company_admin">🏢 Kompaniya Admini</option>
@@ -1040,7 +1040,7 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={formSubmitting}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex-1 py-2.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {formSubmitting ? 'Yaratilmoqda...' : 'Foydalanuvchi Yaratish'}
                 </button>

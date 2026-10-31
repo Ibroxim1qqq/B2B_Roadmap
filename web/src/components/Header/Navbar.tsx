@@ -72,7 +72,7 @@ export default function Navbar({
 
 
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-blue-600 shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 shrink-0">
             <CurrentIcon className="w-4 h-4" />
           </div>
           <div className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export default function Navbar({
         {/* Company Badge */}
         {currentUser?.company_name && (
           <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700">
-            <Building2 className="w-3.5 h-3.5 text-blue-600" />
+            <Building2 className="w-3.5 h-3.5 text-emerald-600" />
             <span className="truncate max-w-[160px]">{displayCompany}</span>
           </div>
         )}
@@ -110,7 +110,7 @@ export default function Navbar({
           <button
             type="button"
             onClick={onOpenAI}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs shadow-indigo-500/20 transition-all cursor-pointer active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-semibold shadow-xs shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
             title="AI Yordamchi (Sun'iy Intellekt)"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
@@ -122,7 +122,7 @@ export default function Navbar({
         {onOpenCreate && (
           <button
             onClick={onOpenCreate}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs shadow-blue-500/20 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-semibold shadow-xs shadow-emerald-600/20 transition-all cursor-pointer"
             title="Yangi obyekt qo'shish"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -134,7 +134,7 @@ export default function Navbar({
         {onOpenNotifications && (
           <button
             onClick={onOpenNotifications}
-            className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border border-slate-200 hover:border-blue-200 transition-all cursor-pointer"
+            className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200 hover:border-emerald-200 transition-all cursor-pointer"
             title="Bildirishnomalar va yangi TJM-lar"
           >
             <Bell className="w-4 h-4" />
@@ -144,55 +144,14 @@ export default function Navbar({
           </button>
         )}
 
-        {/* Person Icon & Profile / Logout Menu */}
+        {/* Person Icon in top right per user request: "ong taraf yuqorida faqat inson iconi tursin icon rasm emas ustiga bossa hechnima chiqmaydi hozircha" */}
         <div ref={dropdownRef} className="relative pl-1 sm:pl-2 border-l border-slate-200">
-          <button 
-            type="button"
-            onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-            className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200/80 flex items-center justify-center text-slate-600 border border-slate-200 shadow-2xs select-none cursor-pointer transition-colors"
-            title={`${displayName} - Profil va Chiqish`}
+          <div 
+            className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 select-none cursor-default"
+            title={displayName}
           >
             <User className="w-4 h-4 text-slate-600" />
-          </button>
-
-          {userDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
-              <div className="px-3.5 py-2 border-b border-slate-100">
-                <div className="text-xs font-bold text-slate-900 truncate">{displayName}</div>
-                <div className="text-[10px] text-slate-500 capitalize">{displayRole}</div>
-              </div>
-
-              {onOpenProfile && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserDropdownOpen(false);
-                    onOpenProfile();
-                  }}
-                  className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer transition-colors"
-                >
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Profil sozlamalari</span>
-                </button>
-              )}
-
-              {onLogout && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserDropdownOpen(false);
-                    if (confirm("Haqiqatan ham tizimdan chiqmoqchimisiz?")) {
-                      onLogout();
-                    }
-                  }}
-                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer transition-colors border-t border-slate-50"
-                >
-                  <LogOut className="w-3.5 h-3.5 text-rose-500" />
-                  <span>Chiqish</span>
-                </button>
-              )}
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </header>

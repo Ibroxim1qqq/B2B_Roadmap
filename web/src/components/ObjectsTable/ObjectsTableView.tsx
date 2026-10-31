@@ -156,12 +156,12 @@ export default function ObjectsTableView({
           onClick={() => handleCardFilterClick('all')}
           className={`rounded-2xl border p-4 shadow-2xs cursor-pointer transition-all flex items-center gap-3.5 ${
             dataFilter === 'all'
-              ? 'bg-blue-50/90 border-blue-500 ring-2 ring-blue-500/20 shadow-sm'
-              : 'bg-white border-slate-200/90 hover:border-blue-300 hover:bg-blue-50/30'
+              ? 'bg-emerald-50/90 border-[#1b815f] ring-2 ring-emerald-500/20 shadow-sm'
+              : 'bg-white border-slate-200/90 hover:border-emerald-300 hover:bg-emerald-50/30'
           }`}
         >
           <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-            dataFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+            dataFilter === 'all' ? 'bg-[#1b815f] text-white' : 'bg-emerald-100 text-emerald-700'
           }`}>
             <Building2 className="w-6 h-6" />
           </div>
@@ -251,7 +251,7 @@ export default function ObjectsTableView({
               placeholder="Jadval bo'yicha qidirish..."
               value={searchQuery}
               onChange={(e) => { onSearchChange(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-8 pr-7 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 rounded-xl text-xs outline-none transition-all"
+              className="w-full pl-8 pr-7 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs outline-none transition-all"
             />
             {searchQuery && (
               <button
@@ -284,12 +284,12 @@ export default function ObjectsTableView({
                     }}
                     className={`w-full text-left px-3 py-1.5 rounded-xl flex items-center justify-between text-xs font-medium cursor-pointer ${
                       !selectedRegion
-                        ? 'bg-blue-50 text-blue-700 font-bold'
+                        ? 'bg-emerald-50 text-emerald-700 font-bold'
                         : 'hover:bg-slate-50 text-slate-700'
                     }`}
                   >
                     <span>🇺🇿 Barcha viloyatlar</span>
-                    {!selectedRegion && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                    {!selectedRegion && <Check className="w-3.5 h-3.5 text-[#1b815f]" />}
                   </button>
                   <div className="my-1 border-t border-slate-100"></div>
                   {REGION_LIST.map(r => (
@@ -303,12 +303,12 @@ export default function ObjectsTableView({
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-xl flex items-center justify-between text-xs font-medium cursor-pointer ${
                         selectedRegion === r.soato
-                          ? 'bg-blue-50 text-blue-700 font-bold'
+                          ? 'bg-emerald-50 text-emerald-700 font-bold'
                           : 'hover:bg-slate-50 text-slate-700'
                       }`}
                     >
                       <span>{r.name}</span>
-                      {selectedRegion === r.soato && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                      {selectedRegion === r.soato && <Check className="w-3.5 h-3.5 text-[#1b815f]" />}
                     </button>
                   ))}
                 </div>
@@ -337,13 +337,13 @@ export default function ObjectsTableView({
                     }}
                     className={`w-full text-left px-3 py-1.5 rounded-xl flex items-center justify-between text-xs font-medium cursor-pointer ${
                       (selectedDistrict === d || (!selectedDistrict && d === 'Barcha tumanlar'))
-                        ? 'bg-blue-50 text-blue-700 font-bold'
+                        ? 'bg-emerald-50 text-emerald-700 font-bold'
                         : 'hover:bg-slate-50 text-slate-700'
                     }`}
                   >
                     <span>{d}</span>
                     {(selectedDistrict === d || (!selectedDistrict && d === 'Barcha tumanlar')) && (
-                      <Check className="w-3.5 h-3.5 text-blue-600" />
+                      <Check className="w-3.5 h-3.5 text-[#1b815f]" />
                     )}
                   </button>
                 ))}
@@ -358,15 +358,15 @@ export default function ObjectsTableView({
               onClick={onOpenAdvancedFilters}
               className={`flex items-center gap-2 px-3 py-2 border rounded-xl font-semibold transition-all cursor-pointer shrink-0 ${
                 activeAdvancedFilterCount > 0
-                  ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-[#1b815f] border-[#1b815f] text-white hover:bg-[#15674c]'
                   : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
               }`}
               title="Kengaytirilgan filtrlar (Xonalar, qavatlar, tashrif va B2B holati)"
             >
-              <SlidersHorizontal className={`w-3.5 h-3.5 shrink-0 ${activeAdvancedFilterCount > 0 ? 'text-white' : 'text-blue-600'}`} />
+              <SlidersHorizontal className={`w-3.5 h-3.5 shrink-0 ${activeAdvancedFilterCount > 0 ? 'text-white' : 'text-[#1b815f]'}`} />
               <span>Filtrlar</span>
               {activeAdvancedFilterCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-white text-blue-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                <span className="w-4 h-4 rounded-full bg-white text-emerald-700 text-[10px] font-black flex items-center justify-center shrink-0">
                   {activeAdvancedFilterCount}
                 </span>
               )}
@@ -392,13 +392,13 @@ export default function ObjectsTableView({
                     }}
                     className={`w-full text-left px-3 py-1.5 rounded-xl flex items-center justify-between text-xs font-medium cursor-pointer ${
                       (selectedStatus === s || (!selectedStatus && s === 'Barcha statuslar'))
-                        ? 'bg-blue-50 text-blue-700 font-bold'
+                        ? 'bg-emerald-50 text-emerald-700 font-bold'
                         : 'hover:bg-slate-50 text-slate-700'
                     }`}
                   >
                     <span>{s}</span>
                     {(selectedStatus === s || (!selectedStatus && s === 'Barcha statuslar')) && (
-                      <Check className="w-3.5 h-3.5 text-blue-600" />
+                      <Check className="w-3.5 h-3.5 text-[#1b815f]" />
                     )}
                   </button>
                 ))}
@@ -480,8 +480,8 @@ export default function ObjectsTableView({
                     <tr
                       key={obj.source_id}
                       onClick={() => onSelect(obj.source_id)}
-                      className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${
-                        selectedId === obj.source_id ? 'bg-blue-50/80 font-medium' : ''
+                      className={`hover:bg-emerald-50/50 transition-colors cursor-pointer group ${
+                        selectedId === obj.source_id ? 'bg-emerald-50/80 font-medium' : ''
                       }`}
                     >
                       {/* ID */}
@@ -491,7 +491,7 @@ export default function ObjectsTableView({
 
                       {/* Name & TJM */}
                       <td className="py-3 px-4 min-w-[200px] max-w-[280px]">
-                        <div className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                        <div className="font-bold text-slate-900 group-hover:text-[#1b815f] transition-colors truncate">
                           {obj.tjm_name ? obj.tjm_name : obj.object_name}
                         </div>
                         {obj.tjm_name && (
@@ -578,7 +578,7 @@ export default function ObjectsTableView({
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => onSelect(obj.source_id)}
-                            className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-[#1b815f] bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
                             title="Tafsilot"
                           >
                             <Eye className="w-3.5 h-3.5" />
