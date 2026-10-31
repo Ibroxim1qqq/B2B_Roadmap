@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { User, Lock, Phone, Building2, Shield, X, Camera, Eye, EyeOff, Check, Trash2, LogOut } from 'lucide-react';
 import { UserProfile } from '../../lib/types';
 import { updateUserProfile } from '../../lib/auth';
+import { api } from '../../lib/api';
 
 interface UserProfileModalProps {
   currentUser: UserProfile | null;
@@ -78,6 +79,12 @@ export default function UserProfileModal({
 
       const updated = updateUserProfile(updates);
       if (updated) {
+        // Sync profile changes to Neon PostgreSQL database
+        const targetId = currentUser.user_id || currentUser.id || currentUser.login;
+        if (targetId) {
+          api.updateUser(targetId, updates).catch(e => console.warn('Sync profile to DB error:', e));
+        }
+
         setSuccess(true);
         onUserUpdated?.(updated);
         setTimeout(() => {

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Building2, Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff, X } from 'lucide-react';
 import { validateCredentials } from '../../lib/auth';
+import { api } from '../../lib/api';
 import { UserProfile } from '../../lib/types';
 export type { UserProfile };
 
@@ -27,7 +28,7 @@ export default function LoginModal({ onLogin, onClose }: LoginModalProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -39,6 +40,14 @@ export default function LoginModal({ onLogin, onClose }: LoginModalProps) {
       setError('Parol kiriting');
       return;
     }
+
+    try {
+      const res = await api.login(login.trim(), password);
+      if (res && res.success && res.user) {
+        onLogin(res.user);
+        return;
+      }
+    } catch (_) {}
 
     const user = validateCredentials(login, password);
     if (user) {

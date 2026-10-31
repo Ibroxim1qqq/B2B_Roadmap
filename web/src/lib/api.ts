@@ -622,6 +622,15 @@ export const api = {
     return await res.json();
   },
 
+  updateUser: async (userId: string, updates: any): Promise<{ success: boolean; data?: any; error?: string }> => {
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, ...updates })
+    });
+    return await res.json();
+  },
+
   getDistricts: async () => {
     return Object.entries(SOATO_DISTRICT_MAP).map(([id, name]) => ({ id, name }));
   },

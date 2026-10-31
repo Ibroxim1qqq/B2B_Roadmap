@@ -8,12 +8,14 @@ import type {
 import { getRegionName, getDistrictName } from './regions.ts';
 
 // 1. Connection string resolution
+const DEFAULT_NEON_DATABASE_URL = 'postgresql://neondb_owner:npg_cEL2WJZwG7Ps@ep-calm-cloud-b4ltc7bt-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require';
+
 export function getDatabaseUrl(): string {
   return (
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
     process.env.NEON_DATABASE_URL ||
-    ''
+    DEFAULT_NEON_DATABASE_URL
   ).trim();
 }
 
@@ -844,7 +846,12 @@ export const db = {
             ${item.user_id}, ${item.name}, ${item.login}, ${item.password_hash},
             ${item.role}, ${item.company_id}, ${item.phone}, ${item.avatar_initials}, NOW()
           )
-          ON CONFLICT (login) DO UPDATE SET name = EXCLUDED.name
+          ON CONFLICT (login) DO UPDATE SET 
+            name = EXCLUDED.name,
+            password_hash = EXCLUDED.password_hash,
+            role = EXCLUDED.role,
+            company_id = EXCLUDED.company_id,
+            phone = EXCLUDED.phone
         `;
       } catch (e) {}
     }
@@ -853,6 +860,44 @@ export const db = {
     return item;
   },
 
+  updateUser: async (identifier: string, updates: any): Promise<any> => {
+    const sql = getSql();
+    const cleanId = String(identifier || '').trim();
+    if (sql && cleanId) {
+      try {
+        if (updates.password || updates.password_hash) {
+          const pass = updates.password || updates.password_hash;
+          await sql`
+            UPDATE users SET
+              name = COALESCE(${updates.name || null}, name),
+              login = COALESCE(${updates.login ? updates.login.trim().toLowerCase() : null}, login),
+              password_hash = ${pass},
+              phone = COALESCE(${updates.phone || null}, phone),
+              avatar_initials = COALESCE(${updates.avatar_initials || updates.avatarInitials || null}, avatar_initials)
+            WHERE user_id = ${cleanId} OR LOWER(login) = ${cleanId.toLowerCase()}
+          `;
+        } else {
+          await sql`
+            UPDATE users SET
+              name = COALESCE(${updates.name || null}, name),
+              login = COALESCE(${updates.login ? updates.login.trim().toLowerCase() : null}, login),
+              phone = COALESCE(${updates.phone || null}, phone),
+              avatar_initials = COALESCE(${updates.avatar_initials || updates.avatarInitials || null}, avatar_initials)
+            WHERE user_id = ${cleanId} OR LOWER(login) = ${cleanId.toLowerCase()}
+          `;
+        }
+      } catch (e) {
+        console.error('updateUser DB error:', e);
+      }
+    }
+
+    const idx = localStore.users.findIndex(u => u.user_id === cleanId || u.id === cleanId || u.login.toLowerCase() === cleanId.toLowerCase());
+    if (idx !== -1) {
+      localStore.users[idx] = { ...localStore.users[idx], ...updates };
+      return localStore.users[idx];
+    }
+    return updates;
+  },
   authenticateUser: async (login: string, pass: string): Promise<UserProfile | null> => {
     const cleanLogin = login.trim().toLowerCase();
     const sql = getSql();

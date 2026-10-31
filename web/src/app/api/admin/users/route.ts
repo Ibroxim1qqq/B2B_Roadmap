@@ -75,3 +75,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { userId, ...updates } = body;
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'User ID kiritilishi shart' },
+        { status: 400 }
+      );
+    }
+
+    const updated = await db.updateUser(userId, updates);
+    return NextResponse.json({ success: true, data: updated });
+  } catch (err: any) {
+    console.error('Admin users PATCH error:', err);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
