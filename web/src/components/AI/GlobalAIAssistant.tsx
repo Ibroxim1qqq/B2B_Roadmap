@@ -36,8 +36,6 @@ export default function GlobalAIAssistant({
   onApplyRoute,
   onApplyFilter
 }: GlobalAIAssistantProps) {
-  // Hozircha foydalanuvchi talabiga ko'ra AI vaqtincha o'chirilgan
-  return null;
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
@@ -46,7 +44,7 @@ export default function GlobalAIAssistant({
 
   const isUysot = isUysotCompany(companyId);
   const companyTitle = isUysot ? 'UYSOT.UZ Toshkent' : 'Samarqand DSHK';
-  const objectCount = objects.length > 0 ? objects.length : (isUysot ? 524 : 3291);
+  const objectCount = objects.length > 0 ? objects.length : 4021;
 
   // Initial welcome message
   const initialGreeting: AIChatMessage = useMemo(() => ({
@@ -98,8 +96,8 @@ export default function GlobalAIAssistant({
       const res = await api.askAIChat({
         message: text,
         companyId,
-        userLat: userLat || (isUysot ? 41.2995 : 39.6542),
-        userLng: userLng || (isUysot ? 69.2401 : 66.9597),
+        userLat: userLat || undefined,
+        userLng: userLng || undefined,
         objects: pureObjects
       });
 

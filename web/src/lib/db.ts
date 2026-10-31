@@ -441,10 +441,12 @@ export const db = {
           return [];
         }
 
-        // Query list from PostgreSQL
-        const rows = isUysot
+        // Query list from PostgreSQL (isUysot=true: UYSOT, isUysot=false: DSHK, undefined: ALL database objects)
+        const rows = isUysot === true
           ? await sql`SELECT * FROM objects WHERE is_uysot = true`
-          : await sql`SELECT * FROM objects WHERE is_uysot = false`;
+          : isUysot === false
+          ? await sql`SELECT * FROM objects WHERE is_uysot = false`
+          : await sql`SELECT * FROM objects`;
 
         // If table has records in Neon DB, merge company overrides
         if (rows.length > 0) {
