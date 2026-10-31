@@ -67,7 +67,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
   };
 
   const handleClear = async () => {
-    if (!confirm('Haqiqatan ham bu obyektning barcha B2B ma\'lumotlarini o\'chirmoqchimisiz?')) {
+    if (!confirm('Haqiqatan ham bu obyektning barcha ma\'lumotlarini o\'chirmoqchimisiz?')) {
       return;
     }
     setClearing(true);
@@ -102,12 +102,14 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
   return (
     <div className="flex flex-col h-full bg-white border-l border-slate-200 z-20 shadow-xl">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-        <div>
-          <h2 className="text-sm font-bold text-slate-800">Ichki B2B ma'lumotlarni tahrirlash</h2>
-          <p className="text-[11px] text-slate-500">O'zgarishlar to'g'ridan-to'g'ri markaziy bazaga saqlanadi</p>
-        </div>
-        <button onClick={onCancel} className="p-1.5 hover:bg-slate-200 rounded-full text-slate-500 transition-colors cursor-pointer">
+      <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
+        <h2 className="text-sm font-bold text-slate-800">Ma'lumotlarni tahrirlash</h2>
+        <button 
+          type="button"
+          onClick={onCancel} 
+          className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+          title="Yopish"
+        >
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -291,35 +293,33 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
           </div>
         )}
 
-        {/* Buttons */}
-        <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 py-2.5 px-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-semibold transition-colors cursor-pointer"
-            >
-              Bekor qilish
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center justify-center gap-1.5 shadow-xs shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer"
-            >
-              <Save className="w-4 h-4" />
-              <span>{loading ? 'Saqlanmoqda...' : 'Saqlash'}</span>
-            </button>
-          </div>
-
-          {/* Delete / Clear button */}
+        {/* Buttons (Bitta qatorda: [Trash icon] [Bekor qilish] [Saqlash]) */}
+        <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
           <button
             type="button"
             onClick={handleClear}
-            disabled={clearing}
-            className="w-full py-2 px-3 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-colors text-xs disabled:opacity-50 cursor-pointer"
+            disabled={clearing || loading}
+            className="p-2.5 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
+            title="Ma'lumotlarni o'chirish"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>{clearing ? 'O\'chirilmoqda...' : 'B2B ma\'lumotlarini o\'chirish'}</span>
+            <Trash2 className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-2.5 px-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-semibold transition-colors cursor-pointer text-center text-xs"
+          >
+            Bekor qilish
+          </button>
+
+          <button
+            type="submit"
+            disabled={loading || clearing}
+            className="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center justify-center gap-1.5 shadow-xs shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer text-center text-xs"
+          >
+            <Save className="w-4 h-4" />
+            <span>{loading ? "Saqlanmoqda..." : "Saqlash"}</span>
           </button>
         </div>
       </form>
