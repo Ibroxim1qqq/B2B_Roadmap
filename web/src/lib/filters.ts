@@ -22,7 +22,11 @@ export const INITIAL_ADVANCED_FILTERS: AdvancedFilterState = {
   deadlineYear: ''
 };
 
-export function countActiveFilters(filters: AdvancedFilterState): number {
+export function countActiveFilters(
+  filters: AdvancedFilterState,
+  selectedDistrict?: string,
+  selectedStatus?: string
+): number {
   let count = 0;
   if (filters.roomCount && filters.roomCount.trim() !== '') count += 1;
   if (filters.minApartments && filters.minApartments.trim() !== '') count += 1;
@@ -33,5 +37,7 @@ export function countActiveFilters(filters: AdvancedFilterState): number {
   if (filters.crmStatus && filters.crmStatus !== 'all') count += 1;
   if (filters.difficulty && filters.difficulty !== 'all') count += 1;
   if (filters.deadlineYear && filters.deadlineYear.trim() !== '' && filters.deadlineYear !== 'all') count += 1;
+  if (selectedDistrict && selectedDistrict !== '' && selectedDistrict !== 'Barcha tumanlar') count += 1;
+  if (selectedStatus && selectedStatus !== '' && selectedStatus !== 'Barcha statuslar') count += 1;
   return count;
 }

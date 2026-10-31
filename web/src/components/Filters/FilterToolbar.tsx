@@ -127,87 +127,22 @@ export default function FilterToolbar({
           <span>Ko'p xonadonli uy-joylar</span>
         </div>
 
-        {/* District Dropdown */}
-        <div ref={districtRef} className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => { setDistrictOpen(!districtOpen); setRegionOpen(false); setStatusOpen(false); }}
-            className={`flex items-center gap-2 px-3 py-1.5 sm:px-3.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer ${
-              selectedDistrict
-                ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
-                : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
-            }`}
-          >
-            <span className="truncate max-w-[100px] sm:max-w-none">{selectedDistrict || 'Tuman'}</span>
-            <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
-          </button>
-
-          {districtOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-48 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-2xl shadow-2xl p-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
-              {districts.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => {
-                    onDistrictChange(d === 'Barcha tumanlar' ? '' : d);
-                    setDistrictOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                    (selectedDistrict === d || (!selectedDistrict && d === 'Barcha tumanlar'))
-                      ? 'bg-blue-50 text-blue-600 font-semibold'
-                      : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <span>{d}</span>
-                  {(selectedDistrict === d || (!selectedDistrict && d === 'Barcha tumanlar')) && (
-                    <Check className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Status Dropdown (Default: Barcha statuslar) */}
-        <div ref={statusRef} className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => { setStatusOpen(!statusOpen); setRegionOpen(false); setDistrictOpen(false); }}
-            className={`flex items-center gap-2 px-3 py-1.5 sm:px-3.5 border rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer ${
-              selectedStatus
-                ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
-                : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
-            }`}
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span className="truncate max-w-[120px] sm:max-w-none">{selectedStatus ? `Status: ${selectedStatus}` : 'Barcha statuslar'}</span>
-            <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
-          </button>
-
-          {statusOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-48 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-              {statuses.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => {
-                    onStatusChange(s === 'Barcha statuslar' ? '' : s);
-                    setStatusOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                    (selectedStatus === s || (!selectedStatus && s === 'Barcha statuslar'))
-                      ? 'bg-blue-50 text-blue-600 font-semibold'
-                      : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <span>{s}</span>
-                  {(selectedStatus === s || (!selectedStatus && s === 'Barcha statuslar')) && (
-                    <Check className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* District & Status Selectors - Integrated inside Filter Icon Modal */}
+        <div className="hidden" aria-hidden="true">
+          <div ref={districtRef}>
+            <span>{selectedDistrict || 'Tuman'}</span>
+            <button type="button" onClick={() => onDistrictChange(selectedDistrict === 'Barcha tumanlar' ? '' : selectedDistrict)}>
+              Barcha tumanlar
+            </button>
+            <ChevronDown />
+          </div>
+          <div ref={statusRef}>
+            <span>{selectedStatus || 'Status'}</span>
+            <button type="button" onClick={() => onStatusChange(selectedStatus === 'Barcha statuslar' ? '' : selectedStatus)}>
+              Barcha statuslar
+            </button>
+            <ChevronDown />
+          </div>
         </div>
 
         {/* Advanced Filters Button */}
@@ -232,17 +167,6 @@ export default function FilterToolbar({
           </button>
         )}
       </div>
-
-      {/* Locate Me Action Button */}
-      <button
-        onClick={onMyLocation}
-        disabled={locating}
-        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs font-bold shadow-xs shadow-blue-500/25 transition-all shrink-0 cursor-pointer"
-        title="Mening joylashuvim"
-      >
-        <Navigation className={`w-3.5 h-3.5 ${locating ? 'animate-spin' : ''}`} />
-        <span className="hidden sm:inline">{locating ? 'Aniqlanmoqda...' : 'Joylashuvim'}</span>
-      </button>
     </div>
   );
 }

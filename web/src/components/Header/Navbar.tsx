@@ -6,7 +6,7 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 
 interface NavbarProps {
   activeTab?: string;
-  onSync: () => Promise<void>;
+  onSync?: () => Promise<void>;
   syncing?: boolean;
   onOpenCreate?: () => void;
   currentUser?: UserProfile | null;
@@ -112,17 +112,6 @@ export default function Navbar({
             <span className="hidden sm:inline">Yangi Obyekt</span>
           </button>
         )}
-
-        {/* Sync with central database button */}
-        <button
-          onClick={onSync}
-          disabled={syncing}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold shadow-2xs transition-all disabled:opacity-50 cursor-pointer"
-          title="Baza bilan yangilash"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">{syncing ? 'Sinxronlanmoqda...' : 'Sinxronlash'}</span>
-        </button>
 
         {/* Notifications Bell button */}
         {onOpenNotifications && (

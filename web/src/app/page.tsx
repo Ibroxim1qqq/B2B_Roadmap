@@ -295,7 +295,11 @@ function HomeContent() {
       // 2. District Filter
       if (selectedDistrict && selectedDistrict !== 'Barcha tumanlar') {
         const d = selectedDistrict.toLowerCase().trim();
-        const mDistrict = (m.district_name || '').toLowerCase().trim();
+        const dClean = selectedDistrict.toLowerCase().replace(/['`’‘]/g, '').replace(/(\s*tumani|\s*shahar|\s*shahri)$/i, '').trim();
+        const mDist = (m.district_name || '').toLowerCase().replace(/['`’‘]/g, '').trim();
+        const mAddr = (m.address || '').toLowerCase().replace(/['`’‘]/g, '').trim();
+        const mName = (m.object_name || '').toLowerCase().replace(/['`’‘]/g, '').trim();
+        const mDistrict = (mDist && (mDist.includes(dClean) || dClean.includes(mDist))) || mAddr.includes(dClean) || mName.includes(dClean) ? d : '';
         if (!mDistrict.includes(d) && !d.includes(mDistrict)) {
           return false;
         }
@@ -303,7 +307,7 @@ function HomeContent() {
 
       // 3. Status Filter (e.g. Jarayonda, To'xtatilgan, Muzlatilgan, Topshirilgan)
       if (selectedStatus && selectedStatus !== 'Barcha statuslar') {
-        const s = selectedStatus.toLowerCase().trim();
+        const s = selectedStatus.toLowerCase().replace(/(da|ida)$/, '').trim();
         const mStatus = (m.status || '').toLowerCase().trim();
         if (!mStatus.includes(s) && !s.includes(mStatus)) {
           return false;
@@ -815,7 +819,7 @@ function HomeContent() {
               onMyLocation={handleLocateMe}
               locating={locating}
               onOpenAdvancedFilters={() => setIsFilterModalOpen(true)}
-              activeAdvancedFilterCount={countActiveFilters(advancedFilters)}
+              activeAdvancedFilterCount={countActiveFilters(advancedFilters, selectedDistrict, selectedStatus)}
             />
 
             {/* Active Filters Pill Bar */}
@@ -826,6 +830,18 @@ function HomeContent() {
                     <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
                     <span>Filtrlar:</span>
                   </span>
+                  {selectedDistrict && selectedDistrict !== 'Barcha tumanlar' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>Tuman: {selectedDistrict}</span>
+                      <button onClick={() => setSelectedDistrict('')} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  )}
+                  {selectedStatus && selectedStatus !== 'Barcha statuslar' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
+                      <span>Status: {selectedStatus}</span>
+                      <button onClick={() => setSelectedStatus('')} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
+                    </span>
+                  )}
                   {advancedFilters.roomCount && advancedFilters.roomCount.trim() !== '' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-200 text-blue-800 rounded-lg text-xs font-semibold shadow-2xs">
                       <span>Xona: {advancedFilters.roomCount}</span>
@@ -870,7 +886,11 @@ function HomeContent() {
                   )}
                 </div>
                 <button
-                  onClick={() => setAdvancedFilters(INITIAL_ADVANCED_FILTERS)}
+                  onClick={() => {
+                    setAdvancedFilters(INITIAL_ADVANCED_FILTERS);
+                    setSelectedDistrict('');
+                    setSelectedStatus('');
+                  }}
                   className="text-rose-600 hover:text-rose-800 font-bold hover:underline shrink-0 cursor-pointer ml-auto text-xs"
                 >
                   Tozalash
@@ -890,6 +910,8 @@ function HomeContent() {
                   selectedRegion={selectedRegion}
                   focusTarget={focusTarget}
                   isActive={activeTab === 'map'}
+                  onMyLocation={handleLocateMe}
+                  locating={locating}
                 />
               </div>
 
@@ -940,7 +962,7 @@ function HomeContent() {
               selectedStatus={selectedStatus}
               onStatusChange={setSelectedStatus}
               onOpenAdvancedFilters={() => setIsFilterModalOpen(true)}
-              activeAdvancedFilterCount={countActiveFilters(advancedFilters)}
+              activeAdvancedFilterCount={countActiveFilters(advancedFilters, selectedDistrict, selectedStatus)}
             />
           )}
 
@@ -1108,7 +1130,20 @@ function HomeContent() {
         onClose={() => setIsFilterModalOpen(false)}
         filters={advancedFilters}
         onChange={setAdvancedFilters}
-        onReset={() => setAdvancedFilters(INITIAL_ADVANCED_FILTERS)}
+        onReset={() => {
+          setAdvancedFilters(INITIAL_ADVANCED_FILTERS);
+          setSelectedDistrict('');
+          setSelectedStatus('');
+        }}
+        selectedDistrict={selectedDistrict}
+        onDistrictChange={setSelectedDistrict}
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
+        selectedRegion={selectedRegion}
+        onRegionChange={(reg) => {
+          setSelectedRegion(reg);
+          setSelectedDistrict('');
+        }}
         filteredCount={displayList.length}
         totalCount={allMarkers.length}
       />

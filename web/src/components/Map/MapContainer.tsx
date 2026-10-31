@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { Navigation } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -43,6 +44,8 @@ interface MapContainerProps {
   selectedRegion?: string;
   focusTarget?: { lat: number; lng: number; zoom?: number; timestamp?: number } | null;
   isActive?: boolean;
+  onMyLocation?: () => void;
+  locating?: boolean;
 }
 
 function escapeHtml(str: string): string {
@@ -83,7 +86,9 @@ export default function MapContainer({
   userLng, 
   selectedRegion,
   focusTarget,
-  isActive = true
+  isActive = true,
+  onMyLocation,
+  locating = false
 }: MapContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -556,6 +561,19 @@ export default function MapContainer({
           <span>To'xtatilgan</span>
         </div>
       </div>
+
+      {/* Locate Me Floating Button inside Map (bottom-right) */}
+      {onMyLocation && (
+        <button
+          type="button"
+          onClick={onMyLocation}
+          disabled={locating}
+          className="absolute bottom-28 sm:bottom-18 right-3 sm:right-5 z-[400] w-10 h-10 bg-white hover:bg-slate-50 active:scale-95 border border-slate-200/90 rounded-xl shadow-md flex items-center justify-center text-slate-700 hover:text-blue-600 transition-all cursor-pointer"
+          title="Mening joylashuvim"
+        >
+          <Navigation className={`w-4.5 h-4.5 text-blue-600 ${locating ? 'animate-spin' : ''}`} />
+        </button>
+      )}
 
       {/* Map Tile Switcher (Xarita | Satelit) bottom-right */}
       <div className="absolute bottom-16 sm:bottom-5 right-3 sm:right-5 z-[400] bg-white border border-slate-200/80 rounded-xl p-1 shadow-md flex items-center gap-1 text-xs font-semibold text-slate-700">
