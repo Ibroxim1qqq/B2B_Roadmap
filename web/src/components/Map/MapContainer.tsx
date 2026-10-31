@@ -542,41 +542,10 @@ export default function MapContainer({
     <div className="w-full h-full relative rounded-2xl overflow-hidden border border-slate-200 shadow-xs select-none">
       <div ref={containerRef} className="w-full h-full z-0" />
 
-      {/* Map Legend for pin colors */}
-      <div className="absolute top-3 left-3 z-[400] bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-xl px-3 py-1.5 shadow-md hidden sm:flex items-center gap-3 text-[11px] font-semibold text-slate-700">
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-emerald-600 flex items-center justify-center text-[8px] text-white font-black shadow-xs">✓</span>
-          <span>Borgan</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-xs"></span>
-          <span>To'ldirilgan</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs"></span>
-          <span>To'ldirilmagan</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-slate-400 shadow-xs"></span>
-          <span>To'xtatilgan</span>
-        </div>
-      </div>
 
-      {/* Locate Me Floating Button inside Map (bottom-right) */}
-      {onMyLocation && (
-        <button
-          type="button"
-          onClick={onMyLocation}
-          disabled={locating}
-          className="absolute bottom-28 sm:bottom-18 right-3 sm:right-5 z-[400] w-10 h-10 bg-white hover:bg-slate-50 active:scale-95 border border-slate-200/90 rounded-xl shadow-md flex items-center justify-center text-slate-700 hover:text-blue-600 transition-all cursor-pointer"
-          title="Mening joylashuvim"
-        >
-          <Navigation className={`w-4.5 h-4.5 text-blue-600 ${locating ? 'animate-spin' : ''}`} />
-        </button>
-      )}
 
       {/* Map Tile Switcher (Xarita | Satelit) bottom-right */}
-      <div className="absolute bottom-16 sm:bottom-5 right-3 sm:right-5 z-[400] bg-white border border-slate-200/80 rounded-xl p-1 shadow-md flex items-center gap-1 text-xs font-semibold text-slate-700">
+      <div className="absolute bottom-4 right-4 z-[400] bg-white border border-slate-200/80 rounded-xl p-1 shadow-md flex items-center gap-1 text-xs font-semibold text-slate-700">
         <button
           onClick={() => setMapType('map')}
           className={`px-3 py-1.5 rounded-lg transition-all ${

@@ -36,6 +36,9 @@ export default function GlobalAIAssistant({
   onApplyRoute,
   onApplyFilter
 }: GlobalAIAssistantProps) {
+  // Foydalanuvchi talabiga ko'ra floating AI tugmasi o'chirildi
+  return null;
+
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
