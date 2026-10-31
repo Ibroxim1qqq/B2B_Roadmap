@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Map, Navigation, Building2, BarChart3, SlidersHorizontal, Settings, User } from 'lucide-react';
+import { Map, Navigation, Building2, BarChart3, SlidersHorizontal, Settings, User, LogOut } from 'lucide-react';
 import { UserProfile } from '../../lib/types';
 
 interface LeftSidebarProps {
@@ -8,13 +8,15 @@ interface LeftSidebarProps {
   onTabChange: (tab: string) => void;
   currentUser?: UserProfile | null;
   onOpenProfile?: () => void;
+  onLogout?: () => void;
 }
 
 export default function LeftSidebar({
   activeTab,
   onTabChange,
   currentUser,
-  onOpenProfile
+  onOpenProfile,
+  onLogout
 }: LeftSidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -108,6 +110,22 @@ export default function LeftSidebar({
             >
               <Settings className="w-4 h-4" />
             </button>
+
+            {/* Logout Button */}
+            {onLogout && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("Haqiqatan ham tizimdan chiqmoqchimisiz?")) {
+                    onLogout();
+                  }
+                }}
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer shadow-2xs"
+                title="Tizimdan chiqish"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex justify-center">

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef } from 'react';
-import { User, Lock, Phone, Building2, Shield, X, Camera, Eye, EyeOff, Check, Trash2 } from 'lucide-react';
+import { User, Lock, Phone, Building2, Shield, X, Camera, Eye, EyeOff, Check, Trash2, LogOut } from 'lucide-react';
 import { UserProfile } from '../../lib/types';
 import { updateUserProfile } from '../../lib/auth';
 
@@ -9,13 +9,15 @@ interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUserUpdated?: (updated: UserProfile) => void;
+  onLogout?: () => void;
 }
 
 export default function UserProfileModal({
   currentUser,
   isOpen,
   onClose,
-  onUserUpdated
+  onUserUpdated,
+  onLogout
 }: UserProfileModalProps) {
   const [name, setName] = useState(currentUser?.name || '');
   const [login, setLogin] = useState(currentUser?.login || '');
@@ -305,6 +307,25 @@ export default function UserProfileModal({
               <span>{saving ? 'Saqlanmoqda...' : 'Saqlash'}</span>
             </button>
           </div>
+
+          {/* Logout Button */}
+          {onLogout && (
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("Haqiqatan ham tizimdan chiqmoqchimisiz?")) {
+                    onClose();
+                    onLogout();
+                  }
+                }}
+                className="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Tizimdan chiqish</span>
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>

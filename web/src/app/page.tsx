@@ -699,6 +699,7 @@ function HomeContent() {
           onTabChange={handleTabChange}
           currentUser={currentUser}
           onOpenProfile={() => setIsProfileOpen(true)}
+          onLogout={handleLogout}
         />
       </div>
 
@@ -712,6 +713,7 @@ function HomeContent() {
           onOpenCreate={() => setIsCreateOpen(true)}
           currentUser={currentUser}
           onLogout={handleLogout}
+          onOpenProfile={() => setIsProfileOpen(true)}
           onOpenNotifications={() => {
             setIsNotificationOpen(true);
             handleMarkAllAsRead();
@@ -1182,6 +1184,7 @@ function HomeContent() {
         currentUser={currentUser}
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
+        onLogout={handleLogout}
         onUserUpdated={(updatedUser) => {
           saveCurrentUser(updatedUser);
           setLocalCurrentUser(updatedUser);
