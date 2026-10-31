@@ -13,6 +13,6 @@ services:
       - key: POSTGRES_URL
         value: postgresql://neondb_owner:npg_cEL2WJZwG7Ps@ep-calm-cloud-b4ltc7bt-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require
       - key: NEXT_PUBLIC_APP_NAME
-        value: Samarqand Qurilish Xaritasi
+        value: UYSOT B2B
       - key: NODE_VERSION
         value: 20.18.0
