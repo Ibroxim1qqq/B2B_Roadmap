@@ -158,88 +158,66 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
           </div>
         </div>
 
-        {/* Mobile Yo'l-yo'lakay Quick Action Bar (Yandex Maps / Yandex Go style) */}
+        {/* Quick Action Bar (Ma'lumot kiritish & Marshrut) */}
         <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center gap-2">
-          {internal.phone ? (
-            <a
-              href={getCallUrl(internal.phone)}
-              className="flex-1 py-2 px-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>Qo'ng'iroq</span>
-            </a>
-          ) : (
-            <div className="flex-1 py-2 px-2 bg-slate-100 text-slate-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-not-allowed">
-              <Phone className="w-3.5 h-3.5" />
-              <span>Tel yo'q</span>
-            </div>
-          )}
-
-          <a
-            href={getYandexNavUrl(source.latitude, source.longitude)}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 py-2 px-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all"
-            title="Yandex Navigator da ochish"
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex-1 py-2 px-3 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
           >
-            <Navigation className="w-3.5 h-3.5 text-slate-950" />
-            <span>Yandex Nav</span>
-          </a>
+            <Pencil className="w-3.5 h-3.5 text-slate-200" />
+            <span>{hasB2BData ? "Tahrirlash" : "+ Ma'lumot kiritish"}</span>
+          </button>
 
           {onPlanRoute && (
             <button
               type="button"
               onClick={onPlanRoute}
-              className="py-2 px-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-xs transition-all cursor-pointer"
+              className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
               title="Yo'l-yo'lakay marshrutga qo'shish"
             >
               <RouteIcon className="w-3.5 h-3.5 text-blue-600" />
               <span>Marshrut</span>
             </button>
           )}
-
-          <a
-            href={getNavigationUrl(source.latitude, source.longitude)}
-            target="_blank"
-            rel="noreferrer"
-            className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center transition-all"
-            title="Google Maps da ochish"
-          >
-            <Globe className="w-4 h-4 text-blue-600" />
-          </a>
-
-          <button
-            type="button"
-            onClick={handleVisit}
-            disabled={loadingVisit}
-            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
-              visitRecorded 
-                ? 'bg-emerald-700 text-white' 
-                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
-            }`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{loadingVisit ? '...' : visitRecorded ? 'Saqlandi' : 'Tashrif'}</span>
-          </button>
         </div>
       </div>
 
       {/* 2. Scrollable Content Body */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         
-        {/* Tashrif & Holat Status Card */}
+        {/* Tashrif & Holat Status Card (Qizil border agar kiritilmagan/borilmagan bo'lsa) */}
         <div className="grid grid-cols-2 gap-2.5">
-          <div className={`p-3 rounded-2xl border ${isVisited ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
-            <div className="flex items-center gap-1.5 text-[11px] font-bold">
-              <Clock className={`w-3.5 h-3.5 ${isVisited ? 'text-emerald-600' : 'text-slate-400'}`} />
-              <span>Tashrif holati</span>
+          <div 
+            onClick={handleVisit}
+            className={`p-3 rounded-2xl border transition-all cursor-pointer active:scale-98 ${
+              isVisited 
+                ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950 hover:border-emerald-400' 
+                : 'bg-red-50/50 border-2 border-red-500 text-red-950 shadow-2xs hover:border-red-600'
+            }`}
+            title={isVisited ? 'Tashrif buyurilgan' : 'Tashrifni qayd qilish uchun bosing'}
+          >
+            <div className="flex items-center justify-between text-[11px] font-bold">
+              <div className="flex items-center gap-1.5">
+                <Clock className={`w-3.5 h-3.5 ${isVisited ? 'text-emerald-600' : 'text-red-500'}`} />
+                <span>Tashrif holati</span>
+              </div>
+              {!isVisited && (
+                <span className="text-[10px] font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded-md">
+                  Yo'q
+                </span>
+              )}
             </div>
-            <p className="text-xs font-semibold mt-1">
+            <p className={`text-xs font-bold mt-1.5 ${isVisited ? 'text-emerald-700' : 'text-red-600'}`}>
               {isVisited ? 'Tashrif buyurilgan' : 'Tashrif qilinmagan'}
             </p>
-            {isVisited && internal.last_visit && (
+            {isVisited && internal.last_visit ? (
               <p className="text-[10px] text-emerald-700 mt-0.5 font-medium leading-tight">
                 {internal.last_visit}
+              </p>
+            ) : (
+              <p className="text-[10px] text-red-500/90 mt-0.5 font-medium">
+                Tashrif kiritilmagan
               </p>
             )}
             {isVisited && internal.visited_by && (
@@ -249,16 +227,27 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
             )}
           </div>
 
-          <div className={`p-3 rounded-2xl border ${hasB2BData ? 'bg-indigo-50/70 border-indigo-200 text-indigo-900' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
-            <div className="flex items-center gap-1.5 text-[11px] font-bold">
-              <CheckCircle2 className={`w-3.5 h-3.5 ${hasB2BData ? 'text-indigo-600' : 'text-slate-400'}`} />
-              <span>Ma'lumotlar</span>
+          <div 
+            onClick={onEdit}
+            className={`p-3 rounded-2xl border transition-all cursor-pointer active:scale-98 ${
+              hasB2BData 
+                ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950 hover:border-emerald-400' 
+                : 'bg-red-50/50 border-2 border-red-500 text-red-950 shadow-2xs hover:border-red-600'
+            }`}
+            title="Ma'lumotlarni kiritish/tahrirlash uchun bosing"
+          >
+            <div className="flex items-center justify-between text-[11px] font-bold">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className={`w-3.5 h-3.5 ${hasB2BData ? 'text-emerald-600' : 'text-red-500'}`} />
+                <span>Ma'lumotlar</span>
+              </div>
+              <Pencil className={`w-3 h-3 ${hasB2BData ? 'text-emerald-600' : 'text-red-500'}`} />
             </div>
-            <p className="text-xs font-semibold mt-1">
-              {hasB2BData ? 'To\'ldirilgan' : 'Kiritilmagan'}
+            <p className={`text-xs font-bold mt-1.5 ${hasB2BData ? 'text-emerald-700' : 'text-red-600'}`}>
+              {hasB2BData ? "To'ldirilgan" : "Kiritilmagan"}
             </p>
-            <p className="text-[10px] text-slate-500 mt-0.5">
-              {hasB2BData ? 'B2B CRM ma\'lumotlari mavjud' : 'Tahrirlash orqali to\'ldiring'}
+            <p className={`text-[10px] mt-0.5 font-medium ${hasB2BData ? 'text-slate-500' : 'text-red-500/90'}`}>
+              {hasB2BData ? "B2B CRM ma'lumotlari mavjud" : "Kiritish uchun bosing"}
             </p>
           </div>
         </div>
@@ -274,15 +263,14 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>Qo'shimcha ma'lumotlar</span>
             </h3>
-            {hasB2BData ? (
-              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                To'ldirilgan
-              </span>
-            ) : (
-              <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                Kiritilmagan
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={onEdit}
+              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95"
+            >
+              <Pencil className="w-3 h-3 text-slate-500" />
+              <span>{hasB2BData ? 'Tahrirlash' : 'Kiritish'}</span>
+            </button>
           </div>
 
           <div className="space-y-2.5 text-xs text-slate-700">
