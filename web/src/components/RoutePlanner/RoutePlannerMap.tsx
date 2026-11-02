@@ -12,7 +12,7 @@ import {
   Locate, Phone, CheckCircle2, Navigation, Volume2, VolumeX,
   Gauge, Compass, Play, Pause, Sparkles, Layers
 } from 'lucide-react';
-import { getCallUrl, getYandexNavUrl } from '../../lib/utils';
+import { escapeHtml, getCallUrl, getYandexNavUrl } from '../../lib/utils';
 
 // Fix Leaflet default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -443,13 +443,13 @@ export default function RoutePlannerMap({
 
           const popupContent = `
             <div style="font-family: sans-serif; min-width: 170px; font-size: 12px;">
-              <div style="font-weight: bold; color: #1e293b; margin-bottom: 4px;">${obj.tjm_name || obj.object_name}</div>
-              <div style="color: #64748b; font-size: 11px; margin-bottom: 6px;">${obj.district_name || 'Samarqand'}</div>
+              <div style="font-weight: bold; color: #1e293b; margin-bottom: 4px;">${escapeHtml(obj.tjm_name || obj.object_name)}</div>
+              <div style="color: #64748b; font-size: 11px; margin-bottom: 6px;">${escapeHtml(obj.district_name || obj.region_name || '')}</div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px;">
-                <button id="btn-pick-a-${obj.source_id}" style="padding: 5px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
+                <button id="btn-pick-a-${escapeHtml(obj.source_id)}" style="padding: 5px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
                   🟢 A: Boshlash
                 </button>
-                <button id="btn-pick-b-${obj.source_id}" style="padding: 5px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
+                <button id="btn-pick-b-${escapeHtml(obj.source_id)}" style="padding: 5px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
                   🔴 B: Borish
                 </button>
               </div>
@@ -542,7 +542,7 @@ export default function RoutePlannerMap({
       startMarker.bindPopup(`
         <div style="font-family: sans-serif; font-size: 12px; min-width: 150px;">
           <div style="font-weight: bold; color: #059669; font-size: 13px;">🟢 Boshlanish nuqtasi (A)</div>
-          <div style="color: #334155; font-weight: 600; margin-top: 4px;">${startPoint.name}</div>
+          <div style="color: #334155; font-weight: 600; margin-top: 4px;">${escapeHtml(startPoint.name)}</div>
           <div style="color: #94a3b8; font-size: 10px; margin-top: 4px;">📍 Joyini o'zgartirish uchun sudrang</div>
         </div>
       `);
@@ -591,7 +591,7 @@ export default function RoutePlannerMap({
       endMarker.bindPopup(`
         <div style="font-family: sans-serif; font-size: 12px; min-width: 150px;">
           <div style="font-weight: bold; color: #dc2626; font-size: 13px;">🔴 Borish manzili (B)</div>
-          <div style="color: #334155; font-weight: 600; margin-top: 4px;">${endPoint.name}</div>
+          <div style="color: #334155; font-weight: 600; margin-top: 4px;">${escapeHtml(endPoint.name)}</div>
           <div style="color: #94a3b8; font-size: 10px; margin-top: 4px;">📍 Joyini o'zgartirish uchun sudrang</div>
         </div>
       `);
@@ -648,11 +648,11 @@ export default function RoutePlannerMap({
       const marker = L.marker([objLat, objLng], { icon: tjmIcon });
 
       const name = obj.tjm_name || obj.object_name;
-      const phoneText = obj.phone ? `<div style="margin-top:4px; font-weight:bold; color:#059669;">📞 ${obj.phone}</div>` : '';
+      const phoneText = obj.phone ? `<div style="margin-top:4px; font-weight:bold; color:#059669;">📞 ${escapeHtml(obj.phone)}</div>` : '';
 
       marker.bindPopup(`
         <div style="font-family: sans-serif; min-width: 190px; font-size: 12px;">
-          <div style="font-weight:bold; color:#1e293b; margin-bottom:4px;">#${orderNumber}. ${name}</div>
+          <div style="font-weight:bold; color:#1e293b; margin-bottom:4px;">#${orderNumber}. ${escapeHtml(name)}</div>
           <div style="color:#64748b; font-size:11px;">📍 Yo'l boshidan: <b>${formatDistance(distAlongRouteMeters)}</b></div>
           <div style="color:#64748b; font-size:11px;">🛣️ Yo'ldan narida: <b>${distFromRoadMeters} metr</b></div>
           <div style="margin-top:4px;">
@@ -864,7 +864,7 @@ export default function RoutePlannerMap({
           }
         }
 
-        let brg: number | undefined = heading !== null && !isNaN(heading) ? heading : undefined;
+        const brg: number | undefined = heading !== null && !isNaN(heading) ? heading : undefined;
 
         updateDriverPosition(latitude, longitude, currentSpeed, brg);
         prevGpsPosRef.current = { lat: latitude, lng: longitude, time: now };

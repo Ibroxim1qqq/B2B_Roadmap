@@ -191,3 +191,70 @@ VALUES
     ('user_nilufar', 'Nilufar', 'nilufar', 'uysot2026', 'company_admin', 'uysot', '+998 90 999 88 77', 'N'),
     ('user_mgr1', 'Alisher Karimov', 'menejer1', '123456', 'manager', 'comp_default', '+998 91 234 56 78', 'AK')
 ON CONFLICT (login) DO NOTHING;
+
+-- Additive migrations (kept in sync with MIGRATIONS_SQL in web/src/lib/db.ts)
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INT PRIMARY KEY,
+    applied_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    token_hash VARCHAR(64) PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS object_visits (
+    id SERIAL PRIMARY KEY,
+    company_id VARCHAR(100) NOT NULL,
+    source_id VARCHAR(100) NOT NULL,
+    user_id VARCHAR(100) DEFAULT '',
+    visited_by TEXT DEFAULT '',
+    lat_lng VARCHAR(100) DEFAULT '',
+    visited_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_object_visits_lookup ON object_visits(company_id, source_id, visited_at DESC);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT '';
+ALTER TABLE company_data ADD COLUMN IF NOT EXISTS custom_values JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE custom_fields ADD COLUMN IF NOT EXISTS company_id VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE custom_fields ADD COLUMN IF NOT EXISTS label TEXT DEFAULT '';
+ALTER TABLE custom_fields ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+ALTER TABLE custom_fields DROP CONSTRAINT IF EXISTS custom_fields_field_name_key;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_custom_fields_company ON custom_fields(company_id, field_name);
+
+ALTER TABLE company_data ALTER COLUMN tjm_name TYPE TEXT;
+ALTER TABLE company_data ALTER COLUMN phone TYPE TEXT;
+ALTER TABLE company_data ALTER COLUMN manager_name TYPE TEXT;
+ALTER TABLE company_data ALTER COLUMN manager_phone TYPE TEXT;
+ALTER TABLE company_data ALTER COLUMN telegram TYPE TEXT;
+ALTER TABLE company_data ALTER COLUMN instagram TYPE TEXT;
+ALTER TABLE company_data ALTER COLUMN priority TYPE TEXT;
+ALTER TABLE company_data ALTER COLUMN last_visit TYPE TEXT;
+ALTER TABLE company_data ALTER COLUMN visited_by TYPE TEXT;
+ALTER TABLE company_data ALTER COLUMN visit_lat_lng TYPE TEXT;
+ALTER TABLE routes ALTER COLUMN user_name TYPE TEXT;
+ALTER TABLE routes ALTER COLUMN route_name TYPE TEXT;
+ALTER TABLE routes ALTER COLUMN start_name TYPE TEXT;
+ALTER TABLE routes ALTER COLUMN end_name TYPE TEXT;
+ALTER TABLE activity_log ALTER COLUMN object_name TYPE TEXT;
+ALTER TABLE activity_log ALTER COLUMN user_info TYPE TEXT;
+ALTER TABLE user_sessions ALTER COLUMN user_name TYPE TEXT;
+ALTER TABLE user_sessions ALTER COLUMN company_name TYPE TEXT;
+ALTER TABLE objects ALTER COLUMN district_name TYPE TEXT;
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS phone TEXT DEFAULT '';
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS sales_office TEXT DEFAULT '';
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS manager_name TEXT DEFAULT '';
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS manager_phone TEXT DEFAULT '';
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS telegram TEXT DEFAULT '';
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS email TEXT DEFAULT '';
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS price_from TEXT DEFAULT '';
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS class_building TEXT DEFAULT '';
+
+UPDATE companies SET data_source = 'uysot'
+  WHERE data_source IS DISTINCT FROM 'uysot'
+    AND (company_id = 'uysot' OR LOWER(company_name) LIKE '%uysot%');

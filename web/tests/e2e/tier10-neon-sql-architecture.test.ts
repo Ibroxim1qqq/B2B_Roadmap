@@ -105,8 +105,7 @@ defineTest('scripts/migrate-neon.ts exists and provides automated Neon migration
   assert.ok(fs.existsSync(scriptPath), 'web/scripts/migrate-neon.ts must exist');
 
   const content = fs.readFileSync(scriptPath, 'utf-8');
-  assert.ok(content.includes('@neondatabase/serverless'), 'Migration script must import @neondatabase/serverless');
-  assert.ok(content.includes('schema.sql'), 'Migration script must read schema.sql');
+  assert.ok(content.includes('ensureDatabaseSchema'), 'Migration script must run the app migration');
   assert.ok(content.includes('DATABASE_URL'), 'Migration script must resolve DATABASE_URL');
 });
 
@@ -119,7 +118,7 @@ defineTest('scripts/seed-neon.ts exists and loads DSHK and Domtut datasets', {
 
   const content = fs.readFileSync(scriptPath, 'utf-8');
   assert.ok(content.includes('real-sheets-data.json'), 'Seed script must reference real-sheets-data.json');
-  assert.ok(content.includes('uysot-domtut-data.json'), 'Seed script must reference uysot-domtut-data.json');
+  assert.ok(content.includes('db:import-domtut'), 'Seed script must point to the Domtut importer');
   assert.ok(content.includes('@neondatabase/serverless'), 'Seed script must import @neondatabase/serverless');
 });
 
@@ -163,7 +162,7 @@ defineTest('lib/db.ts exports complete Neon database interface and typed client'
 
   assert.match(content, /export\s+function\s+getDatabaseUrl/, 'db.ts must export getDatabaseUrl');
   assert.match(content, /export\s+function\s+isPostgresConfigured/, 'db.ts must export isPostgresConfigured');
-  assert.match(content, /export\s+async\s+function\s+ensureDatabaseSchema/, 'db.ts must export ensureDatabaseSchema');
+  assert.match(content, /export\s+function\s+ensureDatabaseSchema/, 'db.ts must export ensureDatabaseSchema');
   assert.match(content, /export\s+const\s+SCHEMA_SQL/, 'db.ts must export SCHEMA_SQL');
   assert.match(content, /export\s+const\s+db\s*=/, 'db.ts must export db client object');
 });

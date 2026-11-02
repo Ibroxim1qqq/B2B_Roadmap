@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react';
 import { User, Lock, Phone, Building2, Shield, X, Camera, Eye, EyeOff, Check, Trash2, LogOut } from 'lucide-react';
 import { UserProfile } from '../../lib/types';
-import { updateUserProfile } from '../../lib/auth';
+import { setCurrentUser } from '../../lib/auth';
 import { api } from '../../lib/api';
 
 interface UserProfileModalProps {
@@ -23,6 +23,7 @@ export default function UserProfileModal({
   const [name, setName] = useState(currentUser?.name || '');
   const [login, setLogin] = useState(currentUser?.login || '');
   const [password, setPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatar_url || '');
   const [showPassword, setShowPassword] = useState(false);
@@ -38,8 +39,8 @@ export default function UserProfileModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      setError("Rasm hajmi 2MB dan oshmasligi kerak");
+    if (file.size > 300 * 1024) {
+      setError("Rasm hajmi 300KB dan oshmasligi kerak");
       return;
     }
 
@@ -52,7 +53,7 @@ export default function UserProfileModal({
     reader.readAsDataURL(file);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError("Ismni kiritish majburiy");
@@ -67,32 +68,30 @@ export default function UserProfileModal({
     setError(null);
 
     try {
-      const updates: Partial<UserProfile> = {
+      const updates: Record<string, string> = {
         name: name.trim(),
         login: login.trim(),
         phone: phone.trim(),
         avatar_url: avatarUrl
       };
-      if (password.trim()) {
-        updates.password = password.trim();
+      if (password) {
+        updates.password = password;
+        updates.current_password = currentPassword;
       }
 
-      const updated = updateUserProfile(updates);
-      if (updated) {
-        // Sync profile changes to Neon PostgreSQL database
-        const targetId = currentUser.user_id || currentUser.id || currentUser.login;
-        if (targetId) {
-          api.updateUser(targetId, updates).catch(e => console.warn('Sync profile to DB error:', e));
-        }
-
+      const res = await api.updateProfile(updates);
+      if (res.success && res.user) {
+        setCurrentUser(res.user);
+        setPassword('');
+        setCurrentPassword('');
         setSuccess(true);
-        onUserUpdated?.(updated);
+        onUserUpdated?.(res.user);
         setTimeout(() => {
           setSuccess(false);
           onClose();
         }, 600);
       } else {
-        setError("Profilni saqlashda xatolik yuz berdi");
+        setError(res.error || "Profilni saqlashda xatolik yuz berdi");
       }
     } catch (err: any) {
       setError(err?.message || "Saqlashda xatolik");
@@ -259,6 +258,22 @@ export default function UserProfileModal({
               </button>
             </div>
           </div>
+
+          {password && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Joriy parol</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Joriy parolingizni kiriting..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-[#1b815f]/15 font-medium text-slate-800 transition-all"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Phone */}
           <div>

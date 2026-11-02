@@ -746,7 +746,7 @@ export default function RoutePlannerView({
     setActiveMobileTab('map');
   };
 
-  // Fetch saved routes from Google Sheets
+  // Fetch saved routes
   const fetchSavedRoutes = useCallback(async () => {
     setLoadingSavedRoutes(true);
     try {
@@ -769,7 +769,7 @@ export default function RoutePlannerView({
     }
   }, [showSavedRoutesModal, fetchSavedRoutes]);
 
-  // Save current route to Google Sheets (Routes sheet)
+  // Save current route
   const handleSaveRouteToSheets = async () => {
     if (!startPoint || !endPoint || !routeResult) {
       alert('Iltimos, avval marshrutni tanlang (A va B nuqtalar)');
@@ -814,7 +814,7 @@ export default function RoutePlannerView({
 
       const res = await api.saveRoute(routePayload);
       if (res.success) {
-        setSaveSuccessMsg(`Marshrut Google Sheets (Routes) jadvaliga saqlandi! (${matchedTJMs.length} ta TJM)`);
+        setSaveSuccessMsg(`Marshrut saqlandi! (${matchedTJMs.length} ta TJM)`);
         setTimeout(() => setSaveSuccessMsg(null), 5000);
       } else {
         alert('Marshrutni saqlashda xatolik: ' + (res.error || 'Noma\'lum xatolik'));
@@ -827,7 +827,7 @@ export default function RoutePlannerView({
     }
   };
 
-  // Load a saved route from Google Sheets into the planner
+  // Load a saved route into the planner
   const handleLoadSavedRoute = (route: SavedRoute) => {
     const startPt = {
       lat: route.start_lat,
@@ -888,7 +888,7 @@ export default function RoutePlannerView({
                 type="button"
                 onClick={() => setShowSavedRoutesModal(true)}
                 className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-[#1b815f] rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer shadow-2xs"
-                title="Google Sheets'da saqlangan marshrutlar"
+                title="Saqlangan marshrutlar"
               >
                 <Bookmark className="w-3.5 h-3.5 text-[#1b815f]" />
                 <span>Saqlanganlar</span>
@@ -1206,7 +1206,7 @@ export default function RoutePlannerView({
               </button>
             </div>
 
-            {/* Success Alert when route saved to Google Sheets */}
+            {/* Success Alert when route saved */}
             {saveSuccessMsg && (
               <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-1 shadow-2xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1235,14 +1235,14 @@ export default function RoutePlannerView({
               </div>
             </div>
 
-            {/* Action Buttons: Save to Google Sheets & Live Navigation */}
+            {/* Action Buttons: Save & Live Navigation */}
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={handleSaveRouteToSheets}
                 disabled={isSavingRoute}
                 className="py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 active:scale-[0.98] cursor-pointer disabled:opacity-60"
-                title="Google Sheets (Routes) jadvaliga saqlash"
+                title="Marshrutni saqlash"
               >
                 {isSavingRoute ? (
                   <>
@@ -2293,7 +2293,7 @@ export default function RoutePlannerView({
         )}
       </div>
 
-      {/* 3. Saved Routes Modal (Google Sheets Routes) */}
+      {/* 3. Saved Routes Modal */}
       {showSavedRoutesModal && (
         <div 
           className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
@@ -2310,10 +2310,10 @@ export default function RoutePlannerView({
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 leading-tight">
-                    Saqlangan Marshrutlar (Google Sheets)
+                    Saqlangan Marshrutlar
                   </h3>
                   <p className="text-[11px] text-slate-500 font-medium">
-                    Google Sheets &quot;Routes&quot; varag&apos;ida saqlangan marshrutlar
+                    Kompaniyangiz saqlagan marshrutlar
                   </p>
                 </div>
               </div>

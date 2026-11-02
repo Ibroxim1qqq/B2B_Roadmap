@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { apiError, clearUserCache, clientIp, HttpError, readJsonBody, requireSuperadmin } from '@/lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+const ALLOWED_ROLES = ['manager', 'company_admin', 'superadmin'];
+const MIN_PASSWORD_LENGTH = 8;
+
+export async function GET(req: Request) {
   try {
-    const [users, companies] = await Promise.all([
-      db.getUsers(),
-      db.getCompanies()
-    ]);
+    await requireSuperadmin(req);
+    const [users, companies] = await Promise.all([db.getUsers(), db.getCompanies()]);
 
     const compMap = new Map<string, string>();
     companies.forEach(c => compMap.set(c.company_id, c.company_name));
@@ -19,79 +21,75 @@ export async function GET() {
     }));
 
     return NextResponse.json({ success: true, count: enriched.length, data: enriched });
-  } catch (err: any) {
-    console.error('Admin users GET error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err) {
+    return apiError(err, 'Admin users GET error');
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { company_id, name, login, password, role } = body;
+    await requireSuperadmin(req);
+    const { company_id, name, login, password, role } = await readJsonBody(req);
 
-    if (!company_id || !name || !login || !password) {
-      return NextResponse.json(
-        { success: false, error: 'Barcha maydonlar (Kompaniya, Ism, Login, Parol) to\'ldirilishi shart' },
-        { status: 400 }
-      );
+    if (![company_id, name, login, password].every(v => typeof v === 'string' && v.trim())) {
+      throw new HttpError(400, "Barcha maydonlar (Kompaniya, Ism, Login, Parol) to'ldirilishi shart");
     }
-
-    // Check if login already exists
-    const existing = await db.getUsers();
-    if (existing.some((u: any) => u.login.toLowerCase() === login.trim().toLowerCase())) {
-      return NextResponse.json(
-        { success: false, error: 'Bunday login allaqachon mavjud. Boshqa login tanlang.' },
-        { status: 400 }
-      );
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      throw new HttpError(400, `Parol kamida ${MIN_PASSWORD_LENGTH} belgidan iborat bo'lishi kerak`);
+    }
+    const cleanRole = role ? String(role).trim() : 'manager';
+    if (!ALLOWED_ROLES.includes(cleanRole)) {
+      throw new HttpError(400, "Rol noto'g'ri");
+    }
+    const companies = await db.getCompanies();
+    const company = companies.find(c => c.company_id === company_id.trim());
+    if (!company && company_id.trim() !== 'system') {
+      throw new HttpError(400, 'Kompaniya topilmadi');
     }
 
     const created = await db.createUser({
       company_id: company_id.trim(),
       name: name.trim(),
       login: login.trim(),
-      password: password.trim(),
-      role: role ? role.trim() : 'manager'
+      password,
+      role: cleanRole
     });
 
-    // Record user registration session in Neon background
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
-    const userAgent = req.headers.get('user-agent') || 'Admin Dashboard';
     db.recordUserSession({
       user_id: created.user_id,
       user_name: created.name,
       login: created.login,
       role: created.role,
       company_id: created.company_id,
-      company_name: company_id,
+      company_name: company?.company_name || created.company_id,
       action: 'register',
-      ip_address: ip,
-      user_agent: userAgent
+      ip_address: clientIp(req),
+      user_agent: req.headers.get('user-agent') || 'Admin Dashboard'
     }).catch(e => console.warn('Failed to record session:', e));
 
     return NextResponse.json({ success: true, data: created });
-  } catch (err: any) {
-    console.error('Admin users POST error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err) {
+    return apiError(err, 'Admin users POST error');
   }
 }
 
 export async function PATCH(req: Request) {
   try {
-    const body = await req.json();
-    const { userId, ...updates } = body;
+    await requireSuperadmin(req);
+    const { userId, name, login, phone, password } = await readJsonBody(req);
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID kiritilishi shart' },
-        { status: 400 }
-      );
+    if (typeof userId !== 'string' || !userId.trim()) {
+      throw new HttpError(400, 'User ID kiritilishi shart');
+    }
+    if (password && String(password).length < MIN_PASSWORD_LENGTH) {
+      throw new HttpError(400, `Parol kamida ${MIN_PASSWORD_LENGTH} belgidan iborat bo'lishi kerak`);
     }
 
-    const updated = await db.updateUser(userId, updates);
+    const updated = await db.updateUser(userId, { name, login, phone, password });
+    if (!updated) throw new HttpError(404, 'Foydalanuvchi topilmadi');
+    clearUserCache();
     return NextResponse.json({ success: true, data: updated });
-  } catch (err: any) {
-    console.error('Admin users PATCH error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err) {
+    return apiError(err, 'Admin users PATCH error');
   }
 }

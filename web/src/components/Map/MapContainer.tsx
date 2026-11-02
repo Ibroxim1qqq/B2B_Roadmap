@@ -320,7 +320,7 @@ export default function MapContainer({
       const districtClean = marker.district_name || '';
       const shortAddress = districtClean 
         ? (regionClean ? `${regionClean}, ${districtClean}` : districtClean)
-        : (marker.address || "Samarqand");
+        : (marker.address || "—");
 
       // 3. Apartments, Floors, Deadline
       const aptClean = marker.apartment_count && String(marker.apartment_count).trim() !== '' && String(marker.apartment_count).trim() !== '0' && String(marker.apartment_count).trim() !== '—'

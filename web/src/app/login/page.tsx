@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2, CloudSun } from 'lucide-react';
-import { validateCredentials, setCurrentUser, getCurrentUser } from '../../lib/auth';
+import { setCurrentUser, getCurrentUser } from '../../lib/auth';
 import { api } from '../../lib/api';
 
 export default function LoginPage() {
@@ -65,7 +65,6 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      // 1. Authenticate with API / DB
       const res = await api.login(login.trim(), password);
       if (res && res.success && res.user) {
         setCurrentUser(res.user);
@@ -74,14 +73,6 @@ export default function LoginPage() {
         } else {
           router.replace('/');
         }
-        return;
-      }
-
-      // 2. Fallback to local credential check
-      const localUser = validateCredentials(login, password);
-      if (localUser) {
-        setCurrentUser(localUser);
-        router.replace('/');
         return;
       }
 

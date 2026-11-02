@@ -264,6 +264,8 @@ def main():
         force_sample=args.force_sample
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    if not result.get("success"):
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

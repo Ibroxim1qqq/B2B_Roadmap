@@ -506,7 +506,7 @@ export default function ObjectsTableView({
 
                       {/* District */}
                       <td className="py-3 px-4 text-slate-600 font-medium whitespace-nowrap">
-                        {obj.district_name || 'Samarqand'}
+                        {obj.district_name || obj.region_name || '—'}
                       </td>
 
                       {/* Status */}

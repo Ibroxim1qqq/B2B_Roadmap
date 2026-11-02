@@ -20,24 +20,6 @@ const DEFAULT_FIELDS: (CustomField & { label?: string; desc?: string })[] = [
   { field_name: 'last_visit', field_type: 'date', required: false, visible: true, column_letter: 'AF', label: 'Oxirgi tashrif sanasi', desc: 'Joyiga borilgan vaqt tamg\'asi' }
 ];
 
-export function getStoredCustomFields(): (CustomField & { label?: string; desc?: string })[] {
-  if (typeof window === 'undefined') return DEFAULT_FIELDS;
-  try {
-    const saved = localStorage.getItem('b2b_custom_fields');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (e) {}
-  return DEFAULT_FIELDS;
-}
-
-export function saveStoredCustomFields(fields: (CustomField & { label?: string; desc?: string })[]) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem('b2b_custom_fields', JSON.stringify(fields));
-  } catch (e) {}
-}
-
 export default function CustomFieldManager() {
   const [fields, setFields] = useState<(CustomField & { label?: string; desc?: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,23 +31,23 @@ export default function CustomFieldManager() {
   const [savedAlert, setSavedAlert] = useState(false);
 
   useEffect(() => {
-    const stored = getStoredCustomFields();
-    setFields(stored);
-    setLoading(false);
-
-    api.getSettings().then(fetched => {
-      if (fetched && fetched.length > 0) {
-        setFields(fetched as any);
-        saveStoredCustomFields(fetched as any);
-      }
-    }).catch(console.error);
+    api.getAllFields()
+      .then(fetched => setFields(fetched.length > 0 ? fetched : DEFAULT_FIELDS))
+      .catch(err => {
+        console.error(err);
+        setFields(DEFAULT_FIELDS);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const toggleVisibility = (index: number) => {
-    const updated = [...fields];
-    updated[index].visible = !updated[index].visible;
-    setFields(updated);
-    saveStoredCustomFields(updated);
+  const toggleVisibility = async (index: number) => {
+    const field = fields[index];
+    const res = await api.setFieldVisibility(field.field_name, !field.visible);
+    if (!res.success) {
+      alert('Xatolik: ' + (res.error || "O'zgartirib bo'lmadi"));
+      return;
+    }
+    setFields(fields.map((f, i) => (i === index ? { ...f, visible: !f.visible } : f)));
   };
 
   const handleAddField = async (e: React.FormEvent) => {
@@ -91,9 +73,12 @@ export default function CustomFieldManager() {
       visible: true
     };
 
-    const updated = [...fields, newFieldObj];
-    setFields(updated);
-    saveStoredCustomFields(updated);
+    const res = await api.addCustomField(newFieldObj);
+    if (!res.success) {
+      alert('Xatolik: ' + (res.error || 'Maydon saqlanmadi'));
+      return;
+    }
+    setFields([...fields, newFieldObj]);
 
     // Reset form
     setNewLabel('');
@@ -105,15 +90,9 @@ export default function CustomFieldManager() {
     setSavedAlert(true);
     setTimeout(() => setSavedAlert(false), 3000);
 
-    // Save directly to Google Sheets Settings & add header column to main sheet
-    try {
-      await api.addCustomField(newFieldObj);
-    } catch (err) {
-      console.warn('Failed to sync new custom field to Google Sheets:', err);
-    }
   };
 
-  const handleDeleteCustomField = (index: number) => {
+  const handleDeleteCustomField = async (index: number) => {
     const field = fields[index];
     // Don't delete system default fields
     if (DEFAULT_FIELDS.some(df => df.field_name === field.field_name)) {
@@ -122,9 +101,12 @@ export default function CustomFieldManager() {
     }
 
     if (confirm(`"${field.label || field.field_name}" maydonini o'chirmoqchimisiz?`)) {
-      const updated = fields.filter((_, idx) => idx !== index);
-      setFields(updated);
-      saveStoredCustomFields(updated);
+      const res = await api.setFieldVisibility(field.field_name, false);
+      if (!res.success) {
+        alert('Xatolik: ' + (res.error || "O'chirib bo'lmadi"));
+        return;
+      }
+      setFields(fields.filter((_, idx) => idx !== index));
     }
   };
 

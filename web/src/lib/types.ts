@@ -113,6 +113,7 @@ export interface Company {
   company_id: string;
   company_name: string;
   status: 'active' | 'inactive';
+  data_source?: 'dshk' | 'uysot';
   created_at: string;
   user_count?: number;
   data_count?: number;
@@ -129,7 +130,7 @@ export interface UserProfile {
   company_id?: string;
   company_name?: string;
   login?: string;
-  password?: string;
+  data_source?: 'dshk' | 'uysot';
 }
 
 export interface SavedRoute {

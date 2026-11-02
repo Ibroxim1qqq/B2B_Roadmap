@@ -97,7 +97,7 @@ defineTest('Social and messaging link generators format clean URLs', {
   description: 'Strips special characters and prefixes for Telegram and Instagram'
 }, () => {
   assert.equal(getTelegramUrl('@menejer_b2b'), 'https://t.me/menejer_b2b');
-  assert.equal(getTelegramUrl('+998901234567'), 'https://t.me/998901234567');
+  assert.equal(getTelegramUrl('+998901234567'), 'https://t.me/+998901234567');
   assert.equal(getTelegramUrl('https://t.me/custom_link'), 'https://t.me/custom_link');
 
   assert.equal(getInstagramUrl('@samarqand_dom'), 'https://instagram.com/samarqand_dom');

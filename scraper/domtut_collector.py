@@ -413,6 +413,7 @@ def main():
     parser.add_argument('--city', choices=['tashkent', 'viloyat', 'all'], default='all', help='Target city/region')
     parser.add_argument('--no-details', action='store_true', help='Skip fetching individual detail pages for speed')
     parser.add_argument('--json-only', action='store_true', help='Skip Google Sheets upload, save JSON only')
+    parser.add_argument('--output', default=None, help='JSON output path (default: bundled web/src/lib file, full runs only)')
     args = parser.parse_args()
     
     # 1. Scrape objects
@@ -424,8 +425,14 @@ def main():
     )
     
     # 2. Save locally to web/src/lib/uysot-domtut-data.json
-    web_json_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'web', 'src', 'lib', 'uysot-domtut-data.json'))
-    save_to_local_json(objects, web_json_path)
+    web_json_path = args.output or os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'web', 'src', 'lib', 'uysot-domtut-data.json'))
+    if not objects:
+        logger.error('No objects collected; existing data left untouched.')
+        sys.exit(1)
+    if args.output or not args.limit:
+        save_to_local_json(objects, web_json_path)
+    else:
+        logger.warning('Limited run without --output: bundled JSON left untouched.')
     
     # 3. Save to Google Sheets if credentials exist
     if not args.json_only:

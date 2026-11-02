@@ -5,7 +5,6 @@ import {
   fileExistsInSrc
 } from './harness.ts';
 import { db } from '../../src/lib/db.ts';
-import * as googleSheets from '../../src/lib/googleSheets.ts';
 
 // ============================================================================
 // TIER 11: Database CRUD Operations & Google Sheets Decoupling Tests
@@ -222,16 +221,3 @@ defineTest('db.addCustomField and db.getCustomFields manage dynamic fields', {
   assert.equal(found.field_type, 'phone');
 });
 
-defineTest('googleSheets.ts module decouples runtime from external Sheets API', {
-  tier: 11, milestone: 11, feature: 'SHEETS_DECOUPLING',
-  description: 'googleSheets.ts delegates calls directly to db client'
-}, async () => {
-  assert.ok(fileExistsInSrc('lib/googleSheets.ts'), 'lib/googleSheets.ts must exist');
-  const content = readSrcFile('lib/googleSheets.ts');
-
-  assert.ok(content.includes("from './db'") || content.includes("from './db.ts'"), 'googleSheets.ts must import from db.ts');
-  assert.ok(content.includes('db.getObjects()'), 'exportAllObjectsFromSheet must invoke db.getObjects');
-  assert.ok(content.includes('db.getRoutes'), 'getRoutesFromSheet must invoke db.getRoutes');
-  assert.ok(content.includes('db.saveRoute'), 'saveRouteToSheet must invoke db.saveRoute');
-  assert.ok(content.includes('db.recordUserSession'), 'recordUserSessionInSheet must invoke db.recordUserSession');
-});

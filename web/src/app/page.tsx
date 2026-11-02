@@ -1,15 +1,15 @@
 'use client';
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useObjects } from '../hooks/useObjects';
 import { useLocation } from '../hooks/useLocation';
 import { useDistance } from '../hooks/useDistance';
-import { api, isUysotCompany, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject, formatMapObjectToObjectDetail, formatRowToObjectDetail, uysotRows, realSheetsRows } from '../lib/api';
+import { api, isUysotCompany, formatBuildingItemToObjectDetail, formatBuildingItemToMapObject, formatMapObjectToObjectDetail, formatRowToObjectDetail } from '../lib/api';
 import { calculateDistance } from '../lib/utils';
 import { ObjectDetail, CustomField, MapObject, UserProfile, WeeklySyncNotification, NewBuildingItem, AIRouteRecommendation } from '../lib/types';
 import GlobalAIAssistant from '../components/AI/GlobalAIAssistant';
-import { getCurrentUser, setCurrentUser as saveCurrentUser, logout as authLogout } from '../lib/auth';
+import { getCurrentUser, setCurrentUser as saveCurrentUser, clearStoredUser, logout as authLogout } from '../lib/auth';
 import Navbar from '../components/Header/Navbar';
 import LeftSidebar from '../components/Sidebar/LeftSidebar';
 import FilterToolbar from '../components/Filters/FilterToolbar';
@@ -72,13 +72,27 @@ function HomeContent() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const user = getCurrentUser();
-    if (!user) {
-      router.replace('/login');
-    } else {
-      setLocalCurrentUser(user);
+    let cancelled = false;
+    const cached = getCurrentUser();
+    if (cached) {
+      setLocalCurrentUser(cached);
       setAuthChecked(true);
     }
+    // The server session is the authority; the stored profile only avoids a blank first paint.
+    api.getSessionUser().then(user => {
+      if (cancelled) return;
+      if (user) {
+        saveCurrentUser(user);
+        setLocalCurrentUser(user);
+        setAuthChecked(true);
+      } else if (user === null || !cached) {
+        clearStoredUser();
+        router.replace('/login');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   // Determine effective company ID (SuperAdmin can view as another company via ?company_id=...)
@@ -98,21 +112,20 @@ function HomeContent() {
 
   // Handle URL query parameters for tab and focused object
   useEffect(() => {
-    if (queryTab) {
+    if (queryTab && !queryFocusId) {
       setActiveTab(queryTab);
-    }
-    if (queryFocusId) {
-      handleSelectObject(queryFocusId);
-      setActiveTab('map');
     }
   }, [queryTab, queryFocusId]);
 
   // Auto-switch region to Toshkent when UYSOT.UZ company is active
+  const regionDefaultAppliedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (effectiveCompanyId === 'uysot' || isUysotCompany(effectiveCompanyId)) {
+    if (!effectiveCompanyId || loading || regionDefaultAppliedFor.current === effectiveCompanyId) return;
+    regionDefaultAppliedFor.current = effectiveCompanyId;
+    if (isUysotCompany(effectiveCompanyId)) {
       setSelectedRegion('1726');
     }
-  }, [effectiveCompanyId]);
+  }, [effectiveCompanyId, loading]);
   const [locating, setLocating] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -137,6 +150,8 @@ function HomeContent() {
 
   useEffect(() => {
     async function loadNotifications() {
+      // Waits for the markers: they tell whether a company viewed by a superadmin uses DSHK at all.
+      if (!effectiveCompanyId || loading) return;
       try {
         const isUysot = isUysotCompany(effectiveCompanyId);
         // UYSOT users strictly never see DSHK notifications
@@ -165,7 +180,7 @@ function HomeContent() {
       }
     }
     loadNotifications();
-  }, [currentUser, effectiveCompanyId]);
+  }, [currentUser, effectiveCompanyId, loading]);
 
   const handleMarkAllAsRead = () => {
     const userId = currentUser?.id || currentUser?.user_id || 'guest';
@@ -176,32 +191,21 @@ function HomeContent() {
 
   // Combine base markers with any new objects discovered via notifications (with 100% strict company isolation)
   const allMarkers = useMemo(() => {
-    const isUysot = isUysotCompany(effectiveCompanyId);
+    // The server already returned only this company's dataset.
     const map = new Map<string, MapObject>();
-    
-    for (const m of markers) {
-      const isDomtut = String(m.source_id).startsWith('domtut_') || Boolean((m as any).is_uysot);
-      if (isUysot) {
-        if (isDomtut) map.set(String(m.source_id), m);
-      } else {
-        if (!isDomtut) map.set(String(m.source_id), m);
-      }
-    }
+    for (const m of markers) map.set(String(m.source_id), m);
 
-    // Only non-UYSOT companies receive DSHK scraper notifications
-    if (!isUysot) {
-      for (const notif of notifications) {
-        for (const b of notif.new_objects || []) {
-          const id = String(b.source_id);
-          if (!id.startsWith('domtut_') && !map.has(id)) {
-            map.set(id, formatBuildingItemToMapObject(b));
-          }
+    for (const notif of notifications) {
+      for (const b of notif.new_objects || []) {
+        const id = String(b.source_id);
+        if (!id.startsWith('domtut_') && !map.has(id)) {
+          map.set(id, formatBuildingItemToMapObject(b));
         }
       }
     }
 
     return Array.from(map.values());
-  }, [markers, notifications, effectiveCompanyId]);
+  }, [markers, notifications]);
 
   const handleSelectNewBuilding = async (building: NewBuildingItem) => {
     setActiveTab('map');
@@ -260,13 +264,7 @@ function HomeContent() {
 
   // Real-time active filtering for region, search, district, and status
   const activeFilteredMarkers = useMemo(() => {
-    const isUysot = isUysotCompany(effectiveCompanyId);
     return allMarkers.filter(m => {
-      // 0. Hard company isolation guard:
-      const isDomtut = String(m.source_id).startsWith('domtut_') || Boolean((m as any).is_uysot);
-      if (isUysot && !isDomtut) return false;
-      if (!isUysot && isDomtut) return false;
-
       // 1. Region Filter
       if (selectedRegion && m.region_soato !== selectedRegion) {
         return false;
@@ -297,13 +295,12 @@ function HomeContent() {
 
       // 2. District Filter
       if (selectedDistrict && selectedDistrict !== 'Barcha tumanlar') {
-        const d = selectedDistrict.toLowerCase().trim();
-        const dClean = selectedDistrict.toLowerCase().replace(/['`’‘]/g, '').replace(/(\s*tumani|\s*shahar|\s*shahri)$/i, '').trim();
+                const dClean = selectedDistrict.toLowerCase().replace(/['`’‘]/g, '').replace(/(\s*tumani|\s*shahar|\s*shahri)$/i, '').trim();
         const mDist = (m.district_name || '').toLowerCase().replace(/['`’‘]/g, '').trim();
         const mAddr = (m.address || '').toLowerCase().replace(/['`’‘]/g, '').trim();
         const mName = (m.object_name || '').toLowerCase().replace(/['`’‘]/g, '').trim();
-        const mDistrict = (mDist && (mDist.includes(dClean) || dClean.includes(mDist))) || mAddr.includes(dClean) || mName.includes(dClean) ? d : '';
-        if (!mDistrict.includes(d) && !d.includes(mDistrict)) {
+        const matchesDistrict = (mDist && (mDist.includes(dClean) || dClean.includes(mDist))) || mAddr.includes(dClean) || mName.includes(dClean);
+        if (!matchesDistrict) {
           return false;
         }
       }
@@ -344,10 +341,13 @@ function HomeContent() {
 
       // 6. Floor Range (Custom min/max)
       if (advancedFilters.minFloors || advancedFilters.maxFloors) {
-        const cleanFloor = parseInt(String(m.floors || '').replace(/\D+/g, '') || '0', 10);
+        // Floors may be a range such as "9-16": keep the object when the range overlaps the filter.
+        const floorNumbers = (String(m.floors || '').match(/\d+/g) || []).map(Number);
+        const lowFloor = floorNumbers.length ? Math.min(...floorNumbers) : 0;
+        const highFloor = floorNumbers.length ? Math.max(...floorNumbers) : 0;
         const minFl = advancedFilters.minFloors ? parseInt(advancedFilters.minFloors, 10) : 0;
         const maxFl = advancedFilters.maxFloors ? parseInt(advancedFilters.maxFloors, 10) : Infinity;
-        if (cleanFloor < minFl || cleanFloor > maxFl) return false;
+        if (highFloor < minFl || lowFloor > maxFl) return false;
       }
 
       // 7. Visit Status (Tashrif holati)
@@ -366,8 +366,8 @@ function HomeContent() {
 
       // 9. Difficulty / Category (Qurilish toifasi)
       if (advancedFilters.difficulty && advancedFilters.difficulty !== 'all') {
-        const diff = (m.difficulty || '').toUpperCase();
-        if (!diff.includes(advancedFilters.difficulty)) return false;
+        const category = (m.difficulty || '').toUpperCase().match(/^(IV|III|II|I)\b/)?.[1];
+        if (category !== advancedFilters.difficulty) return false;
       }
 
       // 10. Deadline Year (Topshirish muddati)
@@ -378,7 +378,7 @@ function HomeContent() {
 
       return true;
     });
-  }, [allMarkers, effectiveCompanyId, selectedRegion, searchQuery, selectedDistrict, selectedStatus, advancedFilters]);
+  }, [allMarkers, selectedRegion, searchQuery, selectedDistrict, selectedStatus, advancedFilters]);
 
   // Calculate distances if user location exists
   const objectsWithDistance = useDistance(activeFilteredMarkers, location.lat, location.lng);
@@ -413,26 +413,16 @@ function HomeContent() {
       setObjectDetail(formatMapObjectToObjectDetail(existing));
       setDetailLoading(false);
     } else {
-      const isDomtut = cleanId.startsWith('domtut_');
-      const fallbackObj = isDomtut
-        ? (uysotRows as any[]).find((r: any) => String(r.source_id).trim() === cleanId)
-        : (realSheetsRows as any[]).find((r: any) => String(r.source_id).trim() === cleanId);
-
-      if (fallbackObj) {
-        setObjectDetail(formatRowToObjectDetail(fallbackObj));
-        setDetailLoading(false);
-      } else {
-        setObjectDetail(formatRowToObjectDetail({
-          source_id: cleanId,
-          object_name: `Bino #${cleanId}`,
-          status: 'Qurilish jarayonida',
-          region_soato: isUysotCompany(effectiveCompanyId) || isDomtut ? '1726' : '1718'
-        }));
-        setDetailLoading(true);
-      }
+      setObjectDetail(formatRowToObjectDetail({
+        source_id: cleanId,
+        object_name: `Bino #${cleanId}`,
+        status: 'Qurilish jarayonida',
+        region_soato: isUysotCompany(effectiveCompanyId) ? '1726' : '1718'
+      }));
+      setDetailLoading(true);
     }
 
-    // 2. Fetch full detail from API in background for any fresh CRM/Sheets updates
+    // 2. Fetch full detail from API in background for any fresh CRM updates
     try {
       const detail = await api.getObject(cleanId, effectiveCompanyId);
       if (detail && detail.source && String(detail.source.source_id) === cleanId) {
@@ -446,6 +436,21 @@ function HomeContent() {
   };
 
   const [activeAIStops, setActiveAIStops] = useState<AIRouteRecommendation[] | null>(null);
+
+  // Opens a deep-linked object once the user and the markers are known, so its CRM data loads for the right company.
+  const focusHandled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!queryFocusId || !effectiveCompanyId || loading || focusHandled.current === queryFocusId) return;
+    focusHandled.current = queryFocusId;
+    setActiveTab('map');
+    handleSelectObject(queryFocusId);
+    const target = markers.find(m => String(m.source_id) === String(queryFocusId));
+    if (target) {
+      setFocusTarget({ lat: target.latitude, lng: target.longitude, zoom: 16, timestamp: Date.now() });
+    }
+    // handleSelectObject is recreated on every render; this runs once per focus id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryFocusId, effectiveCompanyId, loading, markers]);
 
   const handleApplyAIRouteFromCopilot = (stops: AIRouteRecommendation[]) => {
     setActiveAIStops(stops);
@@ -621,7 +626,7 @@ function HomeContent() {
     }
   };
 
-  // Live Sync with Google Sheets
+  // Reload the latest data from the database
   const handleSyncWithSheets = async () => {
     setSyncing(true);
     try {
@@ -632,7 +637,7 @@ function HomeContent() {
           const detail = await api.getObject(selectedId, effectiveCompanyId);
           setObjectDetail(detail);
         }
-        alert(`Google Sheets bilan sinxronlandi! Jami: ${res.count || 0} ta obyekt`);
+        alert(`Ma'lumotlar yangilandi! Jami: ${res.count || 0} ta obyekt`);
       } else {
         alert("Sinxronizatsiya xatosi: " + ((res as any)?.error || 'Baza bilan ulanib bo\'lmadi'));
       }
@@ -683,8 +688,15 @@ function HomeContent() {
 
   if (error) {
     return (
-      <div className="p-8 text-rose-600 text-center">
-        Xatolik yuz berdi: {error.message}
+      <div className="h-screen w-screen flex flex-col items-center justify-center gap-3 bg-slate-100 p-8 text-center">
+        <p className="text-sm font-bold text-rose-600">Ma'lumotlarni yuklab bo'lmadi: {error.message}</p>
+        <button
+          type="button"
+          onClick={() => refresh()}
+          className="px-4 py-2 rounded-xl bg-[#1b815f] text-white text-xs font-bold cursor-pointer"
+        >
+          Qayta urinish
+        </button>
       </div>
     );
   }
@@ -1012,6 +1024,7 @@ function HomeContent() {
               ) : (
                 <ObjectDetails
                   detail={objectDetail}
+                  companyId={effectiveCompanyId}
                   distance={selectedDistance}
                   onClose={() => { setSelectedId(null); setIsEditing(false); }}
                   onEdit={() => setIsEditing(true)}
@@ -1046,6 +1059,7 @@ function HomeContent() {
                 ) : (
                   <ObjectDetails
                     detail={objectDetail}
+                    companyId={effectiveCompanyId}
                     distance={selectedDistance}
                     onClose={() => { setSelectedId(null); setIsEditing(false); }}
                     onEdit={() => setIsEditing(true)}
@@ -1091,6 +1105,7 @@ function HomeContent() {
               ) : (
                 <ObjectDetails
                   detail={objectDetail}
+                  companyId={effectiveCompanyId}
                   distance={selectedDistance}
                   onClose={() => { setSelectedId(null); setIsEditing(false); }}
                   onEdit={() => setIsEditing(true)}
@@ -1122,6 +1137,7 @@ function HomeContent() {
         onSave={handleCreateObject}
         userLat={location.lat}
         userLng={location.lng}
+        defaultRegionSoato={selectedRegion || (isUysotCompany(effectiveCompanyId) ? '1726' : '1718')}
       />
 
       {/* Mobile Bottom Navigation */}

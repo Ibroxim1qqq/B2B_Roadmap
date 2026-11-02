@@ -1,54 +1,50 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import {
+  apiError, clearLoginFailures, clientIp, HttpError, isLoginThrottled,
+  readJsonBody, recordLoginFailure, setSessionCookie
+} from '@/lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const { login, password } = await req.json();
+    const { login, password } = await readJsonBody(req);
 
-    if (!login || !password) {
-      return NextResponse.json(
-        { success: false, error: 'Login va parol kiritilishi shart' },
-        { status: 400 }
-      );
+    if (typeof login !== 'string' || typeof password !== 'string' || !login.trim() || !password) {
+      throw new HttpError(400, 'Login va parol kiritilishi shart');
+    }
+
+    const ip = clientIp(req);
+    if (isLoginThrottled(login, ip)) {
+      throw new HttpError(429, "Juda ko'p urinish. 15 daqiqadan keyin qayta urinib ko'ring.");
     }
 
     const user = await db.authenticateUser(login, password);
-
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Login yoki parol noto\'g\'ri' },
-        { status: 401 }
-      );
+      recordLoginFailure(login, ip);
+      throw new HttpError(401, "Login yoki parol noto'g'ri");
     }
+    clearLoginFailures(login, ip);
 
-    // Extract client IP and device info
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
-    const userAgent = req.headers.get('user-agent') || 'Unknown';
+    const token = await db.createAuthSession(String(user.user_id || user.id));
 
-    // Record login session in Neon PostgreSQL background task
     db.recordUserSession({
       user_id: user.user_id || user.id,
       user_name: user.name,
       login: user.login || '',
       role: user.role || 'manager',
-      company_id: user.company_id || 'comp_default',
-      company_name: user.company_name || 'Asosiy Kompaniya',
+      company_id: user.company_id || '',
+      company_name: user.company_name || '',
       action: 'login',
       ip_address: ip,
-      user_agent: userAgent
+      user_agent: req.headers.get('user-agent') || 'Unknown'
     }).catch(e => console.warn('Failed to record login session:', e));
 
-    return NextResponse.json({
-      success: true,
-      user
-    });
-  } catch (err: any) {
-    console.error('Auth login error:', err);
-    return NextResponse.json(
-      { success: false, error: err.message || 'Server xatosi' },
-      { status: 500 }
-    );
+    const res = NextResponse.json({ success: true, user });
+    setSessionCookie(res, token);
+    return res;
+  } catch (err) {
+    return apiError(err, 'Auth login error');
   }
 }

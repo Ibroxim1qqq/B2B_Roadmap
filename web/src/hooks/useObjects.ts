@@ -13,6 +13,7 @@ export function useObjects(companyId?: string) {
   const [status, setStatus] = useState('');
 
   const fetchMarkers = useCallback(async () => {
+    if (!companyId) return;
     try {
       setLoading(true);
       const data = await api.getMarkers(companyId);
@@ -26,6 +27,7 @@ export function useObjects(companyId?: string) {
   }, [companyId]);
 
   useEffect(() => {
+    if (!companyId) return;
     let isCancelled = false;
     setLoading(true);
     api.getMarkers(companyId)

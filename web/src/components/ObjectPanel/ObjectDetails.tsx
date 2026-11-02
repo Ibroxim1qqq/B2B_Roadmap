@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ObjectDetail, AIPitchBriefing } from '../../lib/types';
 import { api } from '../../lib/api';
 import { 
@@ -8,10 +8,11 @@ import {
   Clock, CheckCircle2, Navigation, Pencil, Trash2, ShieldCheck, Tag,
   Sparkles, Loader2, Route as RouteIcon
 } from 'lucide-react';
-import { getNavigationUrl, getYandexNavUrl, getCallUrl, getTelegramUrl, getInstagramUrl } from '../../lib/utils';
+import { getNavigationUrl, getYandexNavUrl, getCallUrl, getTelegramUrl, getInstagramUrl, safeExternalUrl } from '../../lib/utils';
 
 interface Props {
   detail: ObjectDetail;
+  companyId?: string;
   distance?: number;
   onClose: () => void;
   onEdit: () => void;
@@ -20,7 +21,43 @@ interface Props {
   onPlanRoute?: () => void;
 }
 
-export default function ObjectDetails({ detail, distance, onClose, onEdit, onRecordVisit, onClearB2B, onPlanRoute }: Props) {
+const VISIT_TIME = new Intl.DateTimeFormat('uz-UZ', {
+  timeZone: 'Asia/Tashkent',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hour12: false
+});
+
+function VisitHistory({ sourceId, companyId, lastVisit }: { sourceId?: string; companyId?: string; lastVisit?: string }) {
+  const [visits, setVisits] = useState<{ visited_by: string; visited_at: string }[]>([]);
+
+  useEffect(() => {
+    if (!sourceId) return;
+    let cancelled = false;
+    api.getObjectVisits(sourceId, companyId)
+      .then(rows => {
+        if (!cancelled) setVisits(rows);
+      })
+      .catch(err => console.warn('Visit history load error:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceId, companyId, lastVisit]);
+
+  if (visits.length === 0) return null;
+  return (
+    <div className="pt-2 mt-2 border-t border-slate-200/60 space-y-1">
+      <span className="text-slate-400">Tashriflar tarixi:</span>
+      {visits.map((v, i) => (
+        <div key={i} className="flex items-start justify-between gap-3 text-[11px]">
+          <span className="text-slate-500">{VISIT_TIME.format(new Date(v.visited_at))}</span>
+          <span className="font-semibold text-slate-800 text-right">{v.visited_by}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function ObjectDetails({ detail, companyId, distance, onClose, onEdit, onRecordVisit, onClearB2B, onPlanRoute }: Props) {
   const source = detail?.source || {
     source_id: '',
     object_name: "Noma'lum bino",
@@ -133,7 +170,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
                 {source.status || 'Qurilish jarayonida'}
               </span>
               <span className="text-xs text-slate-500 font-medium">
-                {source.district_name || 'Samarqand'}
+                {source.district_name || source.region_name || '—'}
               </span>
               {distText !== '—' && (
                 <span className="flex items-center gap-1 font-semibold text-[#1b815f] bg-emerald-50 px-2 py-0.5 rounded-md text-[10px]">
@@ -366,6 +403,9 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
               </span>
             </div>
 
+            <VisitHistory sourceId={detail?.source?.source_id} companyId={companyId} lastVisit={detail?.internal?.last_visit} />
+
+
             {/* User defined custom fields */}
             {(() => {
               const standardKeys = [
@@ -422,7 +462,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
               <span className="text-slate-400 flex items-center gap-1.5 shrink-0">
                 <Building className="w-3.5 h-3.5 text-slate-400" /> Tuman / Shahar
               </span>
-              <span className="font-medium text-slate-800 text-right">{source.district_name || 'Samarqand'}</span>
+              <span className="font-medium text-slate-800 text-right">{source.district_name || source.region_name || '—'}</span>
             </div>
 
             <div className="flex items-start justify-between gap-3">
@@ -464,9 +504,9 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
               <span className="text-slate-400 flex items-center gap-1.5 shrink-0">
                 <FileText className="w-3.5 h-3.5 text-slate-400" /> Passport
               </span>
-              {source.passport_url && String(source.passport_url).trim() !== '' && String(source.passport_url) !== '#' ? (
+              {safeExternalUrl(source.passport_url) ? (
                 <a
-                  href={String(source.passport_url)}
+                  href={safeExternalUrl(source.passport_url) || undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="font-semibold text-[#1b815f] hover:underline flex items-center gap-1"
@@ -484,7 +524,7 @@ export default function ObjectDetails({ detail, distance, onClose, onEdit, onRec
                 <ExternalLink className="w-3.5 h-3.5 text-slate-400" /> Manba
               </span>
               <a
-                href={source.source_url || (isDomtut ? 'https://domtut.uz' : `https://dshk.shaffofqurilish.uz/object/${source.source_id}`)}
+                href={safeExternalUrl(source.source_url) || (isDomtut ? 'https://domtut.uz' : `https://dshk.shaffofqurilish.uz/object/${source.source_id}`)}
                 target="_blank"
                 rel="noreferrer"
                 className="font-semibold text-[#1b815f] hover:underline truncate max-w-[180px]"

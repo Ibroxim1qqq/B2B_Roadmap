@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { apiError, HttpError, readJsonBody, requireSuperadmin } from '@/lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const [companies, users] = await Promise.all([
-      db.getCompanies(),
-      db.getUsers()
-    ]);
+    await requireSuperadmin(req);
+    const [companies, users] = await Promise.all([db.getCompanies(), db.getUsers()]);
 
     // Attach user count per company
     const enriched = companies.map(c => ({
@@ -17,28 +16,25 @@ export async function GET() {
     }));
 
     return NextResponse.json({ success: true, count: enriched.length, data: enriched });
-  } catch (err: any) {
-    console.error('Admin companies GET error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err) {
+    return apiError(err, 'Admin companies GET error');
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { name, status } = body;
+    await requireSuperadmin(req);
+    const { name, status, data_source } = await readJsonBody(req);
 
-    if (!name || !name.trim()) {
-      return NextResponse.json(
-        { success: false, error: 'Kompaniya nomi kiritilishi shart' },
-        { status: 400 }
-      );
+    if (typeof name !== 'string' || !name.trim()) {
+      throw new HttpError(400, 'Kompaniya nomi kiritilishi shart');
     }
+    const cleanStatus = status === 'inactive' ? 'inactive' : 'active';
+    const dataSource = data_source === 'uysot' ? 'uysot' : 'dshk';
 
-    const created = await db.createCompany(name.trim(), status || 'active');
+    const created = await db.createCompany(name.trim(), cleanStatus, dataSource);
     return NextResponse.json({ success: true, data: created });
-  } catch (err: any) {
-    console.error('Admin companies POST error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err) {
+    return apiError(err, 'Admin companies POST error');
   }
 }

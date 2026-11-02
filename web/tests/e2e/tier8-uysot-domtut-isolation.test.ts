@@ -12,30 +12,6 @@ import * as path from 'node:path';
 // TIER 8: UYSOT.UZ, Nilufar User, Domtut.uz Scraper & Data Isolation Tests
 // ============================================================================
 
-defineTest('googleSheets.ts defines UYSOT_HEADERS and UYSOT_Objects methods', {
-  tier: 8, milestone: 8, feature: 'UYSOT_SHEETS_SCHEMA',
-  description: 'googleSheets.ts defines UYSOT_HEADERS, ensureUysotSheet, and getUysotObjectsFromSheet'
-}, () => {
-  const content = readSrcFile('lib/googleSheets.ts');
-  assert.match(content, /UYSOT_HEADERS/, 'googleSheets.ts must define UYSOT_HEADERS');
-  assert.match(content, /ensureUysotSheet/, 'googleSheets.ts must export/contain ensureUysotSheet');
-  assert.match(content, /export\s+async\s+function\s+getUysotObjectsFromSheet/, 'googleSheets.ts must export getUysotObjectsFromSheet');
-  assert.ok(content.includes('UYSOT_Objects'), 'googleSheets.ts must target UYSOT_Objects worksheet');
-  assert.ok(content.includes('uysot-domtut-data.json'), 'googleSheets.ts must support local fallback cache');
-});
-
-defineTest('googleSheets.ts provisions UYSOT.UZ company and Nilufar user', {
-  tier: 8, milestone: 8, feature: 'UYSOT_PROVISIONING',
-  description: 'UYSOT.UZ company and Nilufar company_admin are provisioned with data isolation'
-}, () => {
-  const content = readSrcFile('lib/googleSheets.ts');
-  assert.ok(content.includes("'uysot'"), "googleSheets.ts must include 'uysot' company id");
-  assert.ok(content.includes('UYSOT.UZ'), 'googleSheets.ts must include UYSOT.UZ company name');
-  assert.ok(content.includes("'nilufar'"), "googleSheets.ts must include 'nilufar' login");
-  assert.ok(content.includes('Nilufar'), 'googleSheets.ts must include Nilufar user name');
-  assert.ok(content.includes('uysot2026'), 'googleSheets.ts must support uysot2026 password authentication');
-});
-
 defineTest('api/objects/route.ts enforces strict data isolation for UYSOT.UZ', {
   tier: 8, milestone: 8, feature: 'DATA_ISOLATION_ROUTE',
   description: 'Requests with companyId uysot only return Domtut data; other companies only receive DSHK data'
@@ -85,7 +61,7 @@ defineTest('app/page.tsx auto-selects Toshkent region for UYSOT user', {
   description: 'app/page.tsx switches selectedRegion to 1726 (Toshkent) when company is uysot'
 }, () => {
   const content = readSrcFile('app/page.tsx');
-  assert.ok(content.includes("'uysot'"), "page.tsx must check for 'uysot' company");
+  assert.ok(content.includes('isUysotCompany(effectiveCompanyId)'), 'page.tsx must check the company data source');
   assert.ok(content.includes("'1726'"), "page.tsx must set region to '1726' (Toshkent)");
 });
 
@@ -141,14 +117,5 @@ defineTest('Zero-Leakage Matrix: UYSOT and Samarqand datasets have 0 overlapping
   // Ensure no domtut objects exist in DSHK Samarqand dataset
   const domtutInDshk = dshkRows.filter((o: any) => String(o.source_id).startsWith('domtut_'));
   assert.equal(domtutInDshk.length, 0, 'Zero Domtut objects must appear in Samarqand base dataset');
-});
-
-defineTest('Company_Data CRM overrides are strictly isolated by company_id', {
-  tier: 8, milestone: 8, feature: 'CRM_COMPANY_ISOLATION',
-  description: 'getCompanyDataFromSheet filters exclusively by companyId'
-}, () => {
-  const content = readSrcFile('lib/googleSheets.ts');
-  assert.ok(content.includes('rowObj.company_id !== companyId'), 'CRM overrides must strictly check rowObj.company_id !== companyId');
-  assert.ok(content.includes('updateCompanyDataInSheet'), 'CRM update function must exist');
 });
 

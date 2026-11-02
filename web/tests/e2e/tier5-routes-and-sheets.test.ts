@@ -27,17 +27,6 @@ defineTest('SavedRoute interface is defined in lib/types.ts', {
   assert.match(content, /tjm_list:\s*string/, 'SavedRoute must include tjm_list');
 });
 
-defineTest('googleSheets.ts implements saveRouteToSheet and getRoutesFromSheet', {
-  tier: 5, milestone: 5, feature: 'SHEETS_ROUTES',
-  description: 'googleSheets.ts integrates Routes sheet with append and read methods'
-}, () => {
-  const content = readSrcFile('lib/googleSheets.ts');
-  assert.match(content, /export\s+async\s+function\s+saveRouteToSheet/, 'googleSheets.ts must export saveRouteToSheet');
-  assert.match(content, /export\s+async\s+function\s+getRoutesFromSheet/, 'googleSheets.ts must export getRoutesFromSheet');
-  assert.match(content, /ROUTE_HEADERS/, 'googleSheets.ts must define ROUTE_HEADERS');
-  assert.ok(content.includes('Routes!A1:R'), 'saveRouteToSheet targets Routes sheet range');
-});
-
 defineTest('/api/routes route handler exists with GET and POST methods', {
   tier: 5, milestone: 5, feature: 'API_ROUTES',
   description: 'src/app/api/routes/route.ts exposes GET and POST endpoints'

@@ -326,7 +326,7 @@ export default function VisitsView({
                       <td className="py-3 px-4 text-slate-600 min-w-[180px] max-w-[240px]">
                         <div className="font-semibold text-slate-800 flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          <span className="truncate">{obj.district_name || 'Samarqand'}</span>
+                          <span className="truncate">{obj.district_name || obj.region_name || '—'}</span>
                         </div>
                         <div className="text-[11px] text-slate-400 truncate mt-0.5">
                           {obj.address || 'Manzil ko\'rsatilmagan'}

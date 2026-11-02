@@ -3,67 +3,64 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { db } from '@/lib/db';
+import { apiError, readJsonBody, requireSuperadmin } from '@/lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await requireSuperadmin(req);
     const objects = await db.getObjects('uysot', true);
-    const localJsonPath = path.join(process.cwd(), 'src', 'lib', 'uysot-domtut-data.json');
-    let lastUpdated = '';
-    if (fs.existsSync(localJsonPath)) {
-      const stats = fs.statSync(localJsonPath);
-      lastUpdated = stats.mtime.toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' });
-    }
-
-    const districts = Array.from(new Set(objects.map(o => o.district).filter(Boolean)));
+    const districts = Array.from(new Set(objects.map(o => o.district_name || o.district).filter(Boolean)));
+    const updatedAt = objects.reduce<number>((latest, o) => {
+      const at = o.updated_at ? new Date(o.updated_at).getTime() : 0;
+      return at > latest ? at : latest;
+    }, 0);
 
     return NextResponse.json({
       success: true,
       count: objects.length,
-      last_updated: lastUpdated,
+      last_updated: updatedAt ? new Date(updatedAt).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' }) : '',
       districts_count: districts.length,
       districts
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err) {
+    return apiError(err, 'API /api/admin/sync-domtut GET error');
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const limit = body.limit || 80;
+    await requireSuperadmin(req);
+    const body = await readJsonBody(req).catch(() => ({}));
+    const parsedLimit = parseInt(String(body.limit ?? ''), 10);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 1000) : 80;
 
-    const scraperDir = path.resolve(process.cwd(), '..', 'scraper');
-    const scriptPath = path.join(scraperDir, 'domtut_collector.py');
+    const runnerPath = path.resolve(process.cwd(), 'scripts', 'run-domtut-sync.mjs');
+    const collectorPath = path.resolve(process.cwd(), '..', 'scraper', 'domtut_collector.py');
 
-    if (!fs.existsSync(scriptPath)) {
+    // Render's web service may not ship the Python scraper; the scheduled GitHub Actions job covers that case.
+    if (!fs.existsSync(/*turbopackIgnore: true*/ runnerPath) || !fs.existsSync(/*turbopackIgnore: true*/ collectorPath)) {
       return NextResponse.json(
-        { success: false, error: 'domtut_collector.py skripti topilmadi' },
-        { status: 404 }
+        { success: false, error: "Domtut skaneri bu serverda mavjud emas. GitHub Actions'dagi haftalik sinxronizatsiyadan foydalaning." },
+        { status: 503 }
       );
     }
 
-    // Launch python collector in background
-    const child = spawn('python', [scriptPath, '--limit', String(limit)], {
-      cwd: scraperDir,
+    const child = spawn(process.execPath, [runnerPath, '--limit', String(limit)], {
+      cwd: process.cwd(),
       detached: true,
       stdio: 'ignore'
     });
-
+    child.on('error', err => console.error('Domtut sync failed to start:', err));
     child.unref();
 
     return NextResponse.json({
       success: true,
-      message: `Domtut (Toshkent) skaneri muvaffaqiyatli ishga tushirildi (${limit} ta obyekt fonda yangilanadi).`,
+      message: `Domtut (Toshkent) skaneri ishga tushirildi (${limit} ta obyekt fonda yangilanadi).`,
       timestamp: new Date().toISOString()
     });
-  } catch (err: any) {
-    console.error('API /api/admin/sync-domtut error:', err);
-    return NextResponse.json(
-      { success: false, error: err.message || 'Skanerni ishga tushirib bo\'lmadi' },
-      { status: 500 }
-    );
+  } catch (err) {
+    return apiError(err, 'API /api/admin/sync-domtut error');
   }
 }

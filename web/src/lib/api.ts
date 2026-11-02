@@ -1,10 +1,34 @@
 import { MapObject, ObjectDetail, CustomField, DashboardStats, VisitData, SavedRoute, WeeklySyncNotification, UserSession, AIRoutePlanResult, AIPitchBriefing, AIChatMessage, AIChatAction } from './types';
-import realSheetsData from './real-sheets-data.json';
-import uysotDomtutData from './uysot-domtut-data.json';
-import { getRegionName, getDistrictName, getRegionBySoato } from './regions';
+import { getRegionName, getDistrictName } from './regions';
+import { isUysotCompany, rememberCompanyDataSource } from './company';
+import { clearStoredUser } from './auth';
 
-export const uysotRows: any[] = (Array.isArray(uysotDomtutData) ? uysotDomtutData : (uysotDomtutData as any).rows || []) as any[];
-export const realSheetsRows: any[] = (realSheetsData.rows as any[]) || [];
+export { isUysotCompany, rememberCompanyDataSource };
+
+/** Reads an API response; an expired session sends the user back to the login page. */
+async function parseResponse(res: Response): Promise<any> {
+  if (res.status === 401 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+    clearStoredUser();
+    window.location.replace('/login');
+  }
+  try {
+    return await res.json();
+  } catch {
+    return { success: false, error: `Server javobi noto'g'ri (${res.status})` };
+  }
+}
+
+/** Retries once, because Render and Neon may still be waking up from sleep on the first request. */
+async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    const res = await fetch(url, init);
+    if (res.status < 500) return res;
+  } catch {
+    // Falls through to the single retry.
+  }
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  return fetch(url, init);
+}
 
 const SOATO_DISTRICT_MAP: Record<string, string> = {
   '1718401': 'Samarqand shahar',
@@ -23,16 +47,6 @@ const SOATO_DISTRICT_MAP: Record<string, string> = {
   '1718235': 'Samarqand tumani',
   '1718236': 'Toyloq tumani',
   '1718238': 'Urgut tumani'
-};
-
-export const isUysotCompany = (cid?: string | null): boolean => {
-  if (!cid) return false;
-  const clean = String(cid).trim().toLowerCase();
-  return clean === 'uysot' || 
-         clean === 'comp_1789981554543' || 
-         clean === 'uysot.uz' || 
-         clean === 'uysot_uz' || 
-         clean.includes('uysot');
 };
 
 function formatRowToMapObject(r: any): MapObject {
@@ -214,6 +228,7 @@ export function formatRowToObjectDetail(r: any): ObjectDetail {
       image_url: String(r.image_url || '')
     },
     internal: {
+      ...(r.custom_values || {}),
       tjm_name: String(r.tjm_name || '').trim(),
       phone: String(r.phone || '').trim(),
       sales_office: String(r.sales_office || '').trim(),
@@ -386,83 +401,31 @@ export function formatMapObjectToObjectDetail(m: MapObject): ObjectDetail {
 
 export const api = {
   getMarkers: async (companyId?: string): Promise<MapObject[]> => {
-    const isUysot = isUysotCompany(companyId);
-    try {
-      const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
-      const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
-          // Strict isolation guarantee:
-          const filtered = json.data.filter((r: any) => {
-            const isDomtut = String(r.source_id || '').startsWith('domtut_') || Boolean(r.is_uysot);
-            return isUysot ? isDomtut : !isDomtut;
-          });
-          return filtered.map(formatRowToMapObject);
-        }
-      }
-    } catch (e) {
-      console.warn('Using fallback data:', e);
+    const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
+    const res = await fetchWithRetry(`/api/objects${q}`, { cache: 'no-store' });
+    const json = await parseResponse(res);
+    if (!json.success || !Array.isArray(json.data)) {
+      throw new Error(json.error || "Obyektlarni yuklab bo'lmadi");
     }
-    const fallbackRows = isUysot ? uysotRows : realSheetsRows;
-    return fallbackRows
-      .filter((r: any) => {
-        const isDomtut = String(r.source_id || '').startsWith('domtut_') || Boolean(r.is_uysot);
-        return isUysot ? isDomtut : !isDomtut;
-      })
-      .map(formatRowToMapObject);
+    rememberCompanyDataSource(companyId, json.data_source);
+    return json.data.map(formatRowToMapObject);
   },
 
   getObject: async (id: string, companyId?: string): Promise<ObjectDetail> => {
     const cleanId = String(id || '').trim();
-    const isUysot = isUysotCompany(companyId) || cleanId.startsWith('domtut_');
-
-    // 1. Single-object API fetch (fast & lightweight, ~15ms)
-    try {
-      const q = `?id=${encodeURIComponent(cleanId)}&company_id=${encodeURIComponent(companyId || '')}&t=${Date.now()}`;
-      const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          return formatRowToObjectDetail(json.data);
-        }
-      }
-    } catch (e) {
-      console.warn('Single-object API fetch error:', e);
+    const q = `?id=${encodeURIComponent(cleanId)}&company_id=${encodeURIComponent(companyId || '')}&t=${Date.now()}`;
+    const res = await fetchWithRetry(`/api/objects${q}`, { cache: 'no-store' });
+    const json = await parseResponse(res);
+    if (!json.success || !json.data) {
+      throw new Error(json.error || 'Obyekt topilmadi');
     }
+    return formatRowToObjectDetail(json.data);
+  },
 
-    // 2. Direct fallback to preloaded rows matching company isolation
-    const targetDataset = isUysot ? uysotRows : realSheetsRows;
-    const found = targetDataset.find((r: any) => String(r.source_id || '').trim() === cleanId);
-    if (found) {
-      return formatRowToObjectDetail(found);
-    }
-
-    // 3. Check notifications for non-UYSOT (DSHK scraper)
-    if (!isUysot) {
-      try {
-        const notifsRes = await fetch(`/api/notifications?t=${Date.now()}`, { cache: 'no-store' });
-        if (notifsRes.ok) {
-          const notifs = await notifsRes.json();
-          if (notifs && notifs.data && Array.isArray(notifs.data)) {
-            for (const notif of notifs.data) {
-              const foundInNotif = (notif.new_objects || []).find((b: any) => String(b.source_id || '').trim() === cleanId);
-              if (foundInNotif && !String(foundInNotif.source_id).startsWith('domtut_')) {
-                return formatBuildingItemToObjectDetail(foundInNotif);
-              }
-            }
-          }
-        }
-      } catch (e) {}
-    }
-
-    // 4. Safe fallback: Return a clean ObjectDetail for this specific cleanId, NEVER a mismatched row like rows[0]!
-    return formatRowToObjectDetail({
-      source_id: cleanId,
-      object_name: `Bino #${cleanId}`,
-      status: 'Qurilish jarayonida',
-      region_soato: isUysot ? '1726' : '1718'
-    });
+  getObjectVisits: async (id: string, companyId?: string): Promise<{ visited_by: string; lat_lng: string; visited_at: string }[]> => {
+    const q = `?source_id=${encodeURIComponent(id)}&company_id=${encodeURIComponent(companyId || '')}`;
+    const json = await parseResponse(await fetch(`/api/objects/visit${q}`, { cache: 'no-store' }));
+    return json.success && Array.isArray(json.data) ? json.data : [];
   },
 
   getSettings: async (): Promise<CustomField[]> => {
@@ -492,22 +455,12 @@ export const api = {
   },
 
   getStats: async (companyId?: string): Promise<DashboardStats> => {
-    const isUysot = isUysotCompany(companyId);
-    let rows: any[] = isUysot ? uysotRows : realSheetsRows;
-    try {
-      const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
-      const res = await fetch(`/api/objects${q}`, { cache: 'no-store' });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data)) rows = json.data;
-      }
-    } catch (e) {}
-
-    // Strict isolation filter on rows for stats
-    rows = rows.filter((r: any) => {
-      const isDomtut = String(r.source_id || '').startsWith('domtut_') || Boolean(r.is_uysot);
-      return isUysot ? isDomtut : !isDomtut;
-    });
+    const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
+    const json = await parseResponse(await fetchWithRetry(`/api/objects${q}`, { cache: 'no-store' }));
+    if (!json.success || !Array.isArray(json.data)) {
+      throw new Error(json.error || "Statistikani yuklab bo'lmadi");
+    }
+    const rows: any[] = json.data;
 
     const total = rows.length;
     const with_internal = rows.filter((r: any) => String(r.tjm_name || r.phone || r.manager_name || '').trim().length > 0).length;
@@ -532,7 +485,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source_id: id, data, user, company_id: companyId, user_id: userId })
     });
-    return await res.json();
+    return parseResponse(res);
   },
 
   clearObject: async (id: string, user?: string, companyId?: string, userId?: string): Promise<{ success: boolean; message?: string }> => {
@@ -541,7 +494,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source_id: id, user, company_id: companyId, user_id: userId })
     });
-    return await res.json();
+    return parseResponse(res);
   },
 
 
@@ -551,14 +504,13 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    return await res.json();
+    return parseResponse(res);
   },
 
-  syncWithSheets: async (companyId?: string): Promise<{ success: boolean; count?: number; data?: any[] }> => {
-    const isUysot = isUysotCompany(companyId);
-    const q = isUysot ? '?company_id=uysot' : '';
-    const res = await fetch(`/api/objects/sync${q}`, { method: 'POST' });
-    return await res.json();
+  syncWithSheets: async (companyId?: string): Promise<{ success: boolean; count?: number; error?: string }> => {
+    const q = companyId ? `?company_id=${encodeURIComponent(companyId)}` : '';
+    const res = await fetchWithRetry(`/api/objects/sync${q}`, { method: 'POST' });
+    return parseResponse(res);
   },
 
   createObject: async (data: Record<string, any>, user?: string, companyId?: string, userId?: string): Promise<{ success: boolean; message?: string; data?: any }> => {
@@ -567,50 +519,95 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, user, company_id: companyId, user_id: userId })
     });
-    return await res.json();
+    return parseResponse(res);
   },
 
-  addCustomField: async (field: CustomField & { label?: string; desc?: string }): Promise<{ success: boolean; data?: any }> => {
+  getAllFields: async (): Promise<(CustomField & { label?: string; desc?: string })[]> => {
+    const json = await parseResponse(await fetchWithRetry('/api/custom-fields?all=1', { cache: 'no-store' }));
+    if (!json.success || !Array.isArray(json.data)) throw new Error(json.error || "Maydonlarni yuklab bo'lmadi");
+    return json.data;
+  },
+
+  setFieldVisibility: async (fieldName: string, visible: boolean): Promise<{ success: boolean; error?: string }> => {
+    const res = await fetch('/api/custom-fields', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field_name: fieldName, visible })
+    });
+    return parseResponse(res);
+  },
+
+  addCustomField: async (field: CustomField & { label?: string; desc?: string }): Promise<{ success: boolean; data?: any; error?: string }> => {
     try {
       const res = await fetch('/api/custom-fields', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(field)
       });
-      return await res.json();
+      return parseResponse(res);
     } catch (e) {
       console.error('Failed to add custom field:', e);
-      return { success: false };
+      return { success: false, error: "Server bilan bog'lanib bo'lmadi" };
     }
   },
 
   // Auth & Admin Multi-Company Methods
   login: async (login: string, pass: string): Promise<{ success: boolean; user?: any; error?: string }> => {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetchWithRetry('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ login, password: pass })
     });
-    return await res.json();
+    try {
+      // Not parseResponse: a wrong password is a 401 that must show its message, not redirect.
+      return await res.json();
+    } catch {
+      return { success: false, error: `Server javobi noto'g'ri (${res.status})` };
+    }
+  },
+
+  logout: async (): Promise<void> => {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(err => console.warn('Logout request failed:', err));
+  },
+
+  /** The signed-in user; null when the session is invalid, undefined when the server could not be reached. */
+  getSessionUser: async (): Promise<any | null | undefined> => {
+    try {
+      const res = await fetchWithRetry('/api/auth/me', { cache: 'no-store' });
+      if (res.status === 401) return null;
+      const json = await res.json();
+      return json.success ? json.user : undefined;
+    } catch {
+      return undefined;
+    }
+  },
+
+  updateProfile: async (updates: Record<string, string>): Promise<{ success: boolean; user?: any; error?: string }> => {
+    const res = await fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    return parseResponse(res);
   },
 
   getCompanies: async (): Promise<{ success: boolean; data: any[]; error?: string }> => {
     const res = await fetch('/api/admin/companies', { cache: 'no-store' });
-    return await res.json();
+    return parseResponse(res);
   },
 
-  createCompany: async (name: string, status?: string): Promise<{ success: boolean; data?: any; error?: string }> => {
+  createCompany: async (name: string, status?: string, dataSource?: string): Promise<{ success: boolean; data?: any; error?: string }> => {
     const res = await fetch('/api/admin/companies', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, status })
+      body: JSON.stringify({ name, status, data_source: dataSource })
     });
-    return await res.json();
+    return parseResponse(res);
   },
 
   getUsers: async (): Promise<{ success: boolean; data: any[]; error?: string }> => {
     const res = await fetch('/api/admin/users', { cache: 'no-store' });
-    return await res.json();
+    return parseResponse(res);
   },
 
   createUser: async (user: { company_id: string; name: string; login: string; password: string; role: string }): Promise<{ success: boolean; data?: any; error?: string }> => {
@@ -619,7 +616,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(user)
     });
-    return await res.json();
+    return parseResponse(res);
   },
 
   updateUser: async (userId: string, updates: any): Promise<{ success: boolean; data?: any; error?: string }> => {
@@ -628,34 +625,34 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, ...updates })
     });
-    return await res.json();
+    return parseResponse(res);
   },
 
   getDistricts: async () => {
     return Object.entries(SOATO_DISTRICT_MAP).map(([id, name]) => ({ id, name }));
   },
 
-  // Routes Management in Google Sheets
+  // Saved routes
   saveRoute: async (routeData: Partial<SavedRoute> & { tjm_list?: string }): Promise<{ success: boolean; routeId?: string; data?: any; error?: string }> => {
     const res = await fetch('/api/routes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(routeData)
     });
-    return await res.json();
+    return parseResponse(res);
   },
 
   getSavedRoutes: async (companyId?: string): Promise<{ success: boolean; data: SavedRoute[]; count?: number; error?: string }> => {
     const q = companyId ? `?company_id=${encodeURIComponent(companyId)}&t=${Date.now()}` : `?t=${Date.now()}`;
     const res = await fetch(`/api/routes${q}`, { cache: 'no-store' });
-    return await res.json();
+    return parseResponse(res);
   },
 
   // Notifications and Weekly Sync
   getNotifications: async (): Promise<{ success: boolean; data: WeeklySyncNotification[]; count?: number; error?: string }> => {
     try {
       const res = await fetch(`/api/notifications?t=${Date.now()}`, { cache: 'no-store' });
-      return await res.json();
+      return parseResponse(res);
     } catch (e: any) {
       return { success: false, data: [], error: e.message };
     }
@@ -664,7 +661,7 @@ export const api = {
   triggerWeeklySync: async (): Promise<{ success: boolean; message?: string; error?: string }> => {
     try {
       const res = await fetch('/api/cron/weekly-sync', { method: 'POST' });
-      return await res.json();
+      return parseResponse(res);
     } catch (e: any) {
       return { success: false, error: e.message };
     }
@@ -673,7 +670,7 @@ export const api = {
   getUserSessions: async (limit: number = 100): Promise<{ success: boolean; data: UserSession[]; count?: number; error?: string }> => {
     try {
       const res = await fetch(`/api/admin/sessions?limit=${limit}&t=${Date.now()}`, { cache: 'no-store' });
-      return await res.json();
+      return parseResponse(res);
     } catch (e: any) {
       return { success: false, data: [], error: e.message };
     }
@@ -686,7 +683,7 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ limit })
       });
-      return await res.json();
+      return parseResponse(res);
     } catch (e: any) {
       return { success: false, error: e.message };
     }
@@ -695,7 +692,7 @@ export const api = {
   getDomtutStats: async (): Promise<{ success: boolean; count?: number; last_updated?: string; districts_count?: number; districts?: string[]; error?: string }> => {
     try {
       const res = await fetch(`/api/admin/sync-domtut?t=${Date.now()}`, { cache: 'no-store' });
-      return await res.json();
+      return parseResponse(res);
     } catch (e: any) {
       return { success: false, error: e.message };
     }
@@ -724,11 +721,10 @@ export const api = {
           prompt: params.prompt,
           unvisited_only: params.unvisitedOnly,
           high_priority_only: params.highPriorityOnly,
-          max_stops: params.maxStops || 5,
-          objects_pool: params.objects
+          max_stops: params.maxStops || 5
         })
       });
-      return await res.json();
+      return parseResponse(res);
     } catch (e: any) {
       return { success: false, error: e.message };
     }
@@ -744,7 +740,7 @@ export const api = {
           target_object: targetObject
         })
       });
-      return await res.json();
+      return parseResponse(res);
     } catch (e: any) {
       return { success: false, error: e.message };
     }
@@ -775,11 +771,10 @@ export const api = {
           company_id: params.companyId,
           message: params.message,
           user_lat: params.userLat,
-          user_lng: params.userLng,
-          objects_pool: params.objects
+          user_lng: params.userLng
         })
       });
-      return await res.json();
+      return parseResponse(res);
     } catch (e: any) {
       return { success: false, error: e.message };
     }

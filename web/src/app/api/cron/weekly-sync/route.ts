@@ -1,38 +1,46 @@
 import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
+import { timingSafeEqual } from 'node:crypto';
 import path from 'path';
+import { apiError, getSessionUser, HttpError } from '@/lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
+let syncRunning = false;
+
+function secretMatches(provided: string | null): boolean {
+  const expected = process.env.CRON_SECRET;
+  if (!expected || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function POST(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const secret = searchParams.get('secret') || req.headers.get('x-cron-secret');
-    const expectedSecret = process.env.CRON_SECRET || 'b2b_weekly_secret_2026';
-
-    // Allow if secret matches, or in local development
-    const isDev = process.env.NODE_ENV !== 'production';
-    if (!isDev && secret !== expectedSecret) {
-      return NextResponse.json({ success: false, error: 'Ruxsat berilmadi (Unauthorized)' }, { status: 401 });
+    if (!secretMatches(req.headers.get('x-cron-secret'))) {
+      const user = await getSessionUser(req);
+      if (user?.role !== 'superadmin') throw new HttpError(401, 'Ruxsat berilmadi');
     }
+    if (syncRunning) throw new HttpError(409, 'Sinxronizatsiya allaqachon ishlayapti');
 
-    // Primary sync script: scripts/sync-dshk-to-neon.mjs (Neon DB direct)
-    // Legacy fallback reference: scraper/weekly_sync.py
     const scriptPath = path.resolve(process.cwd(), 'scripts', 'sync-dshk-to-neon.mjs');
-
-    // Launch DSHK sync to Neon in background
-    const child = spawn(process.execPath, [scriptPath], {
-      detached: true,
-      stdio: 'ignore'
+    syncRunning = true;
+    const child = spawn(process.execPath, [scriptPath], { cwd: process.cwd(), stdio: 'ignore' });
+    child.on('error', err => {
+      syncRunning = false;
+      console.error('Weekly sync failed to start:', err);
     });
-    child.unref();
+    child.on('exit', code => {
+      syncRunning = false;
+      if (code !== 0) console.error(`Weekly sync exited with code ${code}`);
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Haftalik O'zbekiston bo'ylab DSHK yangilanishi Neon DB ga fonda ishga tushirildi (Weekly DSHK sync to Neon started in background)"
+      message: "Haftalik O'zbekiston bo'ylab DSHK yangilanishi fonda ishga tushirildi"
     });
-  } catch (err: any) {
-    console.error('Weekly sync route error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err) {
+    return apiError(err, 'Weekly sync route error');
   }
 }

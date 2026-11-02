@@ -240,7 +240,7 @@ export default function BottomResults({
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
                           <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
-                          <span>{obj.district_name || 'Samarqand'} • {dist}</span>
+                          <span>{obj.district_name || obj.region_name || '—'} • {dist}</span>
                         </div>
                         <div className="mt-1.5">
                           <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-md">
@@ -265,7 +265,7 @@ export default function BottomResults({
                       <div className="flex items-center gap-2 truncate">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span className="text-slate-400">Manzil:</span>
-                        <span className="font-medium text-slate-800 truncate">{obj.address || obj.sales_office || 'Samarqand viloyati'}</span>
+                        <span className="font-medium text-slate-800 truncate">{obj.address || obj.sales_office || obj.region_name || '—'}</span>
                       </div>
                     </div>
                   </div>

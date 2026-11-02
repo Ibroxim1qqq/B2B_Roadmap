@@ -40,7 +40,7 @@ export default function DashboardView({
     // District breakdown: Total vs Visited
     const districtStats: Record<string, { total: number; visited: number; filled: number }> = {};
     objects.forEach(o => {
-      const d = o.district_name || 'Samarqand shahri';
+      const d = o.district_name || o.region_name || "Noma'lum";
       if (!districtStats[d]) {
         districtStats[d] = { total: 0, visited: 0, filled: 0 };
       }
@@ -119,7 +119,7 @@ export default function DashboardView({
       title: 'Jami TJM-lar', 
       value: stats.total, 
       badge: '100%',
-      desc: "Samarqand viloyati reyestridagi barcha obyektlar", 
+      desc: "Reyestrdagi barcha obyektlar", 
       icon: Building2, 
       color: 'text-[#1b815f]', 
       bg: 'bg-emerald-50', 

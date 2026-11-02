@@ -6,31 +6,15 @@ import {
   FileText, ExternalLink, Navigation, Plus
 } from 'lucide-react';
 import type L from 'leaflet';
+import { REGION_LIST, UZBEKISTAN_REGIONS } from '../../lib/regions';
 
-const DISTRICT_OPTIONS = [
-  { id: '1718401', name: 'Samarqand shahar' },
-  { id: '1718235', name: 'Samarqand tumani' },
-  { id: '1718238', name: 'Urgut tumani' },
-  { id: '1718236', name: 'Toyloq tumani' },
-  { id: '1718203', name: 'Oqdaryo tumani' },
-  { id: '1718209', name: 'Jomboy tumani' },
-  { id: '1718212', name: 'Ishtixon tumani' },
-  { id: '1718233', name: 'Payariq tumani' },
-  { id: '1718215', name: "Kattaqo'rg'on tumani" },
-  { id: '1718406', name: "Kattaqo'rg'on shahar" },
-  { id: '1718206', name: "Bulung'ur tumani" },
-  { id: '1718227', name: "Pastdarg'om tumani" },
-  { id: '1718218', name: 'Narpay tumani' },
-  { id: '1718216', name: "Qo'shrabot tumani" },
-  { id: '1718230', name: 'Paxtachi tumani' },
-  { id: '1718224', name: 'Nurobod tumani' }
-];
 
 interface CreateObjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (newObjectData: Record<string, any>) => Promise<void>;
   userLat?: number | null;
+  defaultRegionSoato?: string;
   userLng?: number | null;
 }
 
@@ -39,6 +23,7 @@ export default function CreateObjectModal({
   onClose,
   onSave,
   userLat,
+  defaultRegionSoato = '1718',
   userLng
 }: CreateObjectModalProps) {
   const [activeTab, setActiveTab] = useState<'basic' | 'crm'>('basic');
@@ -47,10 +32,12 @@ export default function CreateObjectModal({
 
   // Form states
   const [tjmName, setTjmName] = useState('');
-  const [districtSoato, setDistrictSoato] = useState('1718401');
+  const [regionSoato, setRegionSoato] = useState(defaultRegionSoato);
+  const [districtSoato, setDistrictSoato] = useState('');
+  const region = UZBEKISTAN_REGIONS[regionSoato];
   const [address, setAddress] = useState('');
-  const [lat, setLat] = useState<number>(userLat || 39.6542);
-  const [lng, setLng] = useState<number>(userLng || 66.9597);
+  const [lat, setLat] = useState<number>(userLat || UZBEKISTAN_REGIONS[defaultRegionSoato]?.center[0] || 39.6542);
+  const [lng, setLng] = useState<number>(userLng || UZBEKISTAN_REGIONS[defaultRegionSoato]?.center[1] || 66.9597);
   const [status, setStatus] = useState('Qurilish jarayonida');
   const [floors, setFloors] = useState('');
   const [apartments, setApartments] = useState('');
@@ -89,8 +76,8 @@ export default function CreateObjectModal({
       const L = leafletModule.default || leafletModule;
       await import('leaflet/dist/leaflet.css');
 
-      const initialLat = lat || 39.6542;
-      const initialLng = lng || 66.9597;
+      const initialLat = lat;
+      const initialLng = lng;
 
       const map = L.map(mapContainerRef.current, {
         center: [initialLat, initialLng],
@@ -194,8 +181,11 @@ export default function CreateObjectModal({
       await onSave({
         tjm_name: tjmName.trim(),
         object_name: tjmName.trim(),
+        region_soato: regionSoato,
+        region_name: region?.name || '',
         district_soato: districtSoato,
-        address: address.trim() || 'Samarqand',
+        district_name: region?.districts.find(d => d.soato === districtSoato)?.name || '',
+        address: address.trim() || region?.name || '',
         latitude: lat,
         longitude: lng,
         status: status,
@@ -377,6 +367,31 @@ export default function CreateObjectModal({
                 {/* District */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Viloyat
+                  </label>
+                  <select
+                    value={regionSoato}
+                    onChange={(e) => {
+                      const next = UZBEKISTAN_REGIONS[e.target.value];
+                      setRegionSoato(e.target.value);
+                      setDistrictSoato('');
+                      if (next) {
+                        setLat(next.center[0]);
+                        setLng(next.center[1]);
+                        mapInstanceRef.current?.setView(next.center, next.zoom);
+                        markerInstanceRef.current?.setLatLng(next.center);
+                      }
+                    }}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
+                  >
+                    {REGION_LIST.map(r => (
+                      <option key={r.soato} value={r.soato}>{r.name}</option>
+                    ))}
+                  </select>
+</div>
+
+<div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Tuman
                   </label>
                   <select
@@ -384,11 +399,12 @@ export default function CreateObjectModal({
                     onChange={(e) => setDistrictSoato(e.target.value)}
                     className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] rounded-xl px-3 py-2.5 outline-none"
                   >
-                    {DISTRICT_OPTIONS.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
+                    <option value="">Tanlanmagan</option>
+                    {(region?.districts || []).map(d => (
+                      <option key={d.soato} value={d.soato}>{d.name}</option>
                     ))}
                   </select>
-                </div>
+</div>
 
                 {/* Status */}
                 <div>

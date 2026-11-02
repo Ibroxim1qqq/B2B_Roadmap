@@ -29,7 +29,7 @@ defineTest('/api/ai/route-advisor endpoint exists and handles plan_route and pit
   assert.match(content, /export\s+async\s+function\s+POST/, 'route.ts must export POST handler');
   assert.ok(content.includes('smartHeuristicPlanner'), 'route.ts must include smartHeuristicPlanner fallback');
   assert.ok(content.includes('smartHeuristicBriefing'), 'route.ts must include smartHeuristicBriefing fallback');
-  assert.ok(content.includes('gemini-1.5-flash'), 'route.ts must support Gemini 1.5 Flash');
+  assert.ok(content.includes('GEMINI_MODEL'), 'route.ts must support a configurable Gemini model');
   assert.ok(content.includes('llama-3.3-70b-versatile'), 'route.ts must support Groq LLaMA 3.3');
 });
 

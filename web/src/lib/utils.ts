@@ -1,3 +1,19 @@
+/** Escapes text placed into an HTML string, such as a Leaflet popup. */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Only http(s) links may reach an href, so stored data cannot run a javascript: URL. */
+export function safeExternalUrl(url: unknown): string | null {
+  const text = String(url ?? '').trim();
+  return /^https?:\/\//i.test(text) ? text : null;
+}
+
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -52,8 +68,12 @@ export function getTelegramUrl(usernameOrPhone: any): string {
   if (str.startsWith('http://') || str.startsWith('https://')) {
     return str;
   }
-  const clean = str.replace('@', '').replace(/\s/g, '').replace('+', '');
-  return `https://t.me/${clean}`;
+  const clean = str.replace('@', '').replace(/\s/g, '');
+  // A phone number link needs its plus sign; a username must not have one.
+  if (/^\+?\d{9,15}$/.test(clean)) {
+    return `https://t.me/+${clean.replace('+', '')}`;
+  }
+  return `https://t.me/${encodeURIComponent(clean.replace('+', ''))}`;
 }
 
 export function getInstagramUrl(handle: any): string {
@@ -63,7 +83,7 @@ export function getInstagramUrl(handle: any): string {
     return str;
   }
   const clean = str.replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace('@', '').replace(/\//g, '').trim();
-  return `https://instagram.com/${clean}`;
+  return `https://instagram.com/${encodeURIComponent(clean)}`;
 }
 
 export function getCallUrl(phone: any): string {

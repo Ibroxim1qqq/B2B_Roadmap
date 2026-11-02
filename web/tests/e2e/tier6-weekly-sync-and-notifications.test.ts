@@ -22,17 +22,6 @@ defineTest('WeeklySyncNotification and NewBuildingItem types are defined in lib/
   assert.match(content, /new_objects:\s*NewBuildingItem\[\]/, 'WeeklySyncNotification must include new_objects array');
 });
 
-defineTest('googleSheets.ts implements saveNotificationToSheet and getNotificationsFromSheet', {
-  tier: 6, milestone: 6, feature: 'SHEETS_NOTIFICATIONS',
-  description: 'googleSheets.ts integrates Notifications sheet with append and read methods'
-}, () => {
-  const content = readSrcFile('lib/googleSheets.ts');
-  assert.match(content, /export\s+async\s+function\s+saveNotificationToSheet/, 'googleSheets.ts must export saveNotificationToSheet');
-  assert.match(content, /export\s+async\s+function\s+getNotificationsFromSheet/, 'googleSheets.ts must export getNotificationsFromSheet');
-  assert.match(content, /NOTIFICATION_HEADERS/, 'googleSheets.ts must define NOTIFICATION_HEADERS');
-  assert.ok(content.includes('Notifications!A1:G'), 'saveNotificationToSheet targets Notifications range');
-});
-
 defineTest('/api/notifications route handler exists with GET and POST methods', {
   tier: 6, milestone: 6, feature: 'API_NOTIFICATIONS',
   description: 'src/app/api/notifications/route.ts exposes GET and POST endpoints'
@@ -52,7 +41,7 @@ defineTest('/api/cron/weekly-sync route handler exists for automated scheduler',
   assert.ok(fileExistsInSrc('app/api/cron/weekly-sync/route.ts'), 'app/api/cron/weekly-sync/route.ts must exist');
   const content = readSrcFile('app/api/cron/weekly-sync/route.ts');
   assert.match(content, /export\s+async\s+function\s+POST/, 'cron route must export POST handler');
-  assert.ok(content.includes('weekly_sync.py'), 'cron route must reference weekly_sync.py script');
+  assert.ok(content.includes('sync-dshk-to-neon.mjs'), 'cron route must run the Neon sync script');
 });
 
 defineTest('scraper/weekly_sync.py implements full Uzbekistan fetch and diff engine', {
@@ -75,7 +64,8 @@ defineTest('.github/workflows/weekly-sync.yml exists with weekly cron schedule',
   assert.ok(fs.existsSync(workflowPath), '.github/workflows/weekly-sync.yml must exist');
   const content = fs.readFileSync(workflowPath, 'utf-8');
   assert.ok(content.includes("cron: '0 3 * * 1'"), 'Workflow must be scheduled on Mondays');
-  assert.ok(content.includes('weekly_sync.py'), 'Workflow must execute weekly_sync.py');
+  assert.ok(content.includes('sync-dshk-to-neon.mjs'), 'Workflow must write DSHK objects to Neon');
+  assert.ok(content.includes('run-domtut-sync.mjs'), 'Workflow must write Domtut objects to Neon');
 });
 
 defineTest('Navbar.tsx renders Bell icon button and unread count badge', {

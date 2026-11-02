@@ -2,23 +2,9 @@ import { NextResponse } from 'next/server';
 import { AIRoutePlanResult, AIPitchBriefing, MapObject, AIChatMessage, AIChatAction } from '../../../../lib/types';
 import { haversineMeters } from '../../../../lib/routeUtils';
 import { db } from '../../../../lib/db';
-import realSheetsData from '../../../../lib/real-sheets-data.json';
-import uysotDomtutData from '../../../../lib/uysot-domtut-data.json';
+import { apiError, readJsonBody, requireUser, resolveCompanyId } from '../../../../lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
-
-const isUysotCompany = (cid?: string | null): boolean => {
-  if (!cid) return false;
-  const clean = String(cid).trim().toLowerCase();
-  return clean === 'uysot' || 
-         clean === 'comp_1789981554543' || 
-         clean === 'uysot.uz' || 
-         clean === 'uysot_uz' || 
-         clean.includes('uysot');
-};
-
-const uysotRows: any[] = (Array.isArray(uysotDomtutData) ? uysotDomtutData : (uysotDomtutData as any).rows || []) as any[];
-const realSheetsRows: any[] = (realSheetsData.rows as any[]) || [];
 
 interface RequestBody {
   action?: 'chat' | 'plan_route' | 'pitch_briefing';
@@ -30,37 +16,21 @@ interface RequestBody {
   unvisited_only?: boolean;
   high_priority_only?: boolean;
   max_stops?: number;
-  objects_pool?: any[];
   target_object?: any;
 }
 
 // -------------------------------------------------------------
 // Database Cache (60s TTL for fast instant responses)
 // -------------------------------------------------------------
-let cachedPool: any[] | null = null;
-let cachedPoolTime = 0;
+const poolCache = new Map<string, { pool: any[]; at: number }>();
 const CACHE_TTL_MS = 60 * 1000;
 
-async function getFullDatabasePool(companyId?: string): Promise<any[]> {
-  const now = Date.now();
-  if (cachedPool && cachedPool.length > 0 && (now - cachedPoolTime) < CACHE_TTL_MS) {
-    return cachedPool;
-  }
-  try {
-    const list = await db.getObjects(companyId);
-    if (list && list.length > 0) {
-      cachedPool = list;
-      cachedPoolTime = now;
-      return list;
-    }
-  } catch (err) {
-    console.warn('DB getObjects error, using local fallback:', err);
-  }
-
-  const fallback = [...realSheetsRows, ...uysotRows];
-  cachedPool = fallback;
-  cachedPoolTime = now;
-  return fallback;
+async function getCompanyPool(companyId: string, isUysot: boolean): Promise<any[]> {
+  const cached = poolCache.get(companyId);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.pool;
+  const pool = await db.getObjects(companyId, isUysot);
+  poolCache.set(companyId, { pool, at: Date.now() });
+  return pool;
 }
 
 // -------------------------------------------------------------
@@ -981,11 +951,12 @@ function smartHeuristicBriefing(obj: any): AIPitchBriefing {
 // 3. LLM API Calls (Gemini / Groq)
 // -------------------------------------------------------------
 async function callGeminiAI(prompt: string, apiKey: string): Promise<any> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  
+  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
@@ -1042,43 +1013,18 @@ async function callGroqAI(prompt: string, apiKey: string): Promise<any> {
 // -------------------------------------------------------------
 export async function POST(req: Request) {
   try {
-    const body: RequestBody = await req.json();
+    const user = await requireUser(req);
+    const body: RequestBody = await readJsonBody(req);
     const action = body.action || 'chat';
     const geminiKey = process.env.GEMINI_API_KEY?.trim();
     const groqKey = process.env.GROQ_API_KEY?.trim();
 
-    const isUysot = isUysotCompany(body.company_id);
+    const companyId = resolveCompanyId(user, body.company_id);
+    const isUysot = (await db.getCompanyDataSource(companyId)) === 'uysot';
     const companyName = isUysot ? 'UYSOT.UZ (Toshkent)' : 'Samarqand Qurilish Xaritasi';
 
     // Connect AI directly to the full live PostgreSQL database!
-    let pool: any[] = [];
-    if (Array.isArray(body.objects_pool) && body.objects_pool.length >= 100) {
-      pool = [...body.objects_pool];
-    } else {
-      pool = await getFullDatabasePool(body.company_id);
-    }
-
-    if (pool.length === 0) {
-      pool = await getFullDatabasePool(body.company_id);
-    }
-
-    // Ensure cross-district queries (e.g. asking about Shayxontohur, Yunusobod or Samarqand) search across full database
-    const userMsgLower = (body.message || body.prompt || '').toLowerCase();
-    const hasDistrictKeyword = DISTRICT_REGISTRY.some(d => 
-      d.keywords.some(kw => userMsgLower.includes(kw))
-    );
-    if (hasDistrictKeyword || pool.length < 500) {
-      const full = await getFullDatabasePool();
-      if (full && full.length > 0) {
-        const seen = new Set(pool.map(p => String(p.source_id)));
-        full.forEach(f => {
-          if (!seen.has(String(f.source_id))) {
-            pool.push(f);
-            seen.add(String(f.source_id));
-          }
-        });
-      }
-    }
+    const pool = await getCompanyPool(companyId, isUysot);
 
     // ACTION A: Interactive Global Chat & Search
     if (action === 'chat') {
@@ -1219,7 +1165,6 @@ Quyidagi JSON strukturasida O'ZBEK TILIDA javob qaytar:
 
     return NextResponse.json({ success: true, data: heuristicResult });
   } catch (error: any) {
-    console.error('Route advisor API error:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Server error' }, { status: 500 });
+    return apiError(error, 'Route advisor API error');
   }
 }

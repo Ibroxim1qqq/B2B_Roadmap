@@ -2,6 +2,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// The suite writes test rows, so it always runs against the in-memory store.
+delete process.env.DATABASE_URL;
+delete process.env.POSTGRES_URL;
+delete process.env.NEON_DATABASE_URL;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

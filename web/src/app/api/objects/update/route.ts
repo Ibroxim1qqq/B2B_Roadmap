@@ -1,52 +1,60 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { dataCache } from '@/lib/dataCache';
+import { apiError, HttpError, readJsonBody, requireUser, resolveCompanyId, userActorId } from '@/lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+const MAX_FIELD_LENGTH = 10000;
+const MAX_FIELDS = 100;
+const FIELD_KEY = /^[a-z0-9_]{1,100}$/;
+
+function sanitizeFields(data: unknown): Record<string, string> {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new HttpError(400, 'source_id va data talab qilinadi');
+  }
+  const entries = Object.entries(data as Record<string, unknown>);
+  if (entries.length > MAX_FIELDS) throw new HttpError(400, "Maydonlar soni juda ko'p");
+  const clean: Record<string, string> = {};
+  for (const [key, value] of entries) {
+    if (!FIELD_KEY.test(key) || value === null || value === undefined) continue;
+    const text = String(value);
+    if (text.length > MAX_FIELD_LENGTH) throw new HttpError(400, `"${key}" maydoni juda uzun`);
+    clean[key] = text;
+  }
+  return clean;
+}
+
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { source_id, data, user, company_id, user_id } = body;
+    const user = await requireUser(req);
+    const body = await readJsonBody(req);
+    if (!body.source_id) throw new HttpError(400, 'source_id va data talab qilinadi');
 
-    if (!source_id || !data) {
-      return NextResponse.json({ success: false, error: 'source_id va data talab qilinadi' }, { status: 400 });
+    const data = sanitizeFields(body.data);
+    const sourceId = String(body.source_id);
+    const companyId = resolveCompanyId(user, body.company_id);
+
+    if (!(await db.getObjectById(sourceId, companyId))) {
+      throw new HttpError(404, 'Obyekt topilmadi');
     }
 
-    const cleanSourceId = String(source_id);
-    const effectiveCompany = company_id || 'comp_default';
-    const effectiveUser = user_id || user || 'Menejer';
+    await db.updateCompanyData(companyId, userActorId(user), sourceId, data);
 
-    // 1. Immediately update in-memory cache for snappy responsiveness
-    dataCache.updateRow(cleanSourceId, data);
-
-    // 2. Direct Neon PostgreSQL Database Upsert
-    if (effectiveCompany !== 'system') {
-      await db.updateCompanyData(effectiveCompany, effectiveUser, cleanSourceId, data);
-    } else {
-      await db.updateObject(cleanSourceId, data);
-    }
-
-    // 3. Log activity directly into PostgreSQL activity logs
     await db.logActivity({
       action: 'UPDATE',
-      source_id: cleanSourceId,
+      source_id: sourceId,
       object_name: data.tjm_name || '',
-      user: `${user || 'Menejer'} (${effectiveCompany})`,
+      user: `${user.name} (${companyId})`,
       details: data,
       status: 'SUCCESS'
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Ma'lumotlar Neon PostgreSQL ma'lumotlar bazasida muvaffaqiyatli yangilandi",
-      data: { source_id: cleanSourceId, ...data }
+    return NextResponse.json({
+      success: true,
+      message: "Ma'lumotlar muvaffaqiyatli saqlandi",
+      data: { source_id: sourceId, ...data }
     });
-  } catch (err: any) {
-    console.error('API /api/objects/update error:', err);
-    return NextResponse.json({ 
-      success: false, 
-      error: err.message || "Yangilashda xatolik yuz berdi" 
-    }, { status: 500 });
+  } catch (err) {
+    return apiError(err, 'API /api/objects/update error');
   }
 }

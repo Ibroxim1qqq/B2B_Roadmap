@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { CustomField } from '../../lib/types';
 import { X, Save, Building, Phone, MapPin, User, Send, Globe, Trash2, Tag, FileText, Calendar, Hash } from 'lucide-react';
-import { getStoredCustomFields } from '../CustomFields/CustomFieldManager';
 
 interface Props {
   sourceId: string;
@@ -13,14 +12,14 @@ interface Props {
   onClear?: () => Promise<void>;
 }
 
-export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, onClear }: Props) {
+export default function ObjectEdit({ sourceId, initialData, fields = [], onSave, onCancel, onClear }: Props) {
   const [data, setData] = useState<Record<string, string>>({});
   const [allFields, setAllFields] = useState<(CustomField & { label?: string; desc?: string })[]>([]);
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
-    const fieldsList = getStoredCustomFields();
+    const fieldsList: (CustomField & { label?: string; desc?: string })[] = fields;
     setAllFields(fieldsList);
 
     const initialMap: Record<string, string> = {};
@@ -45,7 +44,7 @@ export default function ObjectEdit({ sourceId, initialData, onSave, onCancel, on
     });
 
     setData(initialMap);
-  }, [sourceId, initialData]);
+  }, [sourceId, initialData, fields]);
 
   const handleChange = (name: string, value: string) => {
     setData(prev => ({ ...prev, [name]: value }));

@@ -8,7 +8,7 @@ import {
   AlertCircle, X, ChevronRight, UserPlus, Building, Sparkles,
   Activity, Clock, Globe, LogIn, Laptop
 } from 'lucide-react';
-import { getCurrentUser, logout } from '../../lib/auth';
+import { clearStoredUser, getCurrentUser, logout, setCurrentUser as saveCurrentUser } from '../../lib/auth';
 import { api } from '../../lib/api';
 import { UserProfile, Company, UserSession } from '../../lib/types';
 import GlobalAIAssistant from '../../components/AI/GlobalAIAssistant';
@@ -35,6 +35,7 @@ export default function AdminPage() {
   // New Company form
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanyStatus, setNewCompanyStatus] = useState<'active' | 'inactive'>('active');
+  const [newCompanyDataSource, setNewCompanyDataSource] = useState<'dshk' | 'uysot'>('dshk');
 
   // New User form
   const [newUserName, setNewUserName] = useState('');
@@ -88,18 +89,22 @@ export default function AdminPage() {
 
   // Auth Guard
   useEffect(() => {
-    const user = getCurrentUser();
-    setAuthChecked(true);
-    if (!user) {
-      router.replace('/login');
-      return;
-    }
-    if (user.role !== 'superadmin') {
-      router.replace('/');
-      return;
-    }
-    setCurrentUser(user);
-    loadData();
+    // The server session decides access; the stored profile is only a display cache.
+    api.getSessionUser().then(user => {
+      setAuthChecked(true);
+      if (!user) {
+        if (user === null) clearStoredUser();
+        router.replace('/login');
+        return;
+      }
+      saveCurrentUser(user);
+      if (user.role !== 'superadmin') {
+        router.replace('/');
+        return;
+      }
+      setCurrentUser(user);
+      loadData();
+    });
   }, [router]);
 
   const loadData = async () => {
@@ -132,6 +137,13 @@ export default function AdminPage() {
     }
   };
 
+  const handleResetPassword = async (userId: string, login: string) => {
+    const password = prompt(`"${login}" uchun yangi parol (kamida 8 belgi):`);
+    if (!password) return;
+    const res = await api.updateUser(userId, { password });
+    alert(res.success ? 'Parol yangilandi.' : 'Xatolik: ' + (res.error || "Parol o'zgarmadi"));
+  };
+
   const handleLogout = () => {
     logout();
     router.replace('/login');
@@ -147,7 +159,7 @@ export default function AdminPage() {
     setFormSubmitting(true);
     setFormError(null);
     try {
-      const res = await api.createCompany(newCompanyName.trim(), newCompanyStatus);
+      const res = await api.createCompany(newCompanyName.trim(), newCompanyStatus, newCompanyDataSource);
       if (res && res.success) {
         setFormSuccess(`"${newCompanyName}" kompaniyasi muvaffaqiyatli yaratildi!`);
         setNewCompanyName('');
@@ -576,12 +588,13 @@ export default function AdminPage() {
                       <th className="py-3.5 px-4">Kompaniya</th>
                       <th className="py-3.5 px-4 text-center">Rol</th>
                       <th className="py-3.5 px-4">Yaratilgan sana</th>
+                      <th className="py-3.5 px-4 text-right">Amal</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-400">
+                        <td colSpan={6} className="py-8 text-center text-slate-400">
                           Foydalanuvchilar topilmadi
                         </td>
                       </tr>
@@ -619,6 +632,15 @@ export default function AdminPage() {
                           </td>
                           <td className="py-3.5 px-4 text-slate-400 text-xs">
                             {u.created_at ? new Date(u.created_at).toLocaleDateString('uz-UZ') : '—'}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleResetPassword(u.user_id, u.login)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                            >
+                              <KeyRound className="w-3 h-3" /> Parolni tiklash
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -684,11 +706,11 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Google Sheets Live Sync Notice */}
+            {/* Live audit notice */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600 bg-emerald-50/70 border border-emerald-100 rounded-xl px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="font-semibold text-slate-800">Google Sheets «Sessions» varag'iga real vaqtda yozib borilmoqda</span>
+                <span className="font-semibold text-slate-800">Ma'lumotlar bazasiga real vaqtda yozib borilmoqda</span>
               </div>
               <span className="text-slate-500 font-mono text-[11px]">12 ustun: session_id, user_id, ism, login, rol, kompaniya, harakat, ip, brauzer, vaqt</span>
             </div>
@@ -899,6 +921,20 @@ export default function AdminPage() {
                 >
                   <option value="active">Faol (Active)</option>
                   <option value="inactive">Faol emas (Inactive)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Ma'lumot manbasi
+                </label>
+                <select
+                  value={newCompanyDataSource}
+                  onChange={(e: any) => setNewCompanyDataSource(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10"
+                >
+                  <option value="dshk">DSHK (O'zbekiston bo'ylab qurilish obyektlari)</option>
+                  <option value="uysot">UYSOT / Domtut (Toshkent TJM-lari)</option>
                 </select>
               </div>
 

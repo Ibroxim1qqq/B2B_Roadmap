@@ -28,18 +28,6 @@ defineTest('UserSession interface is defined in lib/types.ts', {
   assert.match(content, /created_at:\s*string/, 'UserSession must include created_at');
 });
 
-defineTest('googleSheets.ts implements recordUserSessionInSheet and getUserSessionsFromSheet', {
-  tier: 7, milestone: 7, feature: 'SHEETS_SESSIONS',
-  description: 'googleSheets.ts provides functions to ensure Sessions sheet, record sessions, and read them'
-}, () => {
-  const content = readSrcFile('lib/googleSheets.ts');
-  assert.match(content, /export\s+async\s+function\s+recordUserSessionInSheet/, 'googleSheets.ts must export recordUserSessionInSheet');
-  assert.match(content, /export\s+async\s+function\s+getUserSessionsFromSheet/, 'googleSheets.ts must export getUserSessionsFromSheet');
-  assert.match(content, /SESSION_HEADERS/, 'googleSheets.ts must define SESSION_HEADERS');
-  assert.ok(content.includes('Sessions!A1:L'), 'recordUserSessionInSheet targets Sessions range');
-  assert.ok(content.includes('ensureSessionsSheet'), 'googleSheets.ts implements ensureSessionsSheet helper');
-});
-
 defineTest('/api/auth/login records session with action login', {
   tier: 7, milestone: 7, feature: 'AUTH_SESSION_LOGGING',
   description: 'Login route records user session upon successful authentication'

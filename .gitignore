@@ -17,3 +17,4 @@ scraper/.env
 scraper/credentials.json
 web/src/lib/sessions.json
 
+web/db-backups/

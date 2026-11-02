@@ -1,60 +1,68 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { dataCache } from '@/lib/dataCache';
+import { apiError, HttpError, readJsonBody, requireUser, resolveCompanyId, userActorId } from '@/lib/serverAuth';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { source_id, visited_by, lat_lng, company_id, user_id } = body;
+const TASHKENT_TIME = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Tashkent',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hour12: false
+});
 
-    if (!source_id) {
-      return NextResponse.json({ success: false, error: 'source_id talab qilinadi' }, { status: 400 });
+export async function GET(req: Request) {
+  try {
+    const user = await requireUser(req);
+    const { searchParams } = new URL(req.url);
+    const sourceId = (searchParams.get('source_id') || '').trim();
+    if (!sourceId) throw new HttpError(400, 'source_id talab qilinadi');
+    const companyId = resolveCompanyId(user, searchParams.get('company_id'));
+    const visits = await db.getObjectVisits(companyId, sourceId);
+    return NextResponse.json({ success: true, count: visits.length, data: visits });
+  } catch (err) {
+    return apiError(err, 'API /api/objects/visit GET error');
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const user = await requireUser(req);
+    const body = await readJsonBody(req);
+    if (!body.source_id) throw new HttpError(400, 'source_id talab qilinadi');
+
+    const sourceId = String(body.source_id);
+    const companyId = resolveCompanyId(user, body.company_id);
+    if (!(await db.getObjectById(sourceId, companyId))) {
+      throw new HttpError(404, 'Obyekt topilmadi');
     }
 
-    const now = new Date();
-    const formattedDate = `${now.toISOString().slice(0, 10)} ${now.toTimeString().slice(0, 5)} (${visited_by || 'Field Sales'})`;
-
+    const visitedBy = `${user.name} (${user.role})`;
+    const latLng = typeof body.lat_lng === 'string' ? body.lat_lng.slice(0, 100) : '';
     const visitData = {
-      last_visit: formattedDate,
-      visited_by: visited_by || 'Field Sales',
-      visit_lat_lng: lat_lng || ''
+      last_visit: `${TASHKENT_TIME.format(new Date())} (${visitedBy})`,
+      visited_by: visitedBy,
+      visit_lat_lng: latLng
     };
 
-    const cleanSourceId = String(source_id);
-    const effectiveCompany = company_id || 'comp_default';
-    const effectiveUser = user_id || visited_by || 'Field Sales';
+    await db.updateCompanyData(companyId, userActorId(user), sourceId, visitData);
+    await db.addObjectVisit({
+      company_id: companyId,
+      source_id: sourceId,
+      user_id: userActorId(user),
+      visited_by: visitedBy,
+      lat_lng: latLng
+    });
 
-    // 1. Immediately update in-memory cache
-    dataCache.updateRow(cleanSourceId, visitData);
-
-    // 2. Direct Neon PostgreSQL update
-    if (effectiveCompany !== 'system') {
-      await db.updateCompanyData(effectiveCompany, effectiveUser, cleanSourceId, visitData);
-    } else {
-      await db.updateObject(cleanSourceId, visitData);
-    }
-
-    // 3. Log to activity logs
     await db.logActivity({
       action: 'VISIT',
-      source_id: cleanSourceId,
-      user: `${visited_by || 'Field Sales'} (${effectiveCompany})`,
+      source_id: sourceId,
+      user: `${visitedBy} (${companyId})`,
       details: visitData,
       status: 'SUCCESS'
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Tashrif Neon PostgreSQL ma'lumotlar bazasida muvaffaqiyatli saqlandi",
-      data: visitData 
-    });
-  } catch (err: any) {
-    console.error('API /api/objects/visit error:', err);
-    return NextResponse.json({ 
-      success: false, 
-      error: err.message || "Tashrifni saqlashda xatolik yuz berdi" 
-    }, { status: 500 });
+    return NextResponse.json({ success: true, message: 'Tashrif muvaffaqiyatli saqlandi', data: visitData });
+  } catch (err) {
+    return apiError(err, 'API /api/objects/visit error');
   }
 }

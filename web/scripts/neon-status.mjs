@@ -1,19 +1,7 @@
-import { neon } from '../node_modules/@neondatabase/serverless/index.mjs';
-import fs from 'fs';
-import path from 'path';
+import { neon } from '@neondatabase/serverless';
+import { resolveDatabaseUrl } from './_db-env.mjs';
 
-function getUrl() {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-  const envPath = path.join(process.cwd(), '.env.local');
-  if (fs.existsSync(envPath)) {
-    const content = fs.readFileSync(envPath, 'utf-8');
-    const match = content.match(/DATABASE_URL=["']?([^"'\r\n]+)["']?/);
-    if (match) return match[1];
-  }
-  return 'postgresql://neondb_owner:npg_cEL2WJZwG7Ps@ep-calm-cloud-b4ltc7bt-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require';
-}
-
-const url = getUrl();
+const url = resolveDatabaseUrl();
 
 async function main() {
   console.log('🚀 Connecting to Neon PostgreSQL...');
