@@ -457,7 +457,11 @@ function HomeContent() {
     setActiveTab('route');
   };
 
-  const handleApplyFilterFromCopilot = (filter: { district?: string; search?: string; status?: string }) => {
+  const handleApplyFilterFromCopilot = (filter: { district?: string; search?: string; status?: string; region?: string }) => {
+    if (filter.region) {
+      setSelectedRegion(filter.region);
+      setSelectedDistrict('');
+    }
     if (filter.district) setSelectedDistrict(filter.district);
     if (filter.search !== undefined) setSearchQuery(filter.search);
     if (filter.status) setSelectedStatus(filter.status);

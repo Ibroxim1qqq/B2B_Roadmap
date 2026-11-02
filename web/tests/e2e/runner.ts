@@ -20,6 +20,7 @@ import './tier15-concurrency-stress-resilience.test.ts';
 import './tier16-real-world-100-cases.test.ts';
 import './tier17-filters-and-pure-neon.test.ts';
 import './tier18-security-regressions.test.ts';
+import './tier19-ai-assistant-quality.test.ts';
 
 // --- CLI Parsing ---
 const args = process.argv.slice(2);

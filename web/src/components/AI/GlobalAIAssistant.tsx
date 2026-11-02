@@ -15,7 +15,7 @@ interface GlobalAIAssistantProps {
   companyId?: string;
   onViewOnMap?: (sourceId: string) => void;
   onApplyRoute?: (stops: AIRouteRecommendation[]) => void;
-  onApplyFilter?: (filter: { district?: string; search?: string; status?: string }) => void;
+  onApplyFilter?: (filter: { district?: string; region?: string; search?: string; status?: string }) => void;
   isOpen?: boolean;
   onClose?: () => void;
 }
@@ -100,7 +100,7 @@ export default function GlobalAIAssistant({
         companyId,
         userLat: userLat || undefined,
         userLng: userLng || undefined,
-        objects: objects || []
+        history: messages.filter(m => m.id !== 'welcome').map(m => ({ sender: m.sender, text: m.text }))
       });
 
       if (res.success && res.data) {

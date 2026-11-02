@@ -737,7 +737,8 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'pitch_briefing',
-          target_object: targetObject
+          target_object: { source_id: targetObject?.source_id },
+          company_id: targetObject?.company_id
         })
       });
       return parseResponse(res);
@@ -751,7 +752,7 @@ export const api = {
     companyId?: string;
     userLat?: number | null;
     userLng?: number | null;
-    objects?: any[];
+    history?: { sender: string; text: string }[];
   }): Promise<{
     success: boolean;
     data?: {
@@ -771,7 +772,8 @@ export const api = {
           company_id: params.companyId,
           message: params.message,
           user_lat: params.userLat,
-          user_lng: params.userLng
+          user_lng: params.userLng,
+          history: params.history
         })
       });
       return parseResponse(res);

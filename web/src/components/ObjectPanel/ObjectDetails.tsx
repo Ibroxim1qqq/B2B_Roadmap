@@ -97,7 +97,8 @@ export default function ObjectDetails({ detail, companyId, distance, onClose, on
     try {
       const res = await api.getAIPitchBriefing({
         ...source,
-        ...internal
+        ...internal,
+        company_id: companyId
       });
       if (res.success && res.data) {
         setAiBriefing(res.data);

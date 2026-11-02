@@ -234,6 +234,7 @@ export interface AIChatAction {
     search?: string;
     district?: string;
     status?: string;
+    region?: string;
   };
 }
 
