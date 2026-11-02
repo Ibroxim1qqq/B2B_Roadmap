@@ -50,7 +50,7 @@ defineTest('app/admin/page.tsx renders Domtut sync trigger and UYSOT company bad
   tier: 8, milestone: 8, feature: 'DOMTUT_ADMIN_UI',
   description: 'Admin page provides Domtut sync trigger and highlights UYSOT data source'
 }, () => {
-  const content = readSrcFile('app/admin/page.tsx');
+  const content = readSrcFile('app/admin/page.tsx') + readSrcFile('components/Admin/AdminTabs.tsx');
   assert.ok(content.includes('triggerDomtutSync'), 'admin page must call api.triggerDomtutSync');
   assert.ok(content.includes('Domtut') || content.includes('Toshkent'), 'admin page must display Domtut Toshkent button/badge');
   assert.ok(content.includes('uysot'), 'admin page must identify uysot company');

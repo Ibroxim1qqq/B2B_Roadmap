@@ -255,6 +255,4 @@ ALTER TABLE objects ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
 ALTER TABLE objects ADD COLUMN IF NOT EXISTS price_from TEXT DEFAULT '';
 ALTER TABLE objects ADD COLUMN IF NOT EXISTS class_building TEXT DEFAULT '';
 
-UPDATE companies SET data_source = 'uysot'
-  WHERE data_source IS DISTINCT FROM 'uysot'
-    AND (company_id = 'uysot' OR LOWER(company_name) LIKE '%uysot%');
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;

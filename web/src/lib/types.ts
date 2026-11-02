@@ -131,6 +131,7 @@ export interface UserProfile {
   company_name?: string;
   login?: string;
   data_source?: 'dshk' | 'uysot';
+  is_active?: boolean;
 }
 
 export interface SavedRoute {

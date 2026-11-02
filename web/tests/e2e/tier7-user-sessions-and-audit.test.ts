@@ -73,7 +73,7 @@ defineTest('app/admin/page.tsx renders Sessions tab with real-time audit table',
   tier: 7, milestone: 7, feature: 'ADMIN_SESSIONS_UI',
   description: 'SuperAdmin page includes Sessiyalar tab, stat counter, and audit table'
 }, () => {
-  const content = readSrcFile('app/admin/page.tsx');
+  const content = readSrcFile('app/admin/page.tsx') + readSrcFile('components/Admin/AdminTabs.tsx');
   assert.ok(content.includes("'sessions'"), "activeTab union must support 'sessions'");
   assert.ok(content.includes('getUserSessions'), 'admin page must invoke api.getUserSessions');
   assert.match(content, /Sessiyalar/, 'admin page must render Sessiyalar tab');

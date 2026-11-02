@@ -6,7 +6,7 @@ import { clearStoredUser } from './auth';
 export { isUysotCompany, rememberCompanyDataSource };
 
 /** Reads an API response; an expired session sends the user back to the login page. */
-async function parseResponse(res: Response): Promise<any> {
+export async function parseResponse(res: Response): Promise<any> {
   if (res.status === 401 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
     clearStoredUser();
     window.location.replace('/login');

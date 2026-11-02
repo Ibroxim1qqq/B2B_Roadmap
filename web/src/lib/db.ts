@@ -194,7 +194,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at
 `;
 
 // Additive only: nothing here may drop or rewrite existing rows. Bump SCHEMA_VERSION when adding statements.
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 export const MIGRATIONS_SQL = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
     version INT PRIMARY KEY,
@@ -258,9 +258,7 @@ ALTER TABLE objects ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
 ALTER TABLE objects ADD COLUMN IF NOT EXISTS price_from TEXT DEFAULT '';
 ALTER TABLE objects ADD COLUMN IF NOT EXISTS class_building TEXT DEFAULT '';
 
-UPDATE companies SET data_source = 'uysot'
-  WHERE data_source IS DISTINCT FROM 'uysot'
-    AND (company_id = 'uysot' OR LOWER(company_name) LIKE '%uysot%')
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE
 `;
 
 // 3. In-memory store for local development and the automated tests. Never used in production.
@@ -544,6 +542,12 @@ function toProfile(row: any, companyName?: string): UserProfile {
 function memoryDataSource(companyId?: string | null): DataSource {
   const company: any = localStore.companies.find(c => c.company_id === companyId);
   return company?.data_source === 'uysot' || companyId === 'uysot' ? 'uysot' : 'dshk';
+}
+
+/** A superadmin keeps working even if the company row says otherwise, so the system cannot lock itself out. */
+function accountIsAllowed(user: any, companyStatus?: string | null): boolean {
+  if (user.is_active === false) return false;
+  return user.role === 'superadmin' || companyStatus !== 'inactive';
 }
 
 function isUniqueViolation(err: any): boolean {
@@ -893,7 +897,7 @@ export const db = {
 
   createCompany: async (name: string, status: string = 'active', dataSource: DataSource = 'dshk'): Promise<Company> => {
     const item: Company = {
-      company_id: `comp_${Date.now()}`,
+      company_id: `comp_${Date.now()}_${randomBytes(3).toString('hex')}`,
       company_name: name.trim(),
       status: (status as 'active' | 'inactive'),
       data_source: dataSource,
@@ -921,7 +925,7 @@ export const db = {
   createUser: async (userData: any): Promise<any> => {
     const password = String(userData.password || '');
     if (!password) throw new Error('Parol kiritilishi shart');
-    const userId = userData.user_id || `user_${Date.now()}`;
+    const userId = userData.user_id || `user_${Date.now()}_${randomBytes(3).toString('hex')}`;
     const name = String(userData.name || '');
     const item = {
       id: userId,
@@ -977,12 +981,15 @@ export const db = {
             password_hash = COALESCE(${newHash}::text, password_hash),
             phone = COALESCE(${updates.phone ?? null}::text, phone),
             avatar_url = COALESCE(${updates.avatar_url ?? null}::text, avatar_url),
+            role = COALESCE(${updates.role ?? null}::text, role),
+            company_id = COALESCE(${updates.company_id ?? null}::text, company_id),
+            is_active = COALESCE(${updates.is_active ?? null}::boolean, is_active),
             avatar_initials = COALESCE(${newInitials}::text, avatar_initials)
           WHERE user_id = ${cleanId}
           RETURNING *
         `;
         if (rows.length === 0) return null;
-        if (newHash) await sql`DELETE FROM auth_sessions WHERE user_id = ${rows[0].user_id}`;
+        if (newHash || updates.is_active === false) await sql`DELETE FROM auth_sessions WHERE user_id = ${rows[0].user_id}`;
         const { password_hash, ...safe } = rows[0];
         return safe;
       } catch (err) {
@@ -1003,7 +1010,7 @@ export const db = {
       ...(newLogin ? { login: newLogin } : {}),
       ...(newHash ? { password_hash: newHash } : {})
     };
-    if (newHash) {
+    if (newHash || updates.is_active === false) {
       for (const [hash, session] of memorySessions) {
         if (session.userId === cleanId) memorySessions.delete(hash);
       }
@@ -1017,14 +1024,14 @@ export const db = {
     const sql = await ready();
     if (sql) {
       const rows = await sql`
-        SELECT u.*, c.company_name, c.data_source
+        SELECT u.*, c.company_name, c.data_source, c.status AS company_status
         FROM users u
         LEFT JOIN companies c ON c.company_id = u.company_id
         WHERE LOWER(u.login) = ${cleanLogin}
         LIMIT 1
       `;
       const user = rows[0];
-      if (!user || !verifyPassword(pass, user.password_hash)) return null;
+      if (!user || !verifyPassword(pass, user.password_hash) || !accountIsAllowed(user, user.company_status)) return null;
       if (!isHashedPassword(user.password_hash)) {
         // Legacy plaintext row: replace it the first time its owner logs in.
         await sql`UPDATE users SET password_hash = ${hashPassword(pass)} WHERE user_id = ${user.user_id}`;
@@ -1035,7 +1042,290 @@ export const db = {
     const user = localStore.users.find(u => u.login.toLowerCase() === cleanLogin);
     if (!user || !verifyPassword(pass, user.password_hash)) return null;
     const company = localStore.companies.find(c => c.company_id === user.company_id);
+    if (!accountIsAllowed(user, company?.status)) return null;
     return toProfile({ ...user, data_source: memoryDataSource(user.company_id) }, company?.company_name || user.company_name);
+  },
+
+  /** Admin: edits a company. Deactivating one ends the sessions of its users. */
+  updateCompany: async (companyId: string, updates: { company_name?: string; status?: string; data_source?: string }): Promise<boolean> => {
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`
+        UPDATE companies SET
+          company_name = COALESCE(${updates.company_name ?? null}::text, company_name),
+          status = COALESCE(${updates.status ?? null}::text, status),
+          data_source = COALESCE(${updates.data_source ?? null}::text, data_source)
+        WHERE company_id = ${companyId}
+        RETURNING company_id
+      `;
+      if (rows.length > 0 && updates.status === 'inactive') {
+        await sql`DELETE FROM auth_sessions WHERE user_id IN (SELECT user_id FROM users WHERE company_id = ${companyId} AND role <> 'superadmin')`;
+      }
+      return rows.length > 0;
+    }
+    const company: any = localStore.companies.find(c => c.company_id === companyId);
+    if (!company) return false;
+    Object.assign(company, Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined)));
+    return true;
+  },
+
+  /** Admin: removes a company and everything only it owned. The caller must first make sure it has no users. */
+  deleteCompany: async (companyId: string): Promise<void> => {
+    const sql = await ready();
+    if (sql) {
+      await sql.transaction(txn => [
+        txn`DELETE FROM company_data WHERE company_id = ${companyId}`,
+        txn`DELETE FROM routes WHERE company_id = ${companyId}`,
+        txn`DELETE FROM object_visits WHERE company_id = ${companyId}`,
+        txn`DELETE FROM custom_fields WHERE company_id = ${companyId}`,
+        txn`DELETE FROM companies WHERE company_id = ${companyId}`
+      ]);
+      return;
+    }
+    localStore.companies = localStore.companies.filter(c => c.company_id !== companyId);
+    for (const [key, value] of localStore.companyData.entries()) {
+      if (value?.company_id === companyId) localStore.companyData.delete(key);
+    }
+    localStore.routes = localStore.routes.filter(r => r.company_id !== companyId);
+  },
+
+  /** Admin: how much data each company holds, keyed by company_id. */
+  getCompanyStats: async (): Promise<Record<string, { crm: number; routes: number; visits: number }>> => {
+    const stats: Record<string, { crm: number; routes: number; visits: number }> = {};
+    const entry = (id: string) => (stats[id] ||= { crm: 0, routes: 0, visits: 0 });
+    const sql = await ready();
+    if (sql) {
+      const [crm, routes, visits] = await Promise.all([
+        sql`SELECT company_id, count(*)::int n FROM company_data GROUP BY 1`,
+        sql`SELECT company_id, count(*)::int n FROM routes GROUP BY 1`,
+        sql`SELECT company_id, count(*)::int n FROM object_visits GROUP BY 1`
+      ]);
+      crm.forEach((r: any) => { entry(r.company_id).crm = r.n; });
+      routes.forEach((r: any) => { entry(r.company_id).routes = r.n; });
+      visits.forEach((r: any) => { entry(r.company_id).visits = r.n; });
+      return stats;
+    }
+    for (const value of localStore.companyData.values()) {
+      if (value?.company_id) entry(value.company_id).crm += 1;
+    }
+    localStore.routes.forEach(r => { entry(r.company_id).routes += 1; });
+    return stats;
+  },
+
+  /** Admin: removes a user. Their past activity stays in the audit log. */
+  deleteUser: async (userId: string): Promise<boolean> => {
+    const sql = await ready();
+    if (sql) {
+      const [, deleted] = await sql.transaction(txn => [
+        txn`DELETE FROM auth_sessions WHERE user_id = ${userId}`,
+        txn`DELETE FROM users WHERE user_id = ${userId} RETURNING user_id`
+      ]);
+      return (deleted as any[]).length > 0;
+    }
+    const before = localStore.users.length;
+    localStore.users = localStore.users.filter(u => u.user_id !== userId);
+    for (const [hash, session] of memorySessions) {
+      if (session.userId === userId) memorySessions.delete(hash);
+    }
+    return localStore.users.length < before;
+  },
+
+  /** Admin: edits a source object. The DSHK and Domtut syncs may later refresh the fields they own. */
+  updateBaseObject: async (sourceId: string, data: Record<string, any>): Promise<boolean> => {
+    const text = (key: string): string | null => (key in data && data[key] !== undefined && data[key] !== null ? String(data[key]) : null);
+    const number = (key: string): number | null => {
+      const value = text(key);
+      return value === null || value === '' ? null : Number(value);
+    };
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`
+        UPDATE objects SET
+          object_name = COALESCE(${text('object_name')}::text, object_name),
+          address = COALESCE(${text('address')}::text, address),
+          region_soato = COALESCE(${text('region_soato')}::text, region_soato),
+          region_name = COALESCE(${text('region_name')}::text, region_name),
+          district_soato = COALESCE(${text('district_soato')}::text, district_soato),
+          district_name = COALESCE(${text('district_name')}::text, district_name),
+          latitude = COALESCE(${number('latitude')}::numeric, latitude),
+          longitude = COALESCE(${number('longitude')}::numeric, longitude),
+          status = COALESCE(${text('status')}::text, status),
+          customer = COALESCE(${text('customer')}::text, customer),
+          builder = COALESCE(${text('builder')}::text, builder),
+          designer = COALESCE(${text('designer')}::text, designer),
+          difficulty = COALESCE(${text('difficulty')}::text, difficulty),
+          floors = COALESCE(${text('floors')}::text, floors),
+          apartment_count = COALESCE(${text('apartment_count')}::text, apartment_count),
+          block_count = COALESCE(${text('block_count')}::text, block_count),
+          deadline = COALESCE(${text('deadline')}::text, deadline),
+          phone = COALESCE(${text('phone')}::text, phone),
+          sales_office = COALESCE(${text('sales_office')}::text, sales_office),
+          manager_name = COALESCE(${text('manager_name')}::text, manager_name),
+          manager_phone = COALESCE(${text('manager_phone')}::text, manager_phone),
+          telegram = COALESCE(${text('telegram')}::text, telegram),
+          email = COALESCE(${text('email')}::text, email),
+          notes = COALESCE(${text('notes')}::text, notes),
+          updated_at = NOW()
+        WHERE source_id = ${sourceId}
+        RETURNING source_id
+      `;
+      baseObjectsCache.clear();
+      return rows.length > 0;
+    }
+    const object = localStore.objects.find(o => String(o.source_id) === sourceId);
+    if (!object) return false;
+    Object.assign(object, data);
+    return true;
+  },
+
+  /** Admin: edits an object a company created itself. */
+  updateCustomObject: async (companyId: string, sourceId: string, data: Record<string, any>): Promise<boolean> => {
+    const crm: Record<string, any> = {};
+    const building: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if ((CRM_COLUMNS as readonly string[]).includes(key)) crm[key] = value;
+      else building[key] = value;
+    }
+
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`
+        UPDATE company_data SET
+          custom_object_json = COALESCE(custom_object_json, '{}'::jsonb) || ${JSON.stringify(building)}::jsonb,
+          updated_at = NOW()
+        WHERE company_id = ${companyId} AND source_id = ${sourceId} AND is_custom_tjm = true
+        RETURNING user_id
+      `;
+      if (rows.length === 0) return false;
+      if (Object.keys(crm).length > 0) await db.updateCompanyData(companyId, rows[0].user_id, sourceId, crm);
+      return true;
+    }
+    const key = `${companyId}_${sourceId}`;
+    const existing = localStore.companyData.get(key);
+    if (!existing?.is_custom_tjm) return false;
+    localStore.companyData.set(key, { ...existing, ...data });
+    return true;
+  },
+
+  /** Admin: removes an object a company created itself. Source objects cannot be removed, the sync would restore them. */
+  deleteCustomObject: async (companyId: string, sourceId: string): Promise<boolean> => {
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`DELETE FROM company_data WHERE company_id = ${companyId} AND source_id = ${sourceId} AND is_custom_tjm = true RETURNING source_id`;
+      return rows.length > 0;
+    }
+    const key = `${companyId}_${sourceId}`;
+    if (!localStore.companyData.get(key)?.is_custom_tjm) return false;
+    return localStore.companyData.delete(key);
+  },
+
+  updateRoute: async (routeId: string, updates: { route_name?: string; notes?: string; status?: string }): Promise<boolean> => {
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`
+        UPDATE routes SET
+          route_name = COALESCE(${updates.route_name ?? null}::text, route_name),
+          notes = COALESCE(${updates.notes ?? null}::text, notes),
+          status = COALESCE(${updates.status ?? null}::text, status)
+        WHERE route_id = ${routeId}
+        RETURNING route_id
+      `;
+      return rows.length > 0;
+    }
+    const route = localStore.routes.find(r => r.id === routeId);
+    if (!route) return false;
+    Object.assign(route, Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined)));
+    return true;
+  },
+
+  deleteRoute: async (routeId: string): Promise<boolean> => {
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`DELETE FROM routes WHERE route_id = ${routeId} RETURNING route_id`;
+      return rows.length > 0;
+    }
+    const before = localStore.routes.length;
+    localStore.routes = localStore.routes.filter(r => r.id !== routeId);
+    return localStore.routes.length < before;
+  },
+
+  updateNotification: async (notifId: string, updates: { title?: string; summary?: string }): Promise<boolean> => {
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`
+        UPDATE notifications SET
+          title = COALESCE(${updates.title ?? null}::text, title),
+          summary = COALESCE(${updates.summary ?? null}::text, summary)
+        WHERE notif_id = ${notifId}
+        RETURNING notif_id
+      `;
+      return rows.length > 0;
+    }
+    const notification = localStore.notifications.find(n => n.id === notifId);
+    if (!notification) return false;
+    Object.assign(notification, Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined)));
+    return true;
+  },
+
+  deleteNotification: async (notifId: string): Promise<boolean> => {
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`DELETE FROM notifications WHERE notif_id = ${notifId} RETURNING notif_id`;
+      return rows.length > 0;
+    }
+    const before = localStore.notifications.length;
+    localStore.notifications = localStore.notifications.filter(n => n.id !== notifId);
+    return localStore.notifications.length < before;
+  },
+
+  /** Admin: every field row, global and company-specific. */
+  getAllCustomFields: async (): Promise<any[]> => {
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`SELECT company_id, field_name, field_type, visible, label, description FROM custom_fields ORDER BY company_id, id`;
+      return rows.map((r: any) => ({ ...r, desc: r.description || '' }));
+    }
+    return localStore.customFields.map((f: any) => ({ company_id: '', ...f }));
+  },
+
+  updateCustomField: async (companyId: string, fieldName: string, updates: { label?: string; desc?: string; field_type?: string; visible?: boolean }): Promise<boolean> => {
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`
+        UPDATE custom_fields SET
+          label = COALESCE(${updates.label ?? null}::text, label),
+          description = COALESCE(${updates.desc ?? null}::text, description),
+          field_type = COALESCE(${updates.field_type ?? null}::text, field_type),
+          visible = COALESCE(${updates.visible ?? null}::boolean, visible)
+        WHERE company_id = ${companyId} AND field_name = ${fieldName}
+        RETURNING field_name
+      `;
+      return rows.length > 0;
+    }
+    const field: any = localStore.customFields.find((f: any) => f.field_name === fieldName && (f.company_id || '') === companyId);
+    if (!field) return false;
+    Object.assign(field, Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined)));
+    return true;
+  },
+
+  /** Removes the field definition only; values already saved on objects stay stored. */
+  deleteCustomField: async (companyId: string, fieldName: string): Promise<boolean> => {
+    const sql = await ready();
+    if (sql) {
+      const rows = await sql`DELETE FROM custom_fields WHERE company_id = ${companyId} AND field_name = ${fieldName} RETURNING field_name`;
+      return rows.length > 0;
+    }
+    const before = localStore.customFields.length;
+    localStore.customFields = localStore.customFields.filter((f: any) => !(f.field_name === fieldName && (f.company_id || '') === companyId));
+    return localStore.customFields.length < before;
+  },
+
+  getActivityLog: async (limit: number = 200): Promise<any[]> => {
+    const sql = await ready();
+    if (sql) {
+      return sql`SELECT action, source_id, object_name, user_info, details, status, created_at FROM activity_log ORDER BY created_at DESC LIMIT ${limit}`;
+    }
+    return [...localStore.activityLogs].reverse().slice(0, limit).map(l => ({ ...l, user_info: l.user || '' }));
   },
 
   /** Verifies a password for an already identified user, for example before a password change. */
@@ -1069,20 +1359,21 @@ export const db = {
     const sql = await ready();
     if (sql) {
       const rows = await sql`
-        SELECT u.*, c.company_name, c.data_source
+        SELECT u.*, c.company_name, c.data_source, c.status AS company_status
         FROM auth_sessions s
         JOIN users u ON u.user_id = s.user_id
         LEFT JOIN companies c ON c.company_id = u.company_id
         WHERE s.token_hash = ${tokenHash} AND s.expires_at > NOW()
         LIMIT 1
       `;
-      return rows.length > 0 ? toProfile(rows[0], rows[0].company_name) : null;
+      return rows.length > 0 && accountIsAllowed(rows[0], rows[0].company_status) ? toProfile(rows[0], rows[0].company_name) : null;
     }
     const session = memorySessions.get(tokenHash);
     if (!session || session.expiresAt < Date.now()) return null;
     const user = localStore.users.find(u => u.user_id === session.userId);
     if (!user) return null;
     const company = localStore.companies.find(c => c.company_id === user.company_id);
+    if (!accountIsAllowed(user, company?.status)) return null;
     return toProfile({ ...user, data_source: memoryDataSource(user.company_id) }, company?.company_name || user.company_name);
   },
 
