@@ -676,10 +676,10 @@ function HomeContent() {
 
   if (!authChecked) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-slate-900">
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-100">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-3 border-[#1b815f] border-t-transparent animate-spin" />
-          <p className="text-slate-400 text-sm font-medium">UYSOT B2B yuklanmoqda...</p>
+          <p className="text-slate-500 text-sm">Yuklanmoqda...</p>
         </div>
 
       </div>
@@ -758,75 +758,12 @@ function HomeContent() {
               </div>
             )}
 
-            {/* 1. 4 Summary Stat Cards on Desktop */}
-            <div className="hidden lg:grid grid-cols-4 gap-3 px-5 pt-4 pb-2 shrink-0">
-              {/* Card 1: Jami TJM-lar */}
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#1b815f] flex items-center justify-center shrink-0">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold text-slate-500 truncate">Jami TJM-lar</p>
-                  <p className="text-lg font-black text-slate-900 leading-tight">
-                    {stats.total} <span className="text-xs font-normal text-slate-400">ta</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 2: Tashrif qilingan */}
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                  <MapPin className="w-5 h-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold text-slate-500 truncate">Tashrif qilingan</p>
-                  <p className="text-lg font-black text-emerald-600 leading-tight">
-                    {stats.visited} <span className="text-xs font-normal text-slate-400">ta</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 3: Ma'lumot to'ldirilgan */}
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold text-slate-500 truncate">Ma'lumot to'ldirilgan</p>
-                  <p className="text-lg font-black text-indigo-600 leading-tight">
-                    {stats.filled} <span className="text-xs font-normal text-slate-400">ta</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 4: Tashrif qilinmagan */}
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold text-slate-500 truncate">Tashrif qilinmagan</p>
-                  <p className="text-lg font-black text-amber-600 leading-tight">
-                    {stats.notVisited} <span className="text-xs font-normal text-slate-400">ta</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Compact Horizontal Stats Strip (Yandex Maps style) */}
-            <div className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-slate-50 border-b border-slate-200/80 overflow-x-auto no-scrollbar shrink-0 text-[11px] font-semibold text-slate-600">
-              <span className="flex items-center gap-1 bg-white border border-slate-200/90 px-2.5 py-1 rounded-xl shrink-0 text-slate-800 shadow-2xs font-bold">
-                🏢 Jami: <span className="text-[#1b815f] font-black">{stats.total}</span> ta
-              </span>
-              <span className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl shrink-0 text-emerald-800 shadow-2xs">
-                ✅ Borilgan: {stats.visited}
-              </span>
-              <span className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl shrink-0 text-amber-800 shadow-2xs">
-                ⏳ Borilmagan: {stats.notVisited}
-              </span>
-              <span className="flex items-center gap-1 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-xl shrink-0 text-indigo-800 shadow-2xs">
-                📝 To'ldirilgan: {stats.filled}
-              </span>
+            {/* Summary */}
+            <div className="flex items-center gap-5 px-4 lg:px-5 py-2.5 text-xs text-slate-500 shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap">
+              <span>Jami <b className="font-semibold text-slate-900 tabular-nums">{stats.total}</b></span>
+              <span>Borilgan <b className="font-semibold text-slate-900 tabular-nums">{stats.visited}</b></span>
+              <span>Borilmagan <b className="font-semibold text-slate-900 tabular-nums">{stats.notVisited}</b></span>
+              <span>To'ldirilgan <b className="font-semibold text-slate-900 tabular-nums">{stats.filled}</b></span>
             </div>
 
             {/* 2. Filter Pills Bar (Directly Above the Map) */}
@@ -946,7 +883,7 @@ function HomeContent() {
                   onClick={() => handleTabChange('route')}
                   className="lg:hidden absolute bottom-4 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 px-4 py-2.5 bg-[#1b815f] active:bg-[#15674c] text-white rounded-full shadow-lg shadow-emerald-600/30 text-xs font-bold tracking-wide active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
                 >
-                  <Navigation className="w-4 h-4 text-white fill-white/20 animate-pulse" />
+                  <Navigation className="w-4 h-4 text-white fill-white/20" />
                   <span>Yo&apos;l-yo&apos;lakay reja</span>
                 </button>
               )}
@@ -1090,7 +1027,7 @@ function HomeContent() {
             }
           }}
         >
-          <div className="bg-white w-full max-w-xl h-[85vh] rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col animate-in zoom-in-95 duration-150">
+          <div className="bg-white w-full max-w-xl h-[85vh] rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col animate-in zoom-in-95 duration-150">
             {detailLoading && !objectDetail ? (
               <div className="p-12 flex flex-col items-center justify-center gap-3 h-full">
                 <div className="w-6 h-6 rounded-full border-2 border-[#1b815f] border-t-transparent animate-spin"></div>

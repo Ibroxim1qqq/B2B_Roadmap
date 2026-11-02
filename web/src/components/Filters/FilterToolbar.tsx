@@ -160,7 +160,7 @@ export default function FilterToolbar({
             <SlidersHorizontal className={`w-3.5 h-3.5 shrink-0 ${activeAdvancedFilterCount > 0 ? 'text-white' : 'text-[#1b815f]'}`} />
             <span className="hidden sm:inline">Filtrlar</span>
             {activeAdvancedFilterCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-white text-emerald-700 text-[10px] font-black flex items-center justify-center shrink-0">
+              <span className="w-4 h-4 rounded-full bg-white text-emerald-700 text-[10px] font-semibold flex items-center justify-center shrink-0">
                 {activeAdvancedFilterCount}
               </span>
             )}

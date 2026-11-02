@@ -113,58 +113,11 @@ export default function DashboardView({
     };
   }, [objects]);
 
-  // 5 Top KPI Cards as requested
+  // The other two numbers are simply the complements of these.
   const cards = [
-    { 
-      title: 'Jami TJM-lar', 
-      value: stats.total, 
-      badge: '100%',
-      desc: "Reyestrdagi barcha obyektlar", 
-      icon: Building2, 
-      color: 'text-[#1b815f]', 
-      bg: 'bg-emerald-50', 
-      border: 'border-emerald-100' 
-    },
-    { 
-      title: 'Borilgan TJM-lar', 
-      value: stats.visited, 
-      badge: `${stats.visitPercent}%`,
-      desc: "Joyiga borib ko'rilgan va qayd etilgan", 
-      icon: MapPin, 
-      color: 'text-emerald-600', 
-      bg: 'bg-emerald-50', 
-      border: 'border-emerald-100' 
-    },
-    { 
-      title: "Ma'lumotlari bor TJM-lar", 
-      value: stats.withInternal, 
-      badge: `${stats.withInternalPercent}%`,
-      desc: "B2B CRM ma'lumotlari to'ldirilgan", 
-      icon: FileText, 
-      color: 'text-indigo-600', 
-      bg: 'bg-indigo-50', 
-      border: 'border-indigo-100' 
-    },
-    { 
-      title: 'Borilmagan TJM-lar', 
-      value: stats.notVisited, 
-      badge: `${stats.notVisitedPercent}%`,
-      desc: "Hali tashrif buyurilmagan obyektlar", 
-      icon: Clock, 
-      color: 'text-amber-600', 
-      bg: 'bg-amber-50', 
-      border: 'border-amber-100' 
-    },
-    { 
-      title: "Ma'lumoti yo'q TJM-lar", 
-      value: stats.withoutInternal, 
-      badge: `${stats.withoutInternalPercent}%`,
-      desc: "B2B ma'lumotlari hali kiritilmagan", 
-      icon: XCircle, 
-      color: 'text-rose-600', 
-      bg: 'bg-rose-50', 
-      border: 'border-rose-100' 
-    },
+    { title: 'Jami TJM', value: stats.total, note: 'reyestrda' },
+    { title: 'Borilgan', value: stats.visited, note: `${stats.visitPercent}%, qolgan ${stats.notVisited}` },
+    { title: "Ma'lumoti bor", value: stats.withInternal, note: `${stats.withInternalPercent}%, qolgan ${stats.withoutInternal}` }
   ];
 
   // SVG Line Chart Calculation helpers
@@ -199,48 +152,28 @@ export default function DashboardView({
 
   return (
     <div className="flex-1 flex flex-col bg-slate-100 min-w-0 overflow-y-auto p-6 space-y-6">
-      {/* 1. 5 KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        {cards.map((card, i) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={i}
-              className={`bg-white rounded-2xl border ${card.border} p-4 shadow-2xs flex flex-col justify-between transition-all hover:shadow-md`}
-            >
-              <div className="flex items-start justify-between">
-                <div className={`p-2.5 rounded-xl ${card.bg} ${card.color} shrink-0`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${card.bg} ${card.color}`}>
-                  {card.badge}
-                </span>
-              </div>
-
-              <div className="mt-3">
-                <p className="text-[11px] text-slate-500 font-semibold">{card.title}</p>
-                <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <p className="text-2xl font-black text-slate-900 leading-tight">{card.value}</p>
-                  <span className="text-xs font-bold text-slate-400">ta</span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">{card.desc}</p>
-              </div>
-            </div>
-          );
-        })}
+      {/* Key numbers */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {cards.map(card => (
+          <div key={card.title} className="bg-white rounded-xl border border-slate-200 p-4">
+            <p className="text-xs text-slate-500">{card.title}</p>
+            <p className="text-2xl font-semibold text-slate-900 tabular-nums mt-1">{card.value}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{card.note}</p>
+          </div>
+        ))}
       </div>
 
       {/* 3. Main Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Left: District Comparison (Progress Bar) */}
+        {/* Left: District Comparison */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <BarChart2 className="w-4 h-4 text-[#1b815f]" />
-                  <span>Tumanlar bo'yicha TJM va Tashriflar (Progress Bar)</span>
+                  <span>Tumanlar bo'yicha TJM va Tashriflar</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   Har bir tumandagi jami TJM-lar ichida qilingan tashriflar progressi
@@ -284,9 +217,9 @@ export default function DashboardView({
                     </div>
 
                     {/* Unified Progress Bar */}
-                    <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/80 p-0.5">
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500 shadow-xs"
+                        className="h-full bg-[#1b815f] rounded-full transition-all duration-500 shadow-xs"
                         style={{ width: `${displayWidth}%` }}
                       ></div>
                     </div>
@@ -321,7 +254,7 @@ export default function DashboardView({
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  <span>Kunlik Tashriflar Dinamikasi (Line Chart 1)</span>
+                  <span>Kunlik Tashriflar Dinamikasi</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   B2B sotuv jamoasining kunlik obyektlarga qilgan tashriflari soni
@@ -419,7 +352,7 @@ export default function DashboardView({
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-indigo-600" />
-                  <span>Kunlik Ma'lumot To'ldirish Dinamikasi (Line Chart 2)</span>
+                  <span>Kunlik Ma'lumot To'ldirish Dinamikasi</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   Menejerlar tomonidan kunlik kiritilgan va to'ldirilgan B2B ma'lumotlari

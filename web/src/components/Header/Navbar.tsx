@@ -21,8 +21,8 @@ const TAB_INFO: Record<string, { title: string; icon: any }> = {
   map: { title: 'Xarita', icon: Map },
   route: { title: "Yo'l-yo'lakay", icon: Navigation },
   objects: { title: 'Obyektlar', icon: Building2 },
-  dashboard: { title: 'Dashboard', icon: BarChart3 },
-  custom_fields: { title: "Qo'shimcha maydonlar", icon: SlidersHorizontal }
+  dashboard: { title: 'Tahlil', icon: BarChart3 },
+  custom_fields: { title: 'Maydonlar', icon: SlidersHorizontal }
 };
 
 export default function Navbar({
@@ -66,28 +66,16 @@ export default function Navbar({
           <div className="w-8 h-8 rounded-xl overflow-hidden shadow-xs shadow-emerald-600/20 bg-[#1b815f] flex items-center justify-center">
             <img src="/uysot-logo.png" alt="UYSOT B2B" className="w-full h-full object-cover" />
           </div>
-          <span className="font-black text-slate-900 text-sm tracking-tight">UYSOT B2B</span>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
         </div>
 
 
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 shrink-0">
-            <CurrentIcon className="w-4 h-4" />
-          </div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-black text-slate-900 tracking-tight">
-              {currentTab.title}
-            </h2>
-          </div>
-        </div>
+        <h2 className="text-[15px] font-semibold text-slate-900 whitespace-nowrap">
+          {currentTab.title}
+        </h2>
 
         {/* Company Badge */}
         {currentUser?.company_name && (
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700">
-            <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="truncate max-w-[160px]">{displayCompany}</span>
-          </div>
+          <span className="hidden md:inline text-xs text-slate-500 truncate max-w-[200px]">{displayCompany}</span>
         )}
       </div>
 
@@ -97,7 +85,7 @@ export default function Navbar({
         {isSuperAdmin && (
           <Link
             href="/admin"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-xs shadow-amber-500/20 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
             title="SuperAdmin Boshqaruv Paneliga o'tish"
           >
             <Shield className="w-3.5 h-3.5" />
@@ -110,10 +98,10 @@ export default function Navbar({
           <button
             type="button"
             onClick={onOpenAI}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-semibold shadow-xs shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
             title="AI Yordamchi (Sun'iy Intellekt)"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <Sparkles className="w-3.5 h-3.5 text-slate-500" />
             <span className="hidden sm:inline">AI Yordamchi</span>
           </button>
         )}
@@ -122,7 +110,7 @@ export default function Navbar({
         {onOpenCreate && (
           <button
             onClick={onOpenCreate}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-semibold shadow-xs shadow-emerald-600/20 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[#1b815f] hover:bg-[#15674c] text-white text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
             title="Yangi obyekt qo'shish"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -134,7 +122,7 @@ export default function Navbar({
         {onOpenNotifications && (
           <button
             onClick={onOpenNotifications}
-            className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200 hover:border-emerald-200 transition-all cursor-pointer"
+            className="relative flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
             title="Bildirishnomalar va yangi TJM-lar"
           >
             <Bell className="w-4 h-4" />
@@ -145,12 +133,12 @@ export default function Navbar({
         )}
 
         {/* Person Icon in top right per user request: "ong taraf yuqorida faqat inson iconi tursin icon rasm emas ustiga bossa hechnima chiqmaydi hozircha" */}
-        <div ref={dropdownRef} className="relative pl-1 sm:pl-2 border-l border-slate-200">
+        <div ref={dropdownRef} className="relative">
           <div 
-            className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 select-none cursor-default"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 select-none cursor-default"
             title={displayName}
           >
-            <User className="w-4 h-4 text-slate-600" />
+            <User className="w-4 h-4" />
           </div>
         </div>
       </div>

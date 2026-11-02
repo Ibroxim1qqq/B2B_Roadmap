@@ -123,7 +123,7 @@ export default function CustomFieldManager() {
       {/* 1. Header with Add Button */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-slate-900 flex items-center gap-2.5">
+          <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2.5">
             <SlidersHorizontal className="w-6 h-6 text-[#1b815f]" />
             <span>Qo'shimcha B2B Maydonlar Sozlamasi</span>
           </h2>
@@ -238,7 +238,7 @@ export default function CustomFieldManager() {
             if (e.target === e.currentTarget) setIsAddOpen(false);
           }}
         >
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-200 p-6 space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200 p-6 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
                 <Plus className="w-5 h-5 text-[#1b815f]" />

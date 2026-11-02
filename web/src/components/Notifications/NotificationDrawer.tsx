@@ -111,7 +111,7 @@ export default function NotificationDrawer({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-black text-slate-900 tracking-tight">
+                <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
                   Yangi TJM-lar
                 </h3>
                 <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-full">

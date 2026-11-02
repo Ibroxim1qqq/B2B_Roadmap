@@ -92,7 +92,7 @@ function formatRowToMapObject(r: any): MapObject {
   const lng = parseFloat(r.longitude) || 66.9597;
   const regSoato = String(r.region_soato || (r.district_soato ? String(r.district_soato).substring(0, 4) : (lat > 40.5 ? '1726' : '1718')));
   const regName = getRegionName(regSoato);
-  const district = getDistrictName(String(r.district_soato || r.district || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || r.district || (r.district_soato ? `Tuman (${r.district_soato})` : regName);
+  const district = getDistrictName(String(r.district_soato || r.district || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || r.district || regName;
 
   const tjm = String(r.tjm_name || '').trim();
   const phone = String(r.phone || '').trim();
@@ -195,7 +195,7 @@ export function formatRowToObjectDetail(r: any): ObjectDetail {
   const lng = parseFloat(r.longitude) || 66.9597;
   const regSoato = String(r.region_soato || (r.district_soato ? String(r.district_soato).substring(0, 4) : (lat > 40.5 ? '1726' : '1718')));
   const regName = getRegionName(regSoato);
-  const district = getDistrictName(String(r.district_soato || r.district || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || r.district || (r.district_soato ? `Tuman (${r.district_soato})` : regName);
+  const district = getDistrictName(String(r.district_soato || r.district || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || r.district || regName;
 
   return {
     source: {

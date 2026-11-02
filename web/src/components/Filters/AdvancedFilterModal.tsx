@@ -55,7 +55,7 @@ export default function AdvancedFilterModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div 
-        className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
         role="dialog"
         aria-modal="true"
       >
@@ -69,7 +69,7 @@ export default function AdvancedFilterModal({
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900">Kengaytirilgan filtrlar</h3>
                 {activeCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700">
                     {activeCount} ta faol
                   </span>
                 )}

@@ -193,7 +193,7 @@ export default function BottomResults({
 
           <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between">
             <span>Markaziy baza</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Sinxronlangan"></span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Sinxronlangan"></span>
           </div>
         </div>
 

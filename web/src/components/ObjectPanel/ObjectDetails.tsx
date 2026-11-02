@@ -241,7 +241,7 @@ export default function ObjectDetails({ detail, companyId, distance, onClose, on
                 <span>Tashrif holati</span>
               </div>
               {!isVisited && (
-                <span className="text-[10px] font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded-md">
+                <span className="text-[10px] font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-md">
                   Yo'q
                 </span>
               )}
@@ -542,10 +542,10 @@ export default function ObjectDetails({ detail, companyId, distance, onClose, on
       <div className="p-4 border-t border-slate-200 bg-white space-y-2.5 shrink-0">
         {/* AI Briefing Card */}
         {aiBriefing && (
-          <div className="p-3.5 bg-gradient-to-br from-emerald-50/90 to-teal-50/90 border border-emerald-200/90 rounded-2xl space-y-2 text-xs shadow-xs animate-in fade-in duration-150">
+          <div className="p-3.5 bg-[#1b815f] hover:bg-[#15674c] border border-emerald-200/90 rounded-2xl space-y-2 text-xs shadow-xs animate-in fade-in duration-150">
             <div className="flex items-center justify-between">
               <span className="font-bold text-indigo-950 flex items-center gap-1.5 text-[11px]">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                 <span>AI Sotuv Strategiyasi &amp; Maslahati</span>
               </span>
               <button
@@ -588,12 +588,12 @@ export default function ObjectDetails({ detail, companyId, distance, onClose, on
           type="button"
           onClick={handleToggleAIBriefing}
           disabled={loadingBriefing}
-          className="w-full py-2 px-3 bg-gradient-to-r from-[#1b815f] via-teal-600 to-purple-600 hover:from-[#15674c] hover:to-teal-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+          className="w-full py-2 px-3 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
         >
           {loadingBriefing ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
           )}
           <span>{aiBriefing ? "AI Maslahatni yashirish" : "✨ AI Sotuv Brifingi (Pitch Maslahati)"}</span>
         </button>

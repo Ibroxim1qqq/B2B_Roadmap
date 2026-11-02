@@ -56,6 +56,68 @@ function getAccountRouteStorageKey(user?: UserProfile | null): string {
   return 'b2b_active_route_guest';
 }
 
+interface PointFieldProps {
+  kind: 'A' | 'B';
+  query: string;
+  placeholder: string;
+  isOpen: boolean;
+  isPicking: boolean;
+  onQueryChange: (value: string) => void;
+  onFocus: () => void;
+  onClear: () => void;
+  onPick: () => void;
+  onUseLocation?: () => void;
+  children?: React.ReactNode;
+}
+
+function PointField({
+  kind, query, placeholder, isOpen, isPicking, onQueryChange, onFocus, onClear, onPick, onUseLocation, children
+}: PointFieldProps) {
+  return (
+    <div className="relative">
+      <div className={`flex items-center gap-2 h-10 px-3 rounded-lg bg-slate-50 border transition-colors ${
+        isPicking ? 'border-[#1b815f] bg-white' : 'border-transparent focus-within:border-slate-300 focus-within:bg-white'
+      }`}>
+        <span className={`w-2 h-2 rounded-full shrink-0 ${kind === 'A' ? 'bg-[#1b815f]' : 'bg-slate-900'}`} />
+        <input
+          type="text"
+          aria-label={kind === 'A' ? 'Qayerdan' : 'Qayerga'}
+          placeholder={placeholder}
+          value={query}
+          onFocus={onFocus}
+          onChange={(e) => onQueryChange(e.target.value)}
+          className="w-full min-w-0 bg-transparent outline-none text-[13px] text-slate-900 placeholder:text-slate-400"
+        />
+        {query && (
+          <button type="button" onClick={onClear} title="Tozalash" className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer shrink-0">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onUseLocation && (
+          <button type="button" onClick={onUseLocation} title="Mening joylashuvim" className="p-1 text-slate-400 hover:text-[#1b815f] cursor-pointer shrink-0">
+            <LocateFixed className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onPick}
+          title="Xaritadan tanlash"
+          className={`p-1 cursor-pointer shrink-0 ${isPicking ? 'text-[#1b815f]' : 'text-slate-400 hover:text-[#1b815f]'}`}
+        >
+          <MapPin className="w-4 h-4" />
+        </button>
+      </div>
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-56 overflow-y-auto py-1">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const OPTION_CLASS = 'w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center justify-between gap-2 cursor-pointer';
+
 export default function RoutePlannerView({
   objects: rawObjects,
   userLat,
@@ -221,7 +283,6 @@ export default function RoutePlannerView({
   const [calculating, setCalculating] = useState(false);
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [matchedTJMs, setMatchedTJMs] = useState<TJMAlongRoute[]>([]);
-  const [activeMobileTab, setActiveMobileTab] = useState<'list' | 'map'>('list');
 
   // Mobile drawer filter & swipe state
   const [stopsDrawerFilter, setStopsDrawerFilter] = useState<'all' | 'unvisited' | 'phone' | 'priority'>('all');
@@ -230,25 +291,6 @@ export default function RoutePlannerView({
   const triggerHaptic = useCallback((ms = 25) => {
     if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && (navigator as any).vibrate) {
       try { (navigator as any).vibrate(ms); } catch (_) {}
-    }
-  }, []);
-
-  const getDetourBadge = useCallback((distMeters: number) => {
-    if (distMeters <= 50) {
-      return {
-        label: "⚡ Yo'l yoqasida (+0 daq)",
-        className: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-      };
-    } else if (distMeters <= 150) {
-      return {
-        label: `↩ Qisqa burilish (+${distMeters} m)`,
-        className: "bg-[#1b815f]/20 text-emerald-400 border-[#1b815f]/30"
-      };
-    } else {
-      return {
-        label: `↗ Yo'ldan chetda (+${distMeters} m)`,
-        className: "bg-amber-500/20 text-amber-300 border-amber-500/30"
-      };
     }
   }, []);
 
@@ -657,7 +699,6 @@ export default function RoutePlannerView({
     setPickingMode(mode);
     setIsStartOpen(false);
     setIsEndOpen(false);
-    setActiveMobileTab('map');
   };
 
   // Start Real In-Car Live Navigation Mode: Routes from User's Current Location to A and B!
@@ -743,7 +784,6 @@ export default function RoutePlannerView({
     setCalculating(false);
     setIsNavigating(true);
     setShowSidebarInNav(false);
-    setActiveMobileTab('map');
   };
 
   // Fetch saved routes
@@ -853,650 +893,336 @@ export default function RoutePlannerView({
     handleCalculateRoute(startPt, endPt);
   };
 
-  return (
-    <div className="flex-1 flex flex-col md:flex-row h-full min-w-0 bg-slate-100 overflow-hidden">
-      {/* 1. Left Panel: Inputs & Route Results List (Desktop view) */}
-      <div className={`hidden md:flex md:w-[420px] lg:w-[460px] h-full flex-col bg-white border-r border-slate-200 z-20 shrink-0 shadow-sm transition-all duration-200 ${
-        isNavigating && !showSidebarInNav ? 'md:hidden' : ''
-      }`}>
-        {/* Top Header Card */}
-        <div className="p-4 border-b border-slate-100 bg-white space-y-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-[#1b815f] text-white flex items-center justify-center shadow-xs shadow-emerald-600/20">
-                <Navigation className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-slate-900 leading-tight">Navigator</h2>
-              </div>
-            </div>
+  // The form folds away once a route exists, so the map stays visible on a phone.
+  useEffect(() => {
+    if (routeResult) setIsMobileControlsCollapsed(true);
+  }, [routeResult]);
 
-            <div className="flex items-center gap-2">
-              {/* AI Route Modal Trigger */}
-              <button
-                type="button"
-                onClick={() => setShowAIRouteModal(true)}
-                className="px-2.5 py-1.5 bg-gradient-to-r from-[#1b815f] via-teal-600 to-purple-600 hover:from-[#15674c] hover:to-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-                title="Sun'iy intellekt yordamida aqlli marshrut tuzish (Bepul)"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-                <span>AI Marshrut</span>
-              </button>
+  const clearPoint = (kind: 'A' | 'B') => {
+    if (kind === 'A') {
+      setStartQuery('');
+      setStartPoint(null);
+    } else {
+      setEndQuery('');
+      setEndPoint(null);
+    }
+    setRouteResult(null);
+    setMatchedTJMs([]);
+    const otherPoint = kind === 'A' ? endPoint : startPoint;
+    if (!otherPoint && typeof window !== 'undefined') {
+      const user = activeUser || getCurrentUser();
+      localStorage.removeItem(getAccountRouteStorageKey(user));
+    }
+  };
 
-              {/* Saved Routes Modal Trigger */}
-              <button
-                type="button"
-                onClick={() => setShowSavedRoutesModal(true)}
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-[#1b815f] rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer shadow-2xs"
-                title="Saqlangan marshrutlar"
-              >
-                <Bookmark className="w-3.5 h-3.5 text-[#1b815f]" />
-                <span>Saqlanganlar</span>
-              </button>
+  const suggestionOptions = (list: MapObject[], kind: 'A' | 'B') => list.map(obj => (
+    <button
+      key={obj.source_id}
+      type="button"
+      onClick={() => {
+        handleSetPointFromObject(obj, kind);
+        if (kind === 'A') setIsStartOpen(false);
+        else setIsEndOpen(false);
+      }}
+      className={OPTION_CLASS}
+    >
+      <span className="truncate">{obj.tjm_name || obj.object_name}</span>
+      <span className="text-xs text-slate-400 shrink-0">{obj.district_name}</span>
+    </button>
+  ));
 
-              {/* Mobile Tab Switcher */}
-              <div className="flex md:hidden bg-slate-100 p-1 rounded-xl text-xs font-bold">
-                <button
-                  onClick={() => setActiveMobileTab('list')}
-                  className={`px-3 py-1 rounded-lg transition-colors ${
-                    activeMobileTab === 'list' ? 'bg-white text-[#1b815f] shadow-xs' : 'text-slate-500'
-                  }`}
-                >
-                  Ro'yxat
-                </button>
-                <button
-                  onClick={() => setActiveMobileTab('map')}
-                  className={`px-3 py-1 rounded-lg transition-colors ${
-                    activeMobileTab === 'map' ? 'bg-white text-[#1b815f] shadow-xs' : 'text-slate-500'
-                  }`}
-                >
-                  Xarita
-                </button>
-              </div>
-            </div>
-          </div>
+  const routeForm = (
+    <div className="relative space-y-1">
+      <PointField
+        kind="A"
+        query={startQuery}
+        placeholder="Qayerdan"
+        isOpen={isStartOpen}
+        isPicking={pickingMode === 'A'}
+        onFocus={() => setIsStartOpen(true)}
+        onQueryChange={(value) => {
+          setStartQuery(value);
+          setIsStartOpen(true);
+        }}
+        onClear={() => clearPoint('A')}
+        onPick={() => triggerPickingMode('A')}
+        onUseLocation={handleUseMyLocation}
+      >
+        <button type="button" onClick={handleUseMyLocation} className={OPTION_CLASS}>
+          Mening joylashuvim
+        </button>
+        <button type="button" onClick={handleUseRegiston} className={OPTION_CLASS}>
+          {isUysot ? 'Toshkent markazi' : 'Samarqand markazi'}
+        </button>
+        <button type="button" onClick={() => triggerPickingMode('A')} className={OPTION_CLASS}>
+          Xaritadan tanlash
+        </button>
+        {suggestionOptions(startSuggestions, 'A')}
+      </PointField>
 
-          {/* Form: Start & Destination Inputs */}
-          <div className="space-y-2 relative">
-            {/* Point A (Start) */}
-            <div className="relative">
-              <div className={`flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-2 text-xs transition-all ${
-                pickingMode === 'A' 
-                  ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/50' 
-                  : 'border-slate-200 focus-within:border-emerald-500 focus-within:bg-white'
-              }`}>
-                <span className="w-5 h-5 rounded-full bg-emerald-500 text-white font-black text-[10px] flex items-center justify-center shrink-0">
-                  A
-                </span>
-                
-                <input
-                  type="text"
-                  placeholder="Boshlanish joyi (Qayerdan?)..."
-                  value={startQuery}
-                  onFocus={() => setIsStartOpen(true)}
-                  onChange={(e) => {
-                    setStartQuery(e.target.value);
-                    setIsStartOpen(true);
-                  }}
-                  className="w-full bg-transparent outline-none font-medium text-slate-800 placeholder:text-slate-400"
-                />
+      <PointField
+        kind="B"
+        query={endQuery}
+        placeholder="Qayerga: TJM nomi yoki manzil"
+        isOpen={isEndOpen}
+        isPicking={pickingMode === 'B'}
+        onFocus={() => setIsEndOpen(true)}
+        onQueryChange={(value) => {
+          setEndQuery(value);
+          setIsEndOpen(true);
+        }}
+        onClear={() => clearPoint('B')}
+        onPick={() => triggerPickingMode('B')}
+      >
+        <button type="button" onClick={() => triggerPickingMode('B')} className={OPTION_CLASS}>
+          Xaritadan tanlash
+        </button>
+        {suggestionOptions(endSuggestions, 'B')}
+      </PointField>
 
-                {startQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStartQuery('');
-                      setStartPoint(null);
-                      setRouteResult(null);
-                      setMatchedTJMs([]);
-                      if (!endPoint && typeof window !== 'undefined') {
-                        const user = activeUser || getCurrentUser();
-                        localStorage.removeItem(getAccountRouteStorageKey(user));
-                      }
-                    }}
-                    className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer transition-colors"
-                    title="A nuqtani bekor qilish (X)"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+      <button
+        type="button"
+        onClick={handleSwap}
+        title="Almashtirish"
+        className="absolute right-[76px] top-[33px] z-10 w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center cursor-pointer"
+      >
+        <ArrowDownUp className="w-3 h-3" />
+      </button>
+    </div>
+  );
 
-                {/* GPS Button */}
-                <button
-                  type="button"
-                  onClick={handleUseMyLocation}
-                  className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200/80 px-2 py-1 rounded-lg border border-emerald-300 flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
-                  title="Mening GPS joylashuvim"
-                >
-                  <LocateFixed className="w-3 h-3 text-emerald-600" />
-                  <span className="hidden sm:inline">GPS</span>
-                </button>
+  const radiusControl = (
+    <div className="flex items-center gap-2 text-xs text-slate-500">
+      <span>Yo&apos;ldan</span>
+      <div className="flex rounded-lg bg-slate-100 p-0.5">
+        {[100, 200, 500].map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => setBufferRadius(r)}
+            className={`px-2 py-1 rounded-md cursor-pointer transition-colors ${
+              bufferRadius === r ? 'bg-white text-slate-900 font-medium shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {r} m
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
-                {/* Pick on Map Button */}
-                <button
-                  type="button"
-                  onClick={() => triggerPickingMode('A')}
-                  className={`text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
-                    pickingMode === 'A'
-                      ? 'bg-emerald-600 text-white border-emerald-600 animate-pulse'
-                      : 'text-slate-700 bg-slate-100 hover:bg-slate-200 border-slate-300'
-                  }`}
-                  title="Xaritadan belgilash"
-                >
-                  <MapPin className="w-3 h-3 text-emerald-600" />
-                  <span>Xarita</span>
-                </button>
-              </div>
+  const unvisitedStopCount = matchedTJMs.filter(t => !t.object.last_visit && !(t.object as any).is_visited).length;
+  const phoneStopCount = matchedTJMs.filter(t => Boolean(t.object.phone)).length;
+  const priorityStopCount = matchedTJMs.filter(t => (t.object.priority || '').toLowerCase().includes('yuqori')).length;
 
-              {/* Start Dropdown */}
-              {isStartOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-56 overflow-y-auto p-1.5 space-y-1">
-                  <button
-                    type="button"
-                    onClick={handleUseMyLocation}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-emerald-50 text-emerald-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
-                  >
-                    <LocateFixed className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>📍 Mening joriy joylashuvim (GPS)</span>
-                  </button>
+  const stopFilters = (
+    <div className="flex items-center gap-4 px-4 border-b border-slate-100 overflow-x-auto no-scrollbar shrink-0 text-xs">
+      {([
+        ['all', 'Barchasi', matchedTJMs.length],
+        ['unvisited', 'Borilmagan', unvisitedStopCount],
+        ['phone', 'Telefoni bor', phoneStopCount],
+        ['priority', 'Ustuvor', priorityStopCount]
+      ] as const).map(([value, label, count]) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => {
+            triggerHaptic(15);
+            setStopsDrawerFilter(value);
+          }}
+          className={`py-2.5 whitespace-nowrap border-b-2 -mb-px cursor-pointer transition-colors ${
+            stopsDrawerFilter === value ? 'border-[#1b815f] text-slate-900 font-medium' : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          {label} <span className="text-slate-400">{count}</span>
+        </button>
+      ))}
+    </div>
+  );
 
-                  <button
-                    type="button"
-                    onClick={handleUseRegiston}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-emerald-50 text-emerald-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
-                  >
-                    <span>🏛️ {isUysot ? 'Toshkent markazi (Amir Temur)' : 'Samarqand markazi (Registon)'}</span>
-                  </button>
+  const renderStopRow = (item: TJMAlongRoute, onOpen: () => void) => {
+    const obj = item.object;
+    const isSelected = String(selectedId) === String(obj.source_id);
+    const isVisited = Boolean(obj.is_visited || obj.last_visit);
 
-                  <button
-                    type="button"
-                    onClick={() => triggerPickingMode('A')}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-emerald-50 text-emerald-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>🗺️ Xaritadan belgilash</span>
-                  </button>
+    return (
+      <div
+        key={obj.source_id}
+        onClick={onOpen}
+        className={`flex items-center gap-3 px-4 py-3 border-b border-slate-100 cursor-pointer transition-colors ${
+          isSelected ? 'bg-emerald-50/60' : 'hover:bg-slate-50'
+        }`}
+      >
+        <span className={`w-6 h-6 rounded-full text-[11px] font-medium flex items-center justify-center shrink-0 ${
+          isVisited ? 'bg-[#1b815f] text-white' : 'bg-slate-100 text-slate-600'
+        }`}>
+          {isVisited ? <Check className="w-3.5 h-3.5" /> : item.orderNumber}
+        </span>
 
-
-                  {startSuggestions.map(obj => (
-                    <button
-                      key={obj.source_id}
-                      type="button"
-                      onClick={() => {
-                        handleSetPointFromObject(obj, 'A');
-                        setIsStartOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-800 font-medium flex items-center justify-between gap-2 cursor-pointer"
-                    >
-                      <span className="truncate">{obj.tjm_name || obj.object_name}</span>
-                      <span className="text-[10px] text-slate-400 shrink-0">{obj.district_name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Swap Button (Floating) */}
-            <div className="flex items-center justify-center -my-1 relative z-10">
-              <button
-                type="button"
-                onClick={handleSwap}
-                className="w-7 h-7 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-[#1b815f] hover:border-emerald-300 shadow-xs flex items-center justify-center transition-all cursor-pointer"
-                title="A va B o'rnini almashtirish"
-              >
-                <ArrowDownUp className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Point B (Destination) - COMPLETELY EMPTY BY DEFAULT */}
-            <div className="relative">
-              <div className={`flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-2 text-xs transition-all ${
-                pickingMode === 'B' 
-                  ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/50' 
-                  : 'border-slate-200 focus-within:border-rose-500 focus-within:bg-white'
-              }`}>
-                <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-black text-[10px] flex items-center justify-center shrink-0">
-                  B
-                </span>
-
-                <input
-                  type="text"
-                  placeholder="Borish manzili (TJM nomi yoki manzil)..."
-                  value={endQuery}
-                  onFocus={() => setIsEndOpen(true)}
-                  onChange={(e) => {
-                    setEndQuery(e.target.value);
-                    setIsEndOpen(true);
-                  }}
-                  className="w-full bg-transparent outline-none font-medium text-slate-800 placeholder:text-slate-400"
-                />
-
-                {endQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEndQuery('');
-                      setEndPoint(null);
-                      setRouteResult(null);
-                      setMatchedTJMs([]);
-                      if (!startPoint && typeof window !== 'undefined') {
-                        const user = activeUser || getCurrentUser();
-                        localStorage.removeItem(getAccountRouteStorageKey(user));
-                      }
-                    }}
-                    className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer transition-colors"
-                    title="B nuqtani bekor qilish (X)"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-
-                {/* Pick on Map Button */}
-                <button
-                  type="button"
-                  onClick={() => triggerPickingMode('B')}
-                  className={`text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
-                    pickingMode === 'B'
-                      ? 'bg-rose-600 text-white border-rose-600 animate-pulse'
-                      : 'text-slate-700 bg-slate-100 hover:bg-slate-200 border-slate-300'
-                  }`}
-                  title="Xaritadan belgilash"
-                >
-                  <MapPin className="w-3 h-3 text-rose-600" />
-                  <span>Xarita</span>
-                </button>
-              </div>
-
-              {/* End Dropdown */}
-              {isEndOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-56 overflow-y-auto p-1.5 space-y-1">
-                  <button
-                    type="button"
-                    onClick={() => triggerPickingMode('B')}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-rose-50 text-rose-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-rose-600" />
-                    <span>🗺️ Xaritadan belgilash</span>
-                  </button>
-
-
-                  {endSuggestions.map(obj => (
-                    <button
-                      key={obj.source_id}
-                      type="button"
-                      onClick={() => {
-                        handleSetPointFromObject(obj, 'B');
-                        setIsEndOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-800 font-medium flex items-center justify-between gap-2 cursor-pointer"
-                    >
-                      <span className="truncate">{obj.tjm_name || obj.object_name}</span>
-                      <span className="text-[10px] text-slate-400 shrink-0">{obj.district_name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Radius and Action Controls */}
-            <div className="pt-2 flex items-center justify-between gap-2 flex-wrap">
-
-              <div className="flex items-center gap-1">
-                <span className="text-[11px] font-bold text-slate-500 mr-1">Radius:</span>
-                {[100, 200, 500].map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setBufferRadius(r)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                      bufferRadius === r
-                        ? 'bg-[#1b815f] text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {r} m
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-1.5 ml-auto">
-                {(startPoint || endPoint) && (
-                  <button
-                    type="button"
-                    onClick={handleClearRoute}
-                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                    title="Barcha nuqtalarni tozalash"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Tozalash</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => handleCalculateRoute(startPoint, endPoint)}
-                  disabled={calculating || !startPoint || !endPoint}
-                  className="px-4 py-1.5 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs shadow-emerald-600/20 transition-all disabled:opacity-50 cursor-pointer"
-                  title="Marshrutni hisoblash"
-                >
-                  <RouteIcon className="w-3.5 h-3.5" />
-                  <span>{calculating ? 'Hisoblanmoqda...' : 'Marshrut'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-medium text-slate-900 truncate">{obj.tjm_name || obj.object_name}</p>
+          <p className="text-xs text-slate-500 truncate">
+            {formatDistance(item.distAlongRouteMeters)} &middot; yo&apos;ldan {item.distFromRoadMeters} m
+          </p>
         </div>
 
-        {/* Route Stats Summary Banner with Real In-Car Navigation Button */}
-        {routeResult && (
-          <div className="p-3 bg-emerald-50/70 border-b border-emerald-100 shrink-0 space-y-2.5">
-            {/* Active Route Persistent Indicator & Clear (X) Button */}
-            <div className="flex items-center justify-between pb-1.5 border-b border-emerald-200/50">
-              <span className="text-[11px] font-bold text-emerald-950 flex items-center gap-1.5">
-                <RouteIcon className="w-3.5 h-3.5 text-[#1b815f]" />
-                <span>Faol yo&apos;nalish (Akkountda saqlangan)</span>
-              </span>
+        <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {obj.phone && (
+            <a href={getCallUrl(obj.phone)} title={obj.phone} className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-900">
+              <Phone className="w-4 h-4" />
+            </a>
+          )}
+          <a
+            href={getYandexNavUrl(obj.latitude, obj.longitude)}
+            target="_blank"
+            rel="noreferrer"
+            title="Yandex Navigator"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          >
+            <Navigation className="w-4 h-4" />
+          </a>
+          {onRecordVisit && !isVisited && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic(30);
+                onRecordVisit(obj.source_id);
+              }}
+              title="Tashrifni belgilash"
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-emerald-50 hover:text-[#1b815f] cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const emptyStops = (
+    <p className="px-6 py-10 text-center text-[13px] text-slate-500">
+      {matchedTJMs.length === 0
+        ? `Yo'ldan ${bufferRadius} m ichida TJM topilmadi. Masofani oshirib ko'ring.`
+        : "Bu filtrga mos to'xtash joyi yo'q."}
+    </p>
+  );
+
+  const routeTotals = routeResult
+    ? `${formatDistance(routeResult.distanceMeters)} · ${formatDuration(routeResult.durationSeconds)}`
+    : '';
+
+  return (
+    <div className="flex-1 flex flex-col md:flex-row h-full min-w-0 bg-slate-100 overflow-hidden">
+      {/* 1. Left Panel: route form and results (desktop) */}
+      <div className={`hidden md:flex md:w-[360px] lg:w-[380px] h-full flex-col bg-white border-r border-slate-200 z-20 shrink-0 ${
+        isNavigating && !showSidebarInNav ? 'md:hidden' : ''
+      }`}>
+        <div className="p-4 space-y-3 border-b border-slate-100 shrink-0">
+          {routeForm}
+
+          <div className="flex items-center justify-between gap-2">
+            {radiusControl}
+            {(startPoint || endPoint) && (
+              <button type="button" onClick={handleClearRoute} className="text-xs text-slate-500 hover:text-slate-900 cursor-pointer">
+                Tozalash
+              </button>
+            )}
+          </div>
+
+          {!routeResult && (
+            <>
               <button
                 type="button"
-                onClick={handleClearRoute}
-                className="text-[11px] text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 px-2 py-0.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer border border-rose-200/80 bg-white shadow-2xs"
-                title="Yo'nalishni bekor qilish va tozalash (X)"
+                onClick={() => handleCalculateRoute(startPoint, endPoint)}
+                disabled={calculating || !startPoint || !endPoint}
+                className="w-full h-10 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-lg text-[13px] font-medium transition-colors disabled:bg-slate-100 disabled:text-slate-400 cursor-pointer disabled:cursor-not-allowed"
               >
-                <X className="w-3 h-3 text-rose-600" />
-                <span>Bekor qilish (X)</span>
+                {calculating ? 'Hisoblanmoqda...' : 'Marshrut tuzish'}
               </button>
+              <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
+                <button type="button" onClick={() => setShowAIRouteModal(true)} className="hover:text-slate-900 cursor-pointer">
+                  AI marshrut
+                </button>
+                <span className="text-slate-300">|</span>
+                <button type="button" onClick={() => setShowSavedRoutesModal(true)} className="hover:text-slate-900 cursor-pointer">
+                  Saqlanganlar
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {routeResult && (
+          <div className="px-4 py-3 border-b border-slate-100 shrink-0 space-y-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="text-lg font-semibold text-slate-900 tabular-nums">{routeTotals}</p>
+              <p className="text-xs text-slate-500">{matchedTJMs.length} ta TJM</p>
             </div>
 
-            {/* Success Alert when route saved */}
-            {saveSuccessMsg && (
-              <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-1 shadow-2xs">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="flex-1 leading-snug">{saveSuccessMsg}</span>
-              </div>
-            )}
+            {saveSuccessMsg && <p className="text-xs text-[#1b815f]">{saveSuccessMsg}</p>}
 
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-white p-2 rounded-xl border border-emerald-100/80 shadow-2xs">
-                <p className="text-[10px] text-slate-400 font-semibold uppercase">Masofa</p>
-                <p className="text-xs font-black text-emerald-700 mt-0.5">
-                  {formatDistance(routeResult.distanceMeters)}
-                </p>
-              </div>
-              <div className="bg-white p-2 rounded-xl border border-emerald-100/80 shadow-2xs">
-                <p className="text-[10px] text-slate-400 font-semibold uppercase">Vaqt</p>
-                <p className="text-xs font-black text-emerald-700 mt-0.5">
-                  {formatDuration(routeResult.durationSeconds)}
-                </p>
-              </div>
-              <div className="bg-white p-2 rounded-xl border border-emerald-100/80 shadow-2xs">
-                <p className="text-[10px] text-slate-400 font-semibold uppercase">Yo'ldagi TJM</p>
-                <p className="text-xs font-black text-emerald-600 mt-0.5">
-                  {matchedTJMs.length} ta
-                </p>
-              </div>
-            </div>
-
-            {/* Action Buttons: Save & Live Navigation */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-[auto_1fr] gap-2">
               <button
                 type="button"
                 onClick={handleSaveRouteToSheets}
                 disabled={isSavingRoute}
-                className="py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 active:scale-[0.98] cursor-pointer disabled:opacity-60"
-                title="Marshrutni saqlash"
+                className="h-10 px-4 rounded-lg text-[13px] font-medium border border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60"
               >
-                {isSavingRoute ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
-                    <span>Saqlanmoqda...</span>
-                  </>
-                ) : (
-                  <>
-                    <BookmarkCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Saqlash</span>
-                  </>
-                )}
+                {isSavingRoute ? 'Saqlanmoqda...' : 'Saqlash'}
               </button>
-
               <button
                 type="button"
                 onClick={handleStartInCarNavigation}
-                className="py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-md bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-600/30 active:scale-[0.98] cursor-pointer"
-                title="Jonli haydovchi navigator rejimini ishga tushirish"
+                className="h-10 rounded-lg text-[13px] font-medium bg-[#1b815f] hover:bg-[#15674c] text-white cursor-pointer transition-colors"
               >
-                <Navigation className="w-3.5 h-3.5 fill-white" />
-                <span>Boshlash 🧭</span>
+                Boshlash
               </button>
             </div>
           </div>
         )}
 
-        {/* Matched TJMs List or Recommended TJMs */}
         {!routeResult ? (
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {/* Recommended TJMs List */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Tavsiya etilgan TJM-lar:</span>
-                </p>
-                <span className="text-[11px] font-semibold text-slate-400">
-                  Jami: {objects.length} ta
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {objects.slice(0, 20).map((obj, index) => (
-                  <div
-                    key={obj.source_id}
-                    onClick={() => onSelectObject(String(obj.source_id))}
-                    className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-emerald-300 hover:shadow-xs transition-all flex items-center justify-between gap-3 cursor-pointer"
+          <div className="flex-1 overflow-y-auto">
+            {nearestUnvisited.length > 0 && (
+              <>
+                <p className="px-4 pt-4 pb-2 text-xs text-slate-500">Yaqindagi borilmaganlar</p>
+                {nearestUnvisited.slice(0, 10).map(item => (
+                  <button
+                    key={item.object.source_id}
+                    type="button"
+                    onClick={() => handleSetDestinationFromNearest(item.object)}
+                    className="w-full text-left flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
                   >
-                    {/* Number Badge: 1, 2, 3, 4, 5... */}
-                    <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
-                      {index + 1}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">
-                        {obj.tjm_name || obj.object_name}
-                      </h4>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{obj.district_name || 'Obyekt'}</p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSetPointFromObject(obj, 'B');
-                      }}
-                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-[#1b815f] text-emerald-700 hover:text-white rounded-xl text-[10px] font-bold border border-emerald-200 transition-colors shrink-0 cursor-pointer"
-                      title="Borish manzili (B) qilib tanlash"
-                    >
-                      B qilib tanlash →
-                    </button>
-                  </div>
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-medium text-slate-900 truncate">{item.object.tjm_name || item.object.object_name}</span>
+                      <span className="block text-xs text-slate-500 truncate">{item.object.district_name || '—'}</span>
+                    </span>
+                    <span className="text-xs text-slate-500 shrink-0 tabular-nums">{formatDistance(item.dist)}</span>
+                  </button>
                 ))}
-              </div>
-            </div>
+              </>
+            )}
           </div>
         ) : (
-
           <>
-            {/* Matched TJMs List Header */}
-            <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs shrink-0">
-              <span className="font-bold text-slate-700 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Yo'l bo'yidagi TJM-lar ({matchedTJMs.length})</span>
-              </span>
-              <label className="flex items-center gap-1.5 text-[11px] text-slate-500 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showAllMarkers}
-                  onChange={(e) => setShowAllMarkers(e.target.checked)}
-                  className="rounded text-[#1b815f] focus:ring-emerald-500"
-                />
-                <span>Boshqalarni ham ko'rsatish</span>
-              </label>
+            {stopFilters}
+            <div className="flex-1 overflow-y-auto">
+              {filteredDrawerStops.length === 0
+                ? emptyStops
+                : filteredDrawerStops.map(item => renderStopRow(item, () => {
+                    triggerHaptic(15);
+                    onSelectObject(String(item.object.source_id));
+                  }))}
             </div>
-
-            {/* Filter Tabs in Desktop Sidebar */}
-            <div className="p-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 text-[11px] font-bold">
-              <button
-                type="button"
-                onClick={() => setStopsDrawerFilter('all')}
-                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                  stopsDrawerFilter === 'all' ? 'bg-[#1b815f] text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                Barchasi ({matchedTJMs.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStopsDrawerFilter('unvisited')}
-                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                  stopsDrawerFilter === 'unvisited' ? 'bg-amber-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                ⏳ Borilmagan ({matchedTJMs.filter(t => !t.object.last_visit && !Boolean((t.object as any).is_visited)).length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStopsDrawerFilter('phone')}
-                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                  stopsDrawerFilter === 'phone' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                📞 Telefon ({matchedTJMs.filter(t => Boolean(t.object.phone)).length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStopsDrawerFilter('priority')}
-                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                  stopsDrawerFilter === 'priority' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                ⭐ Ustuvor ({matchedTJMs.filter(t => (t.object.priority || '').toLowerCase().includes('yuqori')).length})
-              </button>
-            </div>
-
-            {/* Scrollable List of TJMs along Route */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-              {filteredDrawerStops.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 space-y-2">
-                  <Compass className="w-8 h-8 mx-auto text-slate-300" />
-                  <p className="text-xs font-medium">
-                    {matchedTJMs.length === 0 
-                      ? `Tanlangan marshrutdan ${bufferRadius} metr radiusda TJM topilmadi.`
-                      : "Ushbu filtr bo'yicha to'xtash joyi topilmadi."}
-                  </p>
-                  {matchedTJMs.length === 0 && (
-                    <p className="text-[11px] text-slate-400">
-                      Radiusni 500 metrga oshirib ko'ring yoki boshqa manzilni tanlang.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                filteredDrawerStops.map((item) => {
-                  const { object: obj, orderNumber, distFromRoadMeters, distAlongRouteMeters } = item;
-                  const isSelected = String(selectedId) === String(obj.source_id);
-                  const isVisited = Boolean(obj.is_visited || obj.last_visit);
-
-                  return (
-                    <div
-                      key={obj.source_id}
-                      onClick={() => {
-                        triggerHaptic(15);
-                        onSelectObject(String(obj.source_id));
-                      }}
-                      className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-emerald-50/80 border-emerald-400 shadow-sm ring-2 ring-emerald-500/10'
-                          : 'bg-white hover:bg-slate-50/90 border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        {/* Order Number Badge */}
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs text-white shrink-0 shadow-2xs ${
-                          isVisited ? 'bg-emerald-600' : 'bg-[#1b815f]'
-                        }`}>
-                          #{orderNumber}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <h3 className="font-bold text-xs text-slate-900 truncate">
-                              {obj.tjm_name || obj.object_name}
-                            </h3>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                              isVisited 
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200'
-                            }`}>
-                              {isVisited ? 'Borilgan' : 'Borilmagan'}
-                            </span>
-                          </div>
-
-                          {/* Distance Badges */}
-                          <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px]">
-                            <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                              Yo'l boshidan: {formatDistance(distAlongRouteMeters)}
-                            </span>
-                            <span className="text-slate-500">
-                              Yo'ldan: <b className="text-slate-700">{distFromRoadMeters} m</b>
-                            </span>
-                          </div>
-
-                          {/* Contact & Action Row */}
-                          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                            {obj.phone ? (
-                              <a
-                                href={getCallUrl(obj.phone)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-[11px] font-bold text-emerald-700 hover:underline flex items-center gap-1"
-                              >
-                                <Phone className="w-3 h-3 text-emerald-600" />
-                                <span>{obj.phone}</span>
-                              </a>
-                            ) : (
-                              <span className="text-[11px] text-slate-400 italic">Telefon kiritilmagan</span>
-                            )}
-
-                            <div className="flex items-center gap-1">
-                              {onRecordVisit && !isVisited && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onRecordVisit(obj.source_id);
-                                  }}
-                                  className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                                >
-                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                  <span>Tashrif</span>
-                                </button>
-                              )}
-
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onSelectObject(String(obj.source_id));
-                                }}
-                                className="p-1 rounded-lg text-slate-400 hover:text-[#1b815f] hover:bg-emerald-50 transition-colors cursor-pointer"
-                                title="Batafsil ma'lumot"
-                              >
-                                <ChevronRight className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            <label className="px-4 py-2.5 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500 cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={showAllMarkers}
+                onChange={(e) => setShowAllMarkers(e.target.checked)}
+                className="rounded accent-[#1b815f]"
+              />
+              <span>Boshqa TJM-larni ham xaritada ko&apos;rsatish</span>
+            </label>
           </>
         )}
       </div>
@@ -1516,305 +1242,44 @@ export default function RoutePlannerView({
           </div>
         )}
 
-        {/* Mobile Floating Top Route Bar (Yandex Maps / Yandex Go style) */}
+        {/* Mobile top bar: only the route, the map stays visible */}
         {!isNavigating && (
-          <div className="md:hidden absolute top-2 left-2 right-2 z-[450] animate-in slide-in-from-top-2 duration-200 pointer-events-auto">
+          <div className="md:hidden absolute top-2 left-2 right-2 z-[450] pointer-events-auto">
             {pickingMode ? (
-              <div className={`p-3 rounded-2xl shadow-xl flex items-center justify-between gap-2 border text-white ${
-                pickingMode === 'A' ? 'bg-emerald-600 border-emerald-400' : 'bg-rose-600 border-rose-400'
-              }`}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <MapPin className="w-4 h-4 animate-bounce shrink-0" />
-                  <span className="text-xs font-black truncate">
-                    {pickingMode === 'A' ? "📍 Xaritadan A (Boshlanish) nuqtani tanlang" : "🏁 Xaritadan B (Borish) manzilini tanlang"}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPickingMode(null)}
-                  className="px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-xl text-xs font-bold text-white shrink-0 cursor-pointer"
-                >
-                  Bekor qilish
+              <div className="h-11 px-3 rounded-xl bg-white shadow-md flex items-center justify-between gap-2">
+                <span className="text-[13px] font-medium text-slate-900 truncate">
+                  {pickingMode === 'A' ? 'Boshlanish joyini xaritadan tanlang' : 'Borish joyini xaritadan tanlang'}
+                </span>
+                <button type="button" onClick={() => setPickingMode(null)} className="text-[13px] text-slate-500 shrink-0 cursor-pointer">
+                  Bekor
                 </button>
               </div>
             ) : isMobileControlsCollapsed ? (
-              <div 
+              <button
+                type="button"
                 onClick={() => setIsMobileControlsCollapsed(false)}
-                className="bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-lg rounded-2xl p-2.5 flex items-center justify-between gap-2 cursor-pointer active:scale-98 transition-all"
+                className="w-full h-11 px-3 rounded-xl bg-white shadow-md flex items-center justify-between gap-2 cursor-pointer"
               >
-                <div className="flex items-center gap-1.5 min-w-0 text-xs font-bold text-slate-800">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500 text-white font-black text-[10px] flex items-center justify-center shrink-0">
-                    A
-                  </div>
-                  <span className="truncate max-w-[80px] text-slate-700">
-                    {startPoint ? (startPoint.name || 'A nuqta') : 'Boshlanish'}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      triggerHaptic(20);
-                      handleSwap();
-                    }}
-                    className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-90 text-slate-600 transition-all cursor-pointer"
-                    title="A va B ni almashtirish"
-                  >
-                    <ArrowDownUp className="w-3 h-3 text-slate-700" />
-                  </button>
-
-                  <div className="w-5 h-5 rounded-full bg-rose-500 text-white font-black text-[10px] flex items-center justify-center shrink-0">
-                    B
-                  </div>
-                  <span className="truncate max-w-[80px] text-slate-700">
-                    {endPoint ? (endPoint.name || 'B nuqta') : 'Borish manzili'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[11px] font-bold text-[#1b815f] bg-emerald-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                    <span>Ochish</span>
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-              </div>
+                <span className="min-w-0 flex items-center gap-2 text-[13px] text-slate-900">
+                  <span className="truncate">{startPoint?.name || 'Qayerdan'}</span>
+                  <span className="text-slate-400 shrink-0">&rarr;</span>
+                  <span className="truncate">{endPoint?.name || 'Qayerga'}</span>
+                </span>
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+              </button>
             ) : (
-              <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-xl rounded-2xl p-2.5 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-6 h-6 rounded-lg bg-[#1b815f] text-white flex items-center justify-center shadow-xs">
-                      <Navigation className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-xs font-black text-slate-900 tracking-tight">Yo&apos;l-yo&apos;lakay</span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setShowAIRouteModal(true)}
-                      className="px-2 py-1 bg-gradient-to-r from-[#1b815f] to-teal-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs active:scale-95 cursor-pointer"
-                      title="AI Marshrut"
-                    >
-                      <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
-                      <span>AI Marshrut</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowSavedRoutesModal(true)}
-                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1 border border-slate-200 cursor-pointer"
-                      title="Saqlanganlar"
-                    >
-                      <Bookmark className="w-3 h-3 text-[#1b815f]" />
-                      <span>Saqlanganlar</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsMobileControlsCollapsed(true)}
-                      className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
-                      title="Kichraytirish"
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  {/* Point A */}
-                  <div className="relative">
-                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-xs">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500 text-white font-black text-[9px] flex items-center justify-center shrink-0">
-                        A
-                      </span>
-                      <input
-                        type="text"
-                        placeholder="Qayerdan? (Boshlanish nuqtasi)..."
-                        value={startQuery}
-                        onFocus={() => setIsStartOpen(true)}
-                        onChange={(e) => {
-                          setStartQuery(e.target.value);
-                          setIsStartOpen(true);
-                        }}
-                        className="w-full bg-transparent outline-none font-medium text-slate-800 placeholder:text-slate-400 text-xs"
-                      />
-                      {startQuery && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStartQuery('');
-                            setStartPoint(null);
-                            setRouteResult(null);
-                            setMatchedTJMs([]);
-                            if (!endPoint && typeof window !== 'undefined') {
-                              const user = activeUser || getCurrentUser();
-                              localStorage.removeItem(getAccountRouteStorageKey(user));
-                            }
-                          }}
-                          className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleUseMyLocation}
-                        className="p-1 bg-emerald-100 text-emerald-700 rounded-md border border-emerald-300 shrink-0 cursor-pointer"
-                        title="Mening GPS joylashuvim"
-                      >
-                        <LocateFixed className="w-3 h-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => triggerPickingMode('A')}
-                        className="p-1 bg-slate-200 text-slate-700 rounded-md shrink-0 cursor-pointer"
-                        title="Xaritadan belgilash"
-                      >
-                        <MapPin className="w-3 h-3 text-emerald-600" />
-                      </button>
-                    </div>
-
-                    {isStartOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-48 overflow-y-auto p-1.5 space-y-1">
-                        <button
-                          type="button"
-                          onClick={handleUseMyLocation}
-                          className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-emerald-50 text-emerald-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
-                        >
-                          <LocateFixed className="w-3 h-3 text-emerald-600" />
-                          <span>📍 Mening joriy joylashuvim (GPS)</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleUseRegiston}
-                          className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-emerald-50 text-emerald-700 font-bold flex items-center gap-2 cursor-pointer border-b border-slate-100"
-                        >
-                          <span>🏛️ {isUysot ? 'Toshkent markazi' : 'Samarqand markazi (Registon)'}</span>
-                        </button>
-                        {startSuggestions.map(obj => (
-                          <button
-                            key={obj.source_id}
-                            type="button"
-                            onClick={() => {
-                              handleSetPointFromObject(obj, 'A');
-                              setIsStartOpen(false);
-                            }}
-                            className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-slate-50 text-slate-800 font-medium flex items-center justify-between gap-1.5 cursor-pointer"
-                          >
-                            <span className="truncate">{obj.tjm_name || obj.object_name}</span>
-                            <span className="text-[9px] text-slate-400 shrink-0">{obj.district_name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Point B */}
-                  <div className="relative">
-                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-xs">
-                      <span className="w-4 h-4 rounded-full bg-rose-500 text-white font-black text-[9px] flex items-center justify-center shrink-0">
-                        B
-                      </span>
-                      <input
-                        type="text"
-                        placeholder="Qayerga? (Borish manzili / TJM)..."
-                        value={endQuery}
-                        onFocus={() => setIsEndOpen(true)}
-                        onChange={(e) => {
-                          setEndQuery(e.target.value);
-                          setIsEndOpen(true);
-                        }}
-                        className="w-full bg-transparent outline-none font-medium text-slate-800 placeholder:text-slate-400 text-xs"
-                      />
-                      {endQuery && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEndQuery('');
-                            setEndPoint(null);
-                            setRouteResult(null);
-                            setMatchedTJMs([]);
-                            if (!startPoint && typeof window !== 'undefined') {
-                              const user = activeUser || getCurrentUser();
-                              localStorage.removeItem(getAccountRouteStorageKey(user));
-                            }
-                          }}
-                          className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleSwap}
-                        className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md shrink-0 cursor-pointer"
-                        title="A va B ni almashtirish"
-                      >
-                        <ArrowDownUp className="w-3 h-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => triggerPickingMode('B')}
-                        className="p-1 bg-slate-200 text-slate-700 rounded-md shrink-0 cursor-pointer"
-                        title="Xaritadan belgilash"
-                      >
-                        <MapPin className="w-3 h-3 text-rose-600" />
-                      </button>
-                    </div>
-
-                    {isEndOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-48 overflow-y-auto p-1.5 space-y-1">
-                        {endSuggestions.map(obj => (
-                          <button
-                            key={obj.source_id}
-                            type="button"
-                            onClick={() => {
-                              handleSetPointFromObject(obj, 'B');
-                              setIsEndOpen(false);
-                            }}
-                            className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-slate-50 text-slate-800 font-medium flex items-center justify-between gap-1.5 cursor-pointer"
-                          >
-                            <span className="truncate">{obj.tjm_name || obj.object_name}</span>
-                            <span className="text-[9px] text-slate-400 shrink-0">{obj.district_name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quick Action Chips Strip */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 text-[10px] font-bold">
+              <div className="bg-white shadow-md rounded-xl p-2 space-y-2">
+                {routeForm}
+                <div className="flex items-center justify-between gap-2 px-1">
+                  {radiusControl}
                   <button
                     type="button"
-                    onClick={handleQuickNearestAIRoute}
-                    className="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg shrink-0 flex items-center gap-1 border border-emerald-200 active:scale-95 cursor-pointer"
+                    onClick={() => setIsMobileControlsCollapsed(true)}
+                    title="Yig'ish"
+                    className="w-8 h-8 flex items-center justify-center text-slate-400 cursor-pointer"
                   >
-                    <Sparkles className="w-3 h-3 text-[#1b815f]" />
-                    <span>⚡ AI Eng yaqin 5</span>
+                    <ChevronUp className="w-4 h-4" />
                   </button>
-
-                  <span className="text-slate-400 shrink-0">Radius:</span>
-                  {[100, 200, 500].map(r => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setBufferRadius(r)}
-                      className={`px-1.5 py-0.5 rounded-md shrink-0 font-bold transition-all cursor-pointer ${
-                        bufferRadius === r ? 'bg-[#1b815f] text-white' : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {r}m
-                    </button>
-                  ))}
-
-                  {(startPoint || endPoint) && (
-                    <button
-                      type="button"
-                      onClick={handleClearRoute}
-                      className="ml-auto px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-md shrink-0 flex items-center gap-1 cursor-pointer"
-                    >
-                      <RotateCcw className="w-2.5 h-2.5" />
-                      <span>Tozalash</span>
-                    </button>
-                  )}
                 </div>
               </div>
             )}
@@ -1847,179 +1312,99 @@ export default function RoutePlannerView({
           onRecordVisit={onRecordVisit}
         />
 
-        {/* Mobile Bottom En-Route Card (Yandex Maps / Yandex Go Navigator style) */}
-        {!isNavigating && (
-          <div className="md:hidden absolute bottom-2 left-2 right-2 z-[450] animate-in slide-in-from-bottom-3 duration-200 pointer-events-auto">
-            {routeResult && matchedTJMs.length > 0 ? (
-              /* State B: Active Route En-Route Card */
-              <div className="bg-slate-950/95 backdrop-blur-xl border border-white/20 text-white rounded-3xl p-3 shadow-2xl space-y-2.5">
-                {/* Top Summary Bar */}
-                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-[11px] font-semibold text-slate-300">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-black text-xs">
-                      📏 {formatDistance(routeResult.distanceMeters)}
-                    </span>
-                    <span className="text-slate-500">•</span>
-                    <span className="text-emerald-500 font-bold">
-                      ⏱️ {formatDuration(routeResult.durationSeconds)}
-                    </span>
-                    <span className="text-slate-500">•</span>
-                    <span className="text-emerald-400 font-bold">
-                      🏢 {matchedTJMs.length} ta TJM
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
+        {/* Mobile bottom card: the next stop, or nearby objects before a route exists */}
+        {!isNavigating && !pickingMode && (
+          <div className="md:hidden absolute bottom-2 left-2 right-2 z-[450] pointer-events-auto">
+            {routeResult ? (
+              <div className="bg-white shadow-md rounded-xl p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[15px] font-semibold text-slate-900 tabular-nums truncate">{routeTotals}</p>
+                  <div className="flex items-center gap-0.5 shrink-0">
                     <button
                       type="button"
                       onClick={handleSaveRouteToSheets}
                       disabled={isSavingRoute}
-                      className="px-2 py-1 bg-white/10 hover:bg-white/20 text-emerald-400 rounded-lg text-[10px] font-bold border border-emerald-500/30 flex items-center gap-1 active:scale-95 cursor-pointer disabled:opacity-50"
+                      title="Saqlash"
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 cursor-pointer disabled:opacity-50"
                     >
-                      <BookmarkCheck className="w-3 h-3" />
-                      <span>Saqlash</span>
+                      <Bookmark className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
                       onClick={handleClearRoute}
-                      className="px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-lg text-[10px] font-bold border border-rose-500/30 flex items-center gap-1 active:scale-95 cursor-pointer"
-                      title="Bekor qilish (X)"
+                      title="Bekor qilish"
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 cursor-pointer"
                     >
-                      <X className="w-3 h-3" />
-                      <span>Bekor qilish (X)</span>
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Current Active Stop Card with Touch Swipe Gestures */}
+                {saveSuccessMsg && <p className="text-xs text-[#1b815f]">{saveSuccessMsg}</p>}
+
                 {(() => {
-                  const currentTJM = matchedTJMs[Math.min(mobileActiveStopIndex, matchedTJMs.length - 1)];
-                  if (!currentTJM) return null;
-                  const obj = currentTJM.object;
-                  const isVisited = Boolean((obj as any).last_visit || (obj as any).is_visited);
-                  const detour = getDetourBadge(currentTJM.distFromRoadMeters);
-                  const directDist = (userLat && userLng && obj.latitude && obj.longitude)
-                    ? haversineMeters(userLat, userLng, obj.latitude, obj.longitude)
-                    : null;
+                  const current = matchedTJMs[Math.min(mobileActiveStopIndex, matchedTJMs.length - 1)];
+                  if (!current) return <p className="text-[13px] text-slate-500">Yo&apos;lda TJM topilmadi. Masofani oshirib ko&apos;ring.</p>;
+                  const obj = current.object;
+                  const isVisited = Boolean(obj.last_visit || obj.is_visited);
 
                   return (
-                    <div 
-                      onTouchStart={handleTouchStart}
-                      onTouchEnd={handleTouchEnd}
-                      className="space-y-2 select-none"
-                    >
-                      {/* Swipe handle hint */}
-                      <div 
-                        onClick={() => {
-                          triggerHaptic(20);
-                          setShowMobileStopsDrawer(true);
-                        }}
-                        className="w-10 h-1 bg-white/30 hover:bg-white/50 rounded-full mx-auto -mt-1 mb-1 cursor-pointer transition-colors" 
-                        title="Barcha to'xtashlarni ko'rish uchun bosing yoki yuqoriga suring"
-                      />
-
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-7 h-7 rounded-xl bg-[#1b815f] text-white text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
-                            #{currentTJM.orderNumber}
-                          </span>
-                          <div 
-                            onClick={() => {
-                              triggerHaptic(20);
-                              onSelectObject(String(obj.source_id));
-                            }}
-                            className="min-w-0 cursor-pointer active:opacity-75 transition-opacity"
-                            title="Batafsil ma'lumotni ochish"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">
-                                To&apos;xtash {mobileActiveStopIndex + 1}/{matchedTJMs.length}
-                              </span>
-                              <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
-                                isVisited ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
-                              }`}>
-                                {isVisited ? '✓ Borilgan' : 'Borilmagan'}
-                              </span>
-                            </div>
-                            <h4 className="text-xs font-black text-white truncate max-w-[210px] underline decoration-white/20 underline-offset-2">
-                              {obj.tjm_name || obj.object_name}
-                            </h4>
-                          </div>
-                        </div>
-
-                        {/* Prev / Next Stop Steppers */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            disabled={mobileActiveStopIndex === 0}
-                            onClick={() => {
-                              triggerHaptic(20);
-                              const newIdx = Math.max(0, mobileActiveStopIndex - 1);
-                              setMobileActiveStopIndex(newIdx);
-                            }}
-                            className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white text-xs flex items-center justify-center cursor-pointer transition-all active:scale-95"
-                            title="Oldingi bino (chapga surish)"
-                          >
-                            ◀
-                          </button>
-                          <button
-                            type="button"
-                            disabled={mobileActiveStopIndex >= matchedTJMs.length - 1}
-                            onClick={() => {
-                              triggerHaptic(20);
-                              const newIdx = Math.min(matchedTJMs.length - 1, mobileActiveStopIndex + 1);
-                              setMobileActiveStopIndex(newIdx);
-                            }}
-                            className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white text-xs flex items-center justify-center cursor-pointer transition-all active:scale-95"
-                            title="Keyingi bino (o'ngga surish)"
-                          >
-                            ▶
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="text-[10px] text-slate-300 flex items-center gap-2 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded-md font-bold border text-[10px] ${detour.className}`}>
-                          {detour.label}
+                    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className="flex items-center gap-1 select-none">
+                      <button
+                        type="button"
+                        disabled={mobileActiveStopIndex === 0}
+                        onClick={() => setMobileActiveStopIndex(Math.max(0, mobileActiveStopIndex - 1))}
+                        title="Oldingi"
+                        className="w-8 h-9 flex items-center justify-center text-slate-400 disabled:opacity-30 cursor-pointer shrink-0"
+                      >
+                        <ChevronRight className="w-4 h-4 rotate-180" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSelectObject(String(obj.source_id))}
+                        className="min-w-0 flex-1 text-left cursor-pointer"
+                      >
+                        <span className="block text-[13px] font-medium text-slate-900 truncate">{obj.tjm_name || obj.object_name}</span>
+                        <span className="block text-xs text-slate-500 truncate">
+                          {mobileActiveStopIndex + 1}/{matchedTJMs.length} &middot; {isVisited ? 'borilgan' : `yo'ldan ${current.distFromRoadMeters} m`}
                         </span>
-                        <span className="text-slate-500">•</span>
-                        <span>Marshrut: <b>{formatDistance(currentTJM.distAlongRouteMeters)}</b></span>
-                        {directDist !== null && (
-                          <>
-                            <span className="text-slate-500">•</span>
-                            <span className="text-emerald-400 font-bold">🎯 Sizdan: {formatDistance(directDist)}</span>
-                          </>
-                        )}
-                      </div>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={mobileActiveStopIndex >= matchedTJMs.length - 1}
+                        onClick={() => setMobileActiveStopIndex(Math.min(matchedTJMs.length - 1, mobileActiveStopIndex + 1))}
+                        title="Keyingi"
+                        className="w-8 h-9 flex items-center justify-center text-slate-400 disabled:opacity-30 cursor-pointer shrink-0"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })()}
 
-                      {/* Big Tactile Action Buttons */}
-                      <div className="flex items-center gap-1.5 pt-1 border-t border-white/10">
-                        <a
-                          href={getYandexNavUrl(obj.latitude, obj.longitude)}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={() => triggerHaptic(30)}
-                          className="flex-1 py-2 px-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-1 shadow-md transition-all"
-                          title="Yandex Navigator da ochish"
-                        >
-                          <Navigation className="w-3.5 h-3.5 text-slate-950" />
-                          <span>Yandex Nav</span>
-                        </a>
-
-                        {obj.phone && (
-                          <a
-                            href={getCallUrl(obj.phone)}
-                            onClick={() => triggerHaptic(20)}
-                            className="py-2 px-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 shadow-md transition-all"
-                            title="Qo'ng'iroq"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic(30);
+                      handleStartInCarNavigation();
+                    }}
+                    className="flex-1 h-10 rounded-lg bg-[#1b815f] text-white text-[13px] font-medium cursor-pointer"
+                  >
+                    Boshlash
+                  </button>
+                  {(() => {
+                    const current = matchedTJMs[Math.min(mobileActiveStopIndex, matchedTJMs.length - 1)];
+                    if (!current) return null;
+                    const obj = current.object;
+                    const isVisited = Boolean(obj.last_visit || obj.is_visited);
+                    const iconClass = 'w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 cursor-pointer shrink-0';
+                    return (
+                      <>
                         {onRecordVisit && !isVisited && (
                           <button
                             type="button"
+                            title="Tashrifni belgilash"
                             onClick={async () => {
                               triggerHaptic(40);
                               await onRecordVisit(obj.source_id);
@@ -2027,67 +1412,54 @@ export default function RoutePlannerView({
                                 setMobileActiveStopIndex(prev => prev + 1);
                               }
                             }}
-                            className="py-2 px-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95"
-                            title="Tashrifni qayd qilish"
+                            className={iconClass}
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Bordim</span>
+                            <CheckCircle2 className="w-4 h-4" />
                           </button>
                         )}
-
+                        {obj.phone && (
+                          <a href={getCallUrl(obj.phone)} title={obj.phone} className={iconClass}>
+                            <Phone className="w-4 h-4" />
+                          </a>
+                        )}
+                        <a href={getYandexNavUrl(obj.latitude, obj.longitude)} target="_blank" rel="noreferrer" title="Yandex Navigator" className={iconClass}>
+                          <Navigation className="w-4 h-4" />
+                        </a>
                         <button
                           type="button"
-                          onClick={() => {
-                            triggerHaptic(30);
-                            handleStartInCarNavigation();
-                          }}
-                          className="py-2 px-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black rounded-xl text-xs flex items-center justify-center gap-1 shadow-md active:scale-95 cursor-pointer"
-                          title="Jonli haydovchi navigator"
+                          title="Barcha to'xtash joylari"
+                          onClick={() => setShowMobileStopsDrawer(true)}
+                          className={`${iconClass} text-xs font-medium tabular-nums`}
                         >
-                          <Compass className="w-3.5 h-3.5" />
-                          <span>Haydash</span>
+                          {matchedTJMs.length}
                         </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic(20);
-                            setShowMobileStopsDrawer(true);
-                          }}
-                          className="py-2 px-2 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95"
-                          title="Barcha to'xtash joylari ro'yxati"
-                        >
-                          <Layers className="w-3.5 h-3.5" />
-                          <span>{matchedTJMs.length}</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()}
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             ) : (
-              /* State A: No Route Yet - 1-Tap Quick Start Card */
-              <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-xl rounded-3xl p-3 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-slate-900">🚗 Yo&apos;l-yo&apos;lakay: Tezkor borish</span>
-                    <span className="text-[10px] text-slate-500">(1-bosishda)</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic(25);
-                      handleQuickNearestAIRoute();
-                    }}
-                    className="px-2.5 py-1 bg-gradient-to-r from-[#1b815f] to-teal-700 text-white text-[10px] font-bold rounded-lg shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer"
-                  >
-                    <Sparkles className="w-3 h-3 text-amber-300" />
-                    <span>AI 5 ta TJM</span>
-                  </button>
+              <div className="bg-white shadow-md rounded-xl py-3 space-y-2">
+                <div className="flex items-center justify-between gap-2 px-3 text-xs">
+                  <span className="text-slate-500">Yaqindagi borilmaganlar</span>
+                  <span className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic(25);
+                        handleQuickNearestAIRoute();
+                      }}
+                      className="font-medium text-[#1b815f] cursor-pointer"
+                    >
+                      Eng yaqin 5 ta
+                    </button>
+                    <button type="button" onClick={() => setShowAIRouteModal(true)} className="text-slate-500 cursor-pointer">AI</button>
+                    <button type="button" onClick={() => setShowSavedRoutesModal(true)} title="Saqlanganlar" className="text-slate-500 cursor-pointer">
+                      <Bookmark className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
                 </div>
-
-                {/* Horizontal scroll list of nearest unvisited buildings */}
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar px-3">
                   {nearestUnvisited.slice(0, 5).map(item => (
                     <button
                       key={item.object.source_id}
@@ -2096,21 +1468,11 @@ export default function RoutePlannerView({
                         triggerHaptic(20);
                         handleSetDestinationFromNearest(item.object);
                       }}
-                      className="bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 p-2 rounded-2xl shrink-0 text-left min-w-[140px] max-w-[180px] space-y-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                      className="bg-slate-50 rounded-lg px-3 py-2 shrink-0 text-left w-[170px] cursor-pointer"
                     >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[9px] font-bold text-[#1b815f] bg-emerald-100/70 px-1.5 py-0.2 rounded-md">
-                          {formatDistance(item.dist)}
-                        </span>
-                        <span className="text-[9px] text-slate-400 truncate">
-                          {item.object.district_name || 'Samarqand'}
-                        </span>
-                      </div>
-                      <p className="text-[11px] font-bold text-slate-800 truncate leading-snug">
-                        {item.object.tjm_name || item.object.object_name}
-                      </p>
-                      <span className="text-[9px] text-emerald-600 font-semibold block">
-                        ➔ B nuqta qilib tanlash
+                      <span className="block text-xs font-medium text-slate-900 truncate">{item.object.tjm_name || item.object.object_name}</span>
+                      <span className="block text-[11px] text-slate-500 truncate tabular-nums">
+                        {formatDistance(item.dist)} &middot; {item.object.district_name || '—'}
                       </span>
                     </button>
                   ))}
@@ -2120,173 +1482,32 @@ export default function RoutePlannerView({
           </div>
         )}
 
-        {/* Mobile Full Itinerary Drawer with Filter Tabs */}
+        {/* Mobile list of all stops */}
         {showMobileStopsDrawer && (
-          <div 
-            className="fixed inset-0 z-[600] flex flex-col justify-end bg-slate-950/60 backdrop-blur-xs md:hidden animate-in fade-in duration-150"
+          <div
+            className="fixed inset-0 z-[600] flex flex-col justify-end bg-slate-900/40 md:hidden"
             onClick={(e) => {
               if (e.target === e.currentTarget) setShowMobileStopsDrawer(false);
             }}
           >
-            <div className="bg-white w-full max-h-[82vh] rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
-              <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto my-2 shrink-0" />
-              <div className="p-3.5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/90">
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 leading-tight">
-                    Yo&apos;ldagi barcha to&apos;xtashlar ({matchedTJMs.length} ta)
-                  </h3>
-                  <p className="text-[11px] text-slate-500 font-medium">
-                    Marshrut bo&apos;ylab ketma-ket joylashuv
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowMobileStopsDrawer(false)}
-                  className="p-1.5 rounded-xl hover:bg-slate-200 text-slate-500 cursor-pointer"
-                >
+            <div className="bg-white w-full max-h-[82vh] rounded-t-2xl flex flex-col overflow-hidden">
+              <div className="px-4 py-3 flex items-center justify-between shrink-0">
+                <h3 className="text-[15px] font-semibold text-slate-900">To&apos;xtash joylari</h3>
+                <button type="button" onClick={() => setShowMobileStopsDrawer(false)} title="Yopish" className="w-9 h-9 flex items-center justify-center text-slate-500 cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
               </div>
-
-              {/* Filter Tabs inside Drawer */}
-              <div className="p-2 bg-slate-100/90 border-b border-slate-200/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => { triggerHaptic(15); setStopsDrawerFilter('all'); }}
-                  className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                    stopsDrawerFilter === 'all' ? 'bg-[#1b815f] text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
-                  }`}
-                >
-                  Barchasi ({matchedTJMs.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { triggerHaptic(15); setStopsDrawerFilter('unvisited'); }}
-                  className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                    stopsDrawerFilter === 'unvisited' ? 'bg-amber-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
-                  }`}
-                >
-                  ⏳ Borilmagan ({matchedTJMs.filter(t => !t.object.last_visit && !Boolean((t.object as any).is_visited)).length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { triggerHaptic(15); setStopsDrawerFilter('phone'); }}
-                  className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                    stopsDrawerFilter === 'phone' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
-                  }`}
-                >
-                  📞 Telefon bor ({matchedTJMs.filter(t => Boolean(t.object.phone)).length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { triggerHaptic(15); setStopsDrawerFilter('priority'); }}
-                  className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                    stopsDrawerFilter === 'priority' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200'
-                  }`}
-                >
-                  ⭐ Yuqori ustuvor ({matchedTJMs.filter(t => (t.object.priority || '').toLowerCase().includes('yuqori')).length})
-                </button>
-              </div>
-
-              {/* Scrollable list */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                {filteredDrawerStops.length === 0 ? (
-                  <div className="py-10 text-center text-xs text-slate-400 font-semibold">
-                    Ushbu filtr bo&apos;yicha to&apos;xtash joyi topilmadi
-                  </div>
-                ) : (
-                  filteredDrawerStops.map((tjm) => {
-                    const obj = tjm.object;
-                    const isVisited = Boolean((obj as any).last_visit || (obj as any).is_visited);
-                    const originalIndex = matchedTJMs.findIndex(m => m.object.source_id === obj.source_id);
-                    const isCurrent = originalIndex === mobileActiveStopIndex;
-                    const detour = getDetourBadge(tjm.distFromRoadMeters);
-
-                    return (
-                      <div
-                        key={obj.source_id}
-                        onClick={() => {
-                          triggerHaptic(20);
-                          if (originalIndex !== -1) setMobileActiveStopIndex(originalIndex);
-                          onSelectObject(String(obj.source_id));
-                          setShowMobileStopsDrawer(false);
-                        }}
-                        className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                          isCurrent 
-                            ? 'bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500/20' 
-                            : 'bg-white border-slate-200 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shrink-0 ${
-                              isCurrent ? 'bg-[#1b815f] text-white' : 'bg-slate-100 text-slate-700'
-                            }`}>
-                              #{tjm.orderNumber}
-                            </span>
-                            <div className="min-w-0">
-                              <h4 className="text-xs font-black text-slate-900 truncate">
-                                {obj.tjm_name || obj.object_name}
-                              </h4>
-                              <p className="text-[10px] text-slate-500 truncate">
-                                {obj.address || obj.district_name}
-                              </p>
-                            </div>
-                          </div>
-
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 ${
-                            isVisited ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            {isVisited ? '✓ Borilgan' : 'Borilmagan'}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-100/80 mt-2">
-                          <span className={`px-1.5 py-0.2 rounded-md font-bold text-[9px] ${detour.className}`}>
-                            {detour.label}
-                          </span>
-
-                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                            <a
-                              href={getYandexNavUrl(obj.latitude, obj.longitude)}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={() => triggerHaptic(25)}
-                              className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-lg text-[10px] flex items-center gap-1"
-                            >
-                              <Navigation className="w-3 h-3" />
-                              <span>Nav</span>
-                            </a>
-
-                            {obj.phone && (
-                              <a
-                                href={getCallUrl(obj.phone)}
-                                onClick={() => triggerHaptic(20)}
-                                className="p-1 bg-emerald-600 text-white rounded-lg"
-                                title="Qo'ng'iroq"
-                              >
-                                <Phone className="w-3 h-3" />
-                              </a>
-                            )}
-
-                            {onRecordVisit && !isVisited && (
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  triggerHaptic(30);
-                                  await onRecordVisit(obj.source_id);
-                                }}
-                                className="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold rounded-lg text-[10px] cursor-pointer"
-                              >
-                                Bordim
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+              {stopFilters}
+              <div className="flex-1 overflow-y-auto">
+                {filteredDrawerStops.length === 0
+                  ? emptyStops
+                  : filteredDrawerStops.map(item => renderStopRow(item, () => {
+                      triggerHaptic(20);
+                      const index = matchedTJMs.findIndex(m => m.object.source_id === item.object.source_id);
+                      if (index !== -1) setMobileActiveStopIndex(index);
+                      onSelectObject(String(item.object.source_id));
+                      setShowMobileStopsDrawer(false);
+                    }))}
               </div>
             </div>
           </div>
@@ -2301,7 +1522,7 @@ export default function RoutePlannerView({
             if (e.target === e.currentTarget) setShowSavedRoutesModal(false);
           }}
         >
-          <div className="bg-white w-full max-w-2xl max-h-[85vh] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+          <div className="bg-white w-full max-w-2xl max-h-[85vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -2309,7 +1530,7 @@ export default function RoutePlannerView({
                   <BookmarkCheck className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-900 leading-tight">
+                  <h3 className="text-sm font-semibold text-slate-900 leading-tight">
                     Saqlangan Marshrutlar
                   </h3>
                   <p className="text-[11px] text-slate-500 font-medium">
@@ -2366,12 +1587,12 @@ export default function RoutePlannerView({
                         <div className="space-y-1 min-w-0 flex-1">
                           {/* A & B Points */}
                           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                            <span className="w-4 h-4 rounded-full bg-emerald-500 text-white font-black text-[9px] flex items-center justify-center shrink-0">
+                            <span className="w-4 h-4 rounded-full bg-emerald-500 text-white font-semibold text-[9px] flex items-center justify-center shrink-0">
                               A
                             </span>
                             <span className="truncate">{rt.start_name}</span>
                             <span className="text-slate-400">➔</span>
-                            <span className="w-4 h-4 rounded-full bg-rose-500 text-white font-black text-[9px] flex items-center justify-center shrink-0">
+                            <span className="w-4 h-4 rounded-full bg-rose-500 text-white font-semibold text-[9px] flex items-center justify-center shrink-0">
                               B
                             </span>
                             <span className="truncate">{rt.end_name}</span>

@@ -67,7 +67,7 @@ defineTest('RoutePlannerView.tsx removes persisted route only when X or Clear is
   const content = readSrcFile('components/RoutePlanner/RoutePlannerView.tsx');
   assert.match(content, /handleClearRoute/, 'RoutePlannerView must implement handleClearRoute');
   assert.match(content, /localStorage\.removeItem\(storageKey\)/, 'handleClearRoute must call localStorage.removeItem');
-  assert.match(content, /Bekor qilish \(X\)/, 'Summary card must display explicit Bekor qilish (X) button');
+  assert.ok(content.includes('Tozalash') && content.includes('title="Bekor qilish"'), 'Route must offer a clear action on desktop and phone');
 });
 
 defineTest('RoutePlannerView.tsx includes Saqlanganlar modal and Sheets save button', {

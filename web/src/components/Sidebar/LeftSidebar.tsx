@@ -24,8 +24,8 @@ export default function LeftSidebar({
     { id: 'map', label: 'Xarita', icon: Map },
     { id: 'route', label: "Yo'l-yo'lakay", icon: Navigation },
     { id: 'objects', label: 'Obyektlar', icon: Building2 },
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'custom_fields', label: "Qo'shimcha maydonlar", icon: SlidersHorizontal },
+    { id: 'dashboard', label: 'Tahlil', icon: BarChart3 },
+    { id: 'custom_fields', label: 'Maydonlar', icon: SlidersHorizontal },
   ];
 
   return (

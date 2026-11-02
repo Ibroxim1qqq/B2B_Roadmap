@@ -122,7 +122,7 @@ export default function VisitsView({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs font-bold text-slate-600 truncate">Tashrif qilinganlar</div>
-            <div className="text-xl font-black text-emerald-700 leading-tight mt-0.5">
+            <div className="text-xl font-semibold text-emerald-700 leading-tight mt-0.5">
               {visitedCount} <span className="text-xs font-normal text-slate-400">ta</span>
             </div>
             <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
@@ -147,7 +147,7 @@ export default function VisitsView({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs font-bold text-slate-600 truncate">Ma'lumoti to'ldirilganlar</div>
-            <div className="text-xl font-black text-indigo-700 leading-tight mt-0.5">
+            <div className="text-xl font-semibold text-indigo-700 leading-tight mt-0.5">
               {filledCount} <span className="text-xs font-normal text-slate-400">ta</span>
             </div>
             <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">
@@ -172,7 +172,7 @@ export default function VisitsView({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs font-bold text-slate-600 truncate">Tashrif qilinmaganlar</div>
-            <div className="text-xl font-black text-amber-700 leading-tight mt-0.5">
+            <div className="text-xl font-semibold text-amber-700 leading-tight mt-0.5">
               {pendingCount} <span className="text-xs font-normal text-slate-400">ta</span>
             </div>
             <div className="text-[10px] text-amber-600 font-semibold mt-0.5">
@@ -197,7 +197,7 @@ export default function VisitsView({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs font-bold text-slate-600 truncate">Barcha TJM-lar</div>
-            <div className="text-xl font-black text-slate-900 leading-tight mt-0.5">
+            <div className="text-xl font-semibold text-slate-900 leading-tight mt-0.5">
               {totalObjectsCount} <span className="text-xs font-normal text-slate-400">ta</span>
             </div>
             <div className="text-[10px] text-[#1b815f] font-semibold mt-0.5">

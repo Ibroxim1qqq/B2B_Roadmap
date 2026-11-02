@@ -112,13 +112,13 @@ export default function AIRouteModal({
         if (e.target === e.currentTarget && !loading) onClose();
       }}
     >
-      <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col animate-in zoom-in-95 duration-150">
+      <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col animate-in zoom-in-95 duration-150">
         
         {/* Modal Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 text-white shrink-0">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-[#1b815f] hover:bg-[#15674c] text-white shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[#1b815f]/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
-              <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+              <Sparkles className="w-5 h-5 text-amber-300" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export default function AIRouteModal({
           ) : (
             /* Results View */
             <div className="space-y-4">
-              <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl">
+              <div className="p-4 bg-[#1b815f] hover:bg-[#15674c] border border-emerald-100 rounded-2xl">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h4 className="text-sm font-bold text-slate-900">{result.route_name}</h4>
@@ -258,7 +258,7 @@ export default function AIRouteModal({
                     key={stop.source_id}
                     className="p-3.5 rounded-2xl border border-slate-200/90 bg-white hover:border-emerald-300 shadow-2xs transition-all flex items-start gap-3"
                   >
-                    <div className="w-7 h-7 rounded-xl bg-[#1b815f] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                    <div className="w-7 h-7 rounded-xl bg-[#1b815f] text-white font-semibold text-xs flex items-center justify-center shrink-0 shadow-xs">
                       {stop.order}
                     </div>
                     <div className="min-w-0 flex-1 space-y-1">

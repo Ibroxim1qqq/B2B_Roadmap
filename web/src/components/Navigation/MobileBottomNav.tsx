@@ -9,10 +9,10 @@ interface MobileBottomNavProps {
 export default function MobileBottomNav({ activeTab, onTabChange }: MobileBottomNavProps) {
   const items = [
     { id: 'map', label: 'Xarita', icon: Map },
-    { id: 'route', label: "Yo'nalish", icon: Navigation },
+    { id: 'route', label: "Yo'l-yo'lakay", icon: Navigation },
     { id: 'objects', label: 'Obyektlar', icon: Building2 },
     { id: 'dashboard', label: 'Tahlil', icon: BarChart3 },
-    { id: 'custom_fields', label: 'Sozlama', icon: SlidersHorizontal },
+    { id: 'custom_fields', label: 'Maydonlar', icon: SlidersHorizontal },
   ];
 
   return (

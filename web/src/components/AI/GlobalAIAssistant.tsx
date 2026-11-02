@@ -144,12 +144,12 @@ export default function GlobalAIAssistant({
 
   return (
     <div 
-      className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-[420px] md:w-[460px] h-[600px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-slate-200/90 flex flex-col z-[1000] overflow-hidden animate-in zoom-in-95 duration-200"
+      className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-[420px] md:w-[460px] h-[600px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col z-[1000] overflow-hidden animate-in zoom-in-95 duration-200"
     >
       {/* Minimalist Clean Header */}
       <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#1b815f] to-teal-700 flex items-center justify-center shadow-xs">
+          <div className="w-8 h-8 rounded-xl bg-[#1b815f] hover:bg-[#15674c] flex items-center justify-center shadow-xs">
             <Sparkles className="w-4 h-4 text-amber-300" />
           </div>
           <div>
@@ -336,7 +336,7 @@ export default function GlobalAIAssistant({
                             onViewOnMap(act.source_id);
                           }
                         }}
-                        className="w-full py-2 px-3 bg-gradient-to-r from-[#1b815f] via-teal-600 to-purple-600 hover:from-[#15674c] hover:to-teal-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                        className="w-full py-2 px-3 bg-[#1b815f] hover:bg-[#15674c] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
                       >
                         <span>{act.label}</span>
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -355,7 +355,7 @@ export default function GlobalAIAssistant({
 
         {/* Loading Indicator */}
         {loading && (
-          <div className="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-2xl rounded-bl-xs text-xs text-slate-500 shadow-xs max-w-[200px] animate-pulse">
+          <div className="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-2xl rounded-bl-xs text-xs text-slate-500 shadow-xs max-w-[200px]">
             <Bot className="w-4 h-4 text-[#1b815f] animate-spin" />
             <span className="font-semibold">Baza tahlil qilinmoqda...</span>
           </div>

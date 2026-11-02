@@ -149,95 +149,25 @@ export default function ObjectsTableView({
   return (
     <div className="flex-1 flex flex-col bg-slate-100 min-w-0 overflow-y-auto p-5 space-y-4">
       
-      {/* 1. Interactive 4 Summary Filter Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Card 1: Jami TJM-lar */}
-        <div
-          onClick={() => handleCardFilterClick('all')}
-          className={`rounded-2xl border p-4 shadow-2xs cursor-pointer transition-all flex items-center gap-3.5 ${
-            dataFilter === 'all'
-              ? 'bg-emerald-50/90 border-[#1b815f] ring-2 ring-emerald-500/20 shadow-sm'
-              : 'bg-white border-slate-200/90 hover:border-emerald-300 hover:bg-emerald-50/30'
-          }`}
-        >
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-            dataFilter === 'all' ? 'bg-[#1b815f] text-white' : 'bg-emerald-100 text-emerald-700'
-          }`}>
-            <Building2 className="w-6 h-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-slate-600 truncate">Jami TJM-lar</div>
-            <div className="text-xl font-black text-slate-900 leading-tight mt-0.5">
-              {totalObjectsCount} <span className="text-xs font-normal text-slate-400">ta</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Tashrif qilingan */}
-        <div
-          onClick={() => handleCardFilterClick('visited')}
-          className={`rounded-2xl border p-4 shadow-2xs cursor-pointer transition-all flex items-center gap-3.5 ${
-            dataFilter === 'visited'
-              ? 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
-              : 'bg-white border-slate-200/90 hover:border-emerald-300 hover:bg-emerald-50/30'
-          }`}
-        >
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-            dataFilter === 'visited' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700'
-          }`}>
-            <MapPin className="w-6 h-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-slate-600 truncate">Tashrif qilingan</div>
-            <div className="text-xl font-black text-emerald-700 leading-tight mt-0.5">
-              {visitedCount} <span className="text-xs font-normal text-slate-400">ta</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Ma'lumot to'ldirilgan */}
-        <div
-          onClick={() => handleCardFilterClick('filled')}
-          className={`rounded-2xl border p-4 shadow-2xs cursor-pointer transition-all flex items-center gap-3.5 ${
-            dataFilter === 'filled'
-              ? 'bg-indigo-50/90 border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
-              : 'bg-white border-slate-200/90 hover:border-indigo-300 hover:bg-indigo-50/30'
-          }`}
-        >
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-            dataFilter === 'filled' ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700'
-          }`}>
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-slate-600 truncate">Ma'lumot to'ldirilgan</div>
-            <div className="text-xl font-black text-indigo-700 leading-tight mt-0.5">
-              {filledCount} <span className="text-xs font-normal text-slate-400">ta</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Tashrif qilinmagan */}
-        <div
-          onClick={() => handleCardFilterClick('pending')}
-          className={`rounded-2xl border p-4 shadow-2xs cursor-pointer transition-all flex items-center gap-3.5 ${
-            dataFilter === 'pending'
-              ? 'bg-amber-50/90 border-amber-500 ring-2 ring-amber-500/20 shadow-sm'
-              : 'bg-white border-slate-200/90 hover:border-amber-300 hover:bg-amber-50/30'
-          }`}
-        >
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-            dataFilter === 'pending' ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-700'
-          }`}>
-            <Clock className="w-6 h-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-slate-600 truncate">Tashrif qilinmagan</div>
-            <div className="text-xl font-black text-amber-700 leading-tight mt-0.5">
-              {pendingCount} <span className="text-xs font-normal text-slate-400">ta</span>
-            </div>
-          </div>
-        </div>
+      {/* Status tabs */}
+      <div className="flex items-center gap-5 border-b border-slate-200 overflow-x-auto no-scrollbar whitespace-nowrap text-[13px] -mt-1">
+        {([
+          ['all', 'Barchasi', totalObjectsCount],
+          ['visited', 'Borilgan', visitedCount],
+          ['filled', "To'ldirilgan", filledCount],
+          ['pending', 'Borilmagan', pendingCount]
+        ] as const).map(([value, label, count]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => handleCardFilterClick(value)}
+            className={`py-2.5 border-b-2 -mb-px cursor-pointer transition-colors ${
+              dataFilter === value ? 'border-[#1b815f] text-slate-900 font-medium' : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {label} <span className="text-slate-400 tabular-nums">{count}</span>
+          </button>
+        ))}
       </div>
 
       {/* 2. Filters & Search Toolbar Bar */}
@@ -366,7 +296,7 @@ export default function ObjectsTableView({
               <SlidersHorizontal className={`w-3.5 h-3.5 shrink-0 ${activeAdvancedFilterCount > 0 ? 'text-white' : 'text-[#1b815f]'}`} />
               <span>Filtrlar</span>
               {activeAdvancedFilterCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-white text-emerald-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                <span className="w-4 h-4 rounded-full bg-white text-emerald-700 text-[10px] font-semibold flex items-center justify-center shrink-0">
                   {activeAdvancedFilterCount}
                 </span>
               )}
