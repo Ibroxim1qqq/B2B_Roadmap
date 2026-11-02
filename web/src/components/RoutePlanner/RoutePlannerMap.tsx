@@ -113,32 +113,6 @@ function createYandexNavArrowIcon(bearing: number, speedKmh: number) {
     className: 'leaflet-yandex-arrow-marker',
     html: `
       <div style="position: relative; width: 68px; height: 68px; pointer-events: none;">
-        <!-- 1. Floating Speed Badge Directly Above the Arrow -->
-        <div class="nav-speed-bubble" style="
-          position: absolute;
-          top: -18px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #090d16;
-          color: #38bdf8;
-          border: 1.5px solid #0284c7;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
-          padding: 2px 7px;
-          border-radius: 9999px;
-          font-size: 11px;
-          font-weight: 900;
-          font-family: ui-monospace, monospace;
-          white-space: nowrap;
-          z-index: 100;
-          display: flex;
-          align-items: center;
-          gap: 3px;
-        ">
-          <span style="color: #22c55e; font-size: 8px;">●</span>
-          <span class="speed-val">${speedKmh}</span>
-          <span style="font-size: 9px; color: #94a3b8; font-weight: bold;">km/s</span>
-        </div>
-
         <!-- 2. Rotating Arrow Wrapper -->
         <div class="nav-arrow-rotator" style="
           width: 68px;
@@ -147,18 +121,6 @@ function createYandexNavArrowIcon(bearing: number, speedKmh: number) {
           transform-origin: 34px 34px;
           transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1);
         ">
-          <!-- Directional Light Beam ahead -->
-          <div style="
-            position: absolute;
-            top: -34px;
-            left: 14px;
-            width: 40px;
-            height: 44px;
-            background: linear-gradient(to top, rgba(56, 189, 248, 0.6), rgba(56, 189, 248, 0));
-            clip-path: polygon(25% 100%, 75% 100%, 100% 0%, 0% 0%);
-            pointer-events: none;
-          "></div>
-
           <!-- Yandex/Google 3D Navigation Arrow SVG -->
           <svg width="68" height="68" viewBox="0 0 64 64" fill="none" style="filter: drop-shadow(0 6px 16px rgba(2, 6, 23, 0.6));">
             <!-- Pulsing Halo Circle -->
@@ -249,6 +211,14 @@ export default function RoutePlannerMap({
     if (pickingMode === 'B' || (startPoint && !endPoint)) return 'B';
     return null;
   }, [isNavigating, pickingMode, startPoint, endPoint]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => mapRef.current?.invalidateSize());
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   // Live Driver State (Real GPS)
   const [driverPos, setDriverPos] = useState<[number, number] | null>(null);
@@ -976,206 +946,101 @@ export default function RoutePlannerMap({
         </div>
       )}
 
-      {/* 2. IN-CAR TURN-BY-TURN DRIVER HUD: TOP UPCOMING TJM CARD */}
-      {isNavigating && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] w-11/12 max-w-md animate-in slide-in-from-top-4 duration-200">
-          {approachingTJM ? (
-            /* Approaching Alert Banner (< 120m) */
-            <div className="bg-amber-500 text-slate-950 p-3.5 rounded-2xl shadow-2xl border-2 border-white flex items-center justify-between gap-3 animate-pulse">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-slate-950 text-amber-400 font-black text-sm flex items-center justify-center shrink-0">
-                  #{approachingTJM.tjm.orderNumber}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-900">
-                    ⚠️ Oldinda TJM ({approachingTJM.distanceMeters} metrda):
-                  </div>
-                  <h3 className="text-sm font-black text-slate-950 truncate">
-                    {approachingTJM.tjm.object.tjm_name || approachingTJM.tjm.object.object_name}
-                  </h3>
-                  <p className="text-[11px] font-semibold text-slate-900">
-                    Yo'ldan: {approachingTJM.tjm.distFromRoadMeters} metr narida
+      {/* 2. Driving: next stop */}
+      {isNavigating && (() => {
+        const stop = approachingTJM ?? nextUpcomingTJM;
+        const obj = stop?.tjm.object;
+        const iconLink = 'w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-900 shrink-0';
+
+        return (
+          <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-[500] w-[calc(100%-1.5rem)] max-w-md bg-white rounded-xl shadow-md px-3 py-2 flex items-center gap-2 ${
+            approachingTJM ? 'ring-2 ring-[#1b815f]' : ''
+          }`}>
+            {stop && obj ? (
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-500">
+                    {approachingTJM ? `${approachingTJM.distanceMeters} m qoldi` : `Keyingi: ${formatDistance(stop.distanceMeters)}`}
                   </p>
+                  <p className="text-[13px] font-medium text-slate-900 truncate">{obj.tjm_name || obj.object_name}</p>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 shrink-0">
-                <a
-                  href={getYandexNavUrl(approachingTJM.tjm.object.latitude, approachingTJM.tjm.object.longitude)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="p-2.5 bg-slate-950 text-amber-400 hover:text-white rounded-xl shadow-xs"
-                  title="Yandex Navigator da ochish"
-                >
-                  <Navigation className="w-4 h-4" />
-                </a>
-
-                {approachingTJM.tjm.object.phone && (
-                  <a
-                    href={getCallUrl(approachingTJM.tjm.object.phone)}
-                    className="p-2.5 bg-slate-950 text-white rounded-xl shadow-xs"
-                    title="Qo'ng'iroq qilish"
-                  >
+                {obj.phone && (
+                  <a href={getCallUrl(obj.phone)} title={obj.phone} className={iconLink}>
                     <Phone className="w-4 h-4" />
                   </a>
                 )}
-                {onRecordVisit && (
-                  <button
-                    type="button"
-                    onClick={() => onRecordVisit(approachingTJM.tjm.object.source_id)}
-                    className="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black flex items-center gap-1 shadow-xs cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Tashrif</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : nextUpcomingTJM ? (
-            /* Next Upcoming TJM Banner */
-            <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-2xl shadow-xl border border-white/15 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#1b815f] text-white font-black text-xs flex items-center justify-center shrink-0">
-                  #{nextUpcomingTJM.tjm.orderNumber}
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-emerald-500 block uppercase tracking-wider">
-                    Keyingi manzil ({formatDistance(nextUpcomingTJM.distanceMeters)}):
-                  </span>
-                  <p className="text-xs font-bold text-white truncate">
-                    {nextUpcomingTJM.tjm.object.tjm_name || nextUpcomingTJM.tjm.object.object_name}
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    Yo'l yoqasida ({nextUpcomingTJM.tjm.distFromRoadMeters} m)
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 shrink-0">
                 <a
-                  href={getYandexNavUrl(nextUpcomingTJM.tjm.object.latitude, nextUpcomingTJM.tjm.object.longitude)}
+                  href={getYandexNavUrl(obj.latitude, obj.longitude)}
                   target="_blank"
                   rel="noreferrer"
-                  className="p-2 bg-white/10 hover:bg-white/20 text-amber-400 rounded-xl"
-                  title="Yandex Navigator da ochish"
+                  title="Yandex Navigator"
+                  className={iconLink}
                 >
-                  <Navigation className="w-3.5 h-3.5" />
+                  <Navigation className="w-4 h-4" />
                 </a>
-
-                {nextUpcomingTJM.tjm.object.phone && (
-                  <a
-                    href={getCallUrl(nextUpcomingTJM.tjm.object.phone)}
-                    className="p-2 bg-white/10 hover:bg-white/20 text-emerald-400 rounded-xl"
-                    title="Qo'ng'iroq"
+                {approachingTJM && onRecordVisit && (
+                  <button
+                    type="button"
+                    onClick={() => onRecordVisit(obj.source_id)}
+                    className="h-9 px-3 rounded-lg bg-[#1b815f] hover:bg-[#15674c] text-white text-xs font-medium cursor-pointer shrink-0"
                   >
-                    <Phone className="w-3.5 h-3.5" />
-                  </a>
+                    Bordim
+                  </button>
                 )}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-slate-900/90 backdrop-blur-md text-white p-2.5 rounded-xl shadow-lg border border-white/15 text-center text-xs font-semibold">
-              🏁 Manzilga yaqinlashyapsiz
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 3. IN-CAR DRIVER BOTTOM DASHBOARD (Speedometer & Controls) */}
-      {isNavigating && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[500] w-11/12 max-w-lg animate-in slide-in-from-bottom-4 duration-200">
-          <div className="bg-slate-950/95 backdrop-blur-xl border-2 border-white/20 text-white p-4 rounded-3xl shadow-2xl space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              {/* Real Speedometer */}
-              <div className="flex items-center gap-2.5 bg-slate-900/90 border border-white/10 px-3.5 py-2 rounded-2xl shrink-0">
-                <Gauge className="w-5 h-5 text-emerald-400" />
-                <div>
-                  <div className="text-xl font-black text-emerald-400 leading-none">
-                    {speedKmh}
-                  </div>
-                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                    km/soat
-                  </div>
-                </div>
-              </div>
-
-              {/* Distance & ETA to Destination */}
-              <div className="min-w-0 flex-1 text-center">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Qolgan masofa
-                </p>
-                <div className="text-base font-black text-white truncate">
-                  {formatDistance(remainingDistance || totalDistance)}
-                </div>
-                <p className="text-[10px] text-emerald-500 font-semibold">
-                  Yo'lda: {matchedTJMs.length} ta TJM
-                </p>
-              </div>
-
-              {/* End Navigation Button */}
-              <button
-                type="button"
-                onClick={onStopNavigation}
-                className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black flex items-center gap-1.5 shadow-lg shadow-rose-600/30 transition-colors cursor-pointer shrink-0"
-              >
-                <X className="w-4 h-4" />
-                <span>Tugatish</span>
-              </button>
-            </div>
-
-            {/* Sub Controls: Sound, Recenter, Mode Switcher */}
-            <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2">
-                {/* Sound Alert Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setSoundEnabled(!soundEnabled)}
-                  className={`p-1.5 rounded-xl border flex items-center gap-1 text-[11px] font-bold transition-colors cursor-pointer ${
-                    soundEnabled 
-                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
-                      : 'bg-white/5 border-white/10 text-slate-400'
-                  }`}
-                  title="Ovozli signal"
-                >
-                  {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-                  <span>Signal</span>
-                </button>
-
-                {/* Recenter Camera at Close Street Level */}
-                <button
-                  type="button"
-                  onClick={handleRecenter}
-                  className={`p-1.5 rounded-xl border flex items-center gap-1 text-[11px] font-bold transition-colors cursor-pointer ${
-                    autoFollow 
-                      ? 'bg-[#1b815f]/30 border-[#1b815f] text-emerald-500' 
-                      : 'bg-white/5 border-white/10 text-slate-400'
-                  }`}
-                  title="Mashinani markazlashtirish (Yaqinlashtirish)"
-                >
-                  <Locate className="w-3.5 h-3.5" />
-                  <span>Kuzatish (17x)</span>
-                </button>
-              </div>
-
-              {/* Demo Mode toggle (for testing indoors without a car) */}
-              <button
-                type="button"
-                onClick={() => {
-                  demoProgressRef.current = 0;
-                  setIsDemoMode(!isDemoMode);
-                }}
-                className={`px-2.5 py-1 rounded-xl text-[10px] font-black border transition-colors cursor-pointer ${
-                  isDemoMode 
-                    ? 'bg-amber-500 text-slate-950 border-amber-400' 
-                    : 'bg-white/10 text-slate-300 border-white/10 hover:text-white'
-                }`}
-              >
-                {isDemoMode ? "🛑 GPS ga qaytish" : "🚗 Sinov (Demo)"}
-              </button>
-            </div>
+              </>
+            ) : (
+              <p className="py-1.5 text-[13px] text-slate-900">Manzilga yaqinlashyapsiz</p>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* 3. Driving: speed, remaining distance and controls */}
+      {isNavigating && (() => {
+        const control = (active: boolean) => `w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
+          active ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
+        }`;
+
+        return (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[500] w-[calc(100%-1.5rem)] max-w-md bg-white rounded-xl shadow-md p-2 flex items-center gap-2">
+            <div className="px-2 text-center shrink-0">
+              <p className="text-lg font-semibold text-slate-900 leading-none tabular-nums">{speedKmh}</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">km/soat</p>
+            </div>
+
+            <div className="min-w-0 flex-1 pl-2 border-l border-slate-100">
+              <p className="text-[13px] font-medium text-slate-900 truncate tabular-nums">{formatDistance(remainingDistance || totalDistance)} qoldi</p>
+              <p className="text-xs text-slate-500 truncate">{matchedTJMs.length} ta TJM</p>
+            </div>
+
+            <button type="button" onClick={() => setSoundEnabled(!soundEnabled)} title={soundEnabled ? 'Ovozni o\'chirish' : 'Ovozni yoqish'} className={control(soundEnabled)}>
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+            <button type="button" onClick={handleRecenter} title="Mashinani markazga olish" className={control(autoFollow)}>
+              <Locate className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                demoProgressRef.current = 0;
+                setIsDemoMode(!isDemoMode);
+              }}
+              title={isDemoMode ? 'GPS ga qaytish' : 'Sinov rejimi'}
+              className={`${control(isDemoMode)} max-md:hidden`}
+            >
+              {isDemoMode ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={onStopNavigation}
+              title="Tugatish"
+              className="h-9 px-3 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer shrink-0"
+            >
+              Tugatish
+            </button>
+          </div>
+        );
+      })()}
 
       {/* 4. Map Switcher (Map / Satellite) */}
       <div className="absolute top-1/2 -translate-y-1/2 right-2 md:top-4 md:translate-y-0 md:right-4 z-[400] flex bg-white rounded-lg p-0.5 shadow-md text-xs">

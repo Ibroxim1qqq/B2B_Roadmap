@@ -1234,10 +1234,9 @@ export default function RoutePlannerView({
           <div className="hidden md:block absolute top-4 left-4 z-[400]">
             <button
               onClick={() => setShowSidebarInNav(!showSidebarInNav)}
-              className="px-3.5 py-2 bg-slate-950/90 hover:bg-slate-900 text-white rounded-2xl text-xs font-bold shadow-xl flex items-center gap-2 backdrop-blur-md cursor-pointer border border-white/15 transition-all"
+              className="h-9 px-3 bg-white rounded-lg shadow-md text-xs text-slate-700 hover:text-slate-900 cursor-pointer"
             >
-              <Layers className="w-4 h-4 text-emerald-500" />
-              <span>{showSidebarInNav ? "Xaritani to'liq yoyish" : `TJM Ro'yxati (${matchedTJMs.length})`}</span>
+              {showSidebarInNav ? "Ro'yxatni yopish" : `Ro'yxat (${matchedTJMs.length})`}
             </button>
           </div>
         )}
