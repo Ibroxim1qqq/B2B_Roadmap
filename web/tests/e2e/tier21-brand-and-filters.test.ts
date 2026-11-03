@@ -3,10 +3,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { defineTest, SRC_ROOT } from './harness.ts';
 import { db } from '../../src/lib/db.ts';
+import { moveItem, orderByNearest, splitRoutePoints } from '../../src/lib/routeUtils.ts';
 import { safeExternalUrl } from '../../src/lib/utils.ts';
 import { filterPoolByPrompt, parseCriteria, smartHeuristicPlanner } from '../../src/lib/aiEngine.ts';
 import {
-  brandOptions, clientOwnerOptions, countActiveFilters, DEFAULT_CLIENT_OWNERS, INITIAL_ADVANCED_FILTERS, matchesObjectFilters, normalizeFilterText, companyOptions, tjmOptions
+  brandOptions, clientOwnerOptions, isUysotClient, countActiveFilters, DEFAULT_CLIENT_OWNERS, INITIAL_ADVANCED_FILTERS, matchesObjectFilters, normalizeFilterText, companyOptions, tjmOptions
 } from '../../src/lib/filters.ts';
 
 // ============================================================================
@@ -196,3 +197,37 @@ defineTest('Only web links become clickable', meta('CRM_LINK_SAFE', 'safeExterna
   assert.equal(safeExternalUrl(undefined), null);
 });
 
+
+defineTest('UYSOT CRM and UYSOT.UZ count as UYSOT clients', meta('UYSOT_CLIENT', 'isUysotClient'), () => {
+  assert.equal(isUysotClient({ client_owner: 'UYSOT CRM' }), true);
+  assert.equal(isUysotClient({ client_owner: 'uysot.uz' }), true);
+  assert.equal(isUysotClient({ client_owner: 'UYQUR' }), false);
+  assert.equal(isUysotClient({ client_owner: 'Boshqa UYSOT' }), false);
+  assert.equal(isUysotClient({}), false);
+});
+
+defineTest('A filter route visits every object, nearest first', meta('FILTER_ROUTE_ORDER', 'orderByNearest'), () => {
+  const items = [{ id: 'c', latitude: 41.3, longitude: 69 }, { id: 'a', latitude: 41.1, longitude: 69 }, { id: 'b', latitude: 41.2, longitude: 69 }];
+  assert.deepEqual(orderByNearest(items, { lat: 41, lng: 69 }).map(i => i.id), ['a', 'b', 'c']);
+  assert.deepEqual(orderByNearest(items, { lat: 42, lng: 69 }).map(i => i.id), ['c', 'b', 'a']);
+  assert.equal(items.length, 3, 'the input list is left alone');
+  assert.deepEqual(orderByNearest([], { lat: 41, lng: 69 }), []);
+});
+
+defineTest('Long routes split into connected parts that keep every point', meta('ROUTE_PARTS', 'splitRoutePoints'), () => {
+  const points = Array.from({ length: 500 }, (_, i) => i);
+  const parts = splitRoutePoints(points, 90);
+  assert.ok(parts.every(p => p.length <= 90 && p.length >= 2));
+  for (let i = 1; i < parts.length; i += 1) assert.equal(parts[i][0], parts[i - 1][parts[i - 1].length - 1]);
+  assert.deepEqual([...new Set(parts.flat())], points);
+  assert.deepEqual(splitRoutePoints([1, 2, 3], 90), [[1, 2, 3]]);
+  assert.deepEqual(splitRoutePoints(Array.from({ length: 91 }, (_, i) => i), 90).map(p => p.length), [90, 2]);
+});
+
+defineTest('Moving a route point keeps every other point in order', meta('VIA_MOVE', 'moveItem'), () => {
+  const points = ['a', 'b', 'c', 'd'];
+  assert.deepEqual(moveItem(points, 3, 0), ['d', 'a', 'b', 'c']);
+  assert.deepEqual(moveItem(points, 0, 2), ['b', 'c', 'a', 'd']);
+  assert.deepEqual(moveItem(points, 1, 1), points);
+  assert.deepEqual(points, ['a', 'b', 'c', 'd'], 'the input list is left alone');
+});

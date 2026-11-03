@@ -222,6 +222,11 @@ export function matchesObjectFilters(m: MapObject, criteria: ObjectFilterCriteri
   return true;
 }
 
+/** UYSOT CRM and UYSOT.UZ are both clients of UYSOT. */
+export function isUysotClient(m: { client_owner?: string }): boolean {
+  return normalizeFilterText(m.client_owner).startsWith('uysot');
+}
+
 export const DEFAULT_CLIENT_OWNERS = ['UYSOT CRM', 'UYSOT.UZ', 'UYQUR'];
 
 /** The standard options first, then every other name this company has already used on an object. */

@@ -1,4 +1,4 @@
-import { MapObject } from './types';
+import type { MapObject } from './types';
 
 export interface RoutePoint {
   lat: number;
@@ -115,6 +115,53 @@ export async function calculateOSRMRoute(
  * Fetch real driving route through multiple waypoints from OSRM
  * Coordinates: Array of { lat: number, lng: number }
  */
+// The public OSRM server refuses a request with too many points, so long routes go in parts.
+const MAX_POINTS_PER_REQUEST = 90;
+
+/** Each part starts where the previous one ended, so the route stays connected. */
+export function splitRoutePoints<T>(points: T[], size: number = MAX_POINTS_PER_REQUEST): T[][] {
+  if (points.length <= size) return [points];
+  const parts: T[][] = [];
+  for (let start = 0; start < points.length - 1; start += size - 1) {
+    parts.push(points.slice(start, start + size));
+  }
+  return parts;
+}
+
+export function moveItem<T>(items: T[], from: number, to: number): T[] {
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
+/** A route that visits every object: always the closest one not yet visited. */
+export function orderByNearest<T extends { latitude: number; longitude: number }>(
+  items: T[],
+  start: { lat: number; lng: number }
+): T[] {
+  const remaining = [...items];
+  const ordered: T[] = [];
+  let lat = start.lat;
+  let lng = start.lng;
+  while (remaining.length > 0) {
+    let best = 0;
+    let bestDistance = Infinity;
+    remaining.forEach((item, index) => {
+      const distance = haversineMeters(lat, lng, item.latitude, item.longitude);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = index;
+      }
+    });
+    const [next] = remaining.splice(best, 1);
+    ordered.push(next);
+    lat = next.latitude;
+    lng = next.longitude;
+  }
+  return ordered;
+}
+
 export async function calculateOSRMRouteMulti(
   points: { lat: number; lng: number }[]
 ): Promise<RouteResult> {
@@ -123,6 +170,17 @@ export async function calculateOSRMRouteMulti(
   }
   if (points.length === 2) {
     return calculateOSRMRoute(points[0].lat, points[0].lng, points[1].lat, points[1].lng);
+  }
+  const parts = splitRoutePoints(points);
+  if (parts.length > 1) {
+    const merged: RouteResult = { distanceMeters: 0, durationSeconds: 0, coordinates: [] };
+    for (const part of parts) {
+      const res = await calculateOSRMRouteMulti(part);
+      merged.distanceMeters += res.distanceMeters;
+      merged.durationSeconds += res.durationSeconds;
+      merged.coordinates = merged.coordinates.concat(merged.coordinates.length > 0 ? res.coordinates.slice(1) : res.coordinates);
+    }
+    return merged;
   }
 
   try {

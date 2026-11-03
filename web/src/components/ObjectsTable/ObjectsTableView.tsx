@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { getNavigationUrl, getCallUrl } from '../../lib/utils';
 import { getDistrictsForRegion } from '../../lib/regions';
+import { isUysotClient } from '../../lib/filters';
 
 interface ObjectsTableViewProps {
   objects: (MapObject & { distance?: number })[];
@@ -25,6 +26,14 @@ interface ObjectsTableViewProps {
   onStatusChange: (s: string) => void;
   onOpenAdvancedFilters?: () => void;
   activeAdvancedFilterCount?: number;
+}
+
+type SortColumn = 'company' | 'name' | 'district' | 'floors' | 'apartments' | 'visit';
+
+function companyName(obj: MapObject): string {
+  const builder = obj.builder && obj.builder !== '—' ? obj.builder : '';
+  const customer = obj.customer && obj.customer !== '—' ? obj.customer : '';
+  return builder || customer || '—';
 }
 
 export default function ObjectsTableView({
@@ -44,7 +53,7 @@ export default function ObjectsTableView({
   activeAdvancedFilterCount = 0
 }: ObjectsTableViewProps) {
   const [dataFilter, setDataFilter] = useState<'all' | 'visited' | 'filled' | 'pending'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'district' | 'floors' | 'apartments' | 'visit'>('name');
+  const [sortBy, setSortBy] = useState<SortColumn>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [districtOpen, setDistrictOpen] = useState(false);
@@ -90,7 +99,9 @@ export default function ObjectsTableView({
     const list = [...filtered];
     list.sort((a, b) => {
       let comparison = 0;
-      if (sortBy === 'name') {
+      if (sortBy === 'company') {
+        comparison = companyName(a).localeCompare(companyName(b));
+      } else if (sortBy === 'name') {
         const nameA = (a.tjm_name || a.object_name || '').toLowerCase();
         const nameB = (b.tjm_name || b.object_name || '').toLowerCase();
         comparison = nameA.localeCompare(nameB);
@@ -117,7 +128,7 @@ export default function ObjectsTableView({
   const totalPages = Math.ceil(sorted.length / pageSize) || 1;
   const paginated = sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const toggleSort = (col: 'name' | 'district' | 'floors' | 'apartments' | 'visit') => {
+  const toggleSort = (col: SortColumn) => {
     if (sortBy === col) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
@@ -363,61 +374,51 @@ export default function ObjectsTableView({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-4 w-12"># ID</th>
-                <th 
+                <th
+                  onClick={() => toggleSort('company')}
+                  className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none whitespace-nowrap"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>MChJ nomi</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </div>
+                </th>
+                <th className="py-3 px-4 whitespace-nowrap">Brend nomi</th>
+                <th
                   onClick={() => toggleSort('name')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                  className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>Obyekt / TJM nomi</span>
+                    <span>TJM nomi</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
-                <th 
-                  onClick={() => toggleSort('district')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Tuman</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </div>
-                </th>
+                <th className="py-3 px-4">Manzil</th>
                 <th className="py-3 px-4">Status</th>
-                <th 
-                  onClick={() => toggleSort('floors')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                <th
+                  onClick={() => toggleSort('apartments')}
+                  className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>Qavat</span>
+                    <span>Xonadon soni</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
-                <th className="py-3 px-4">Pudratchi / Buyurtmachi</th>
-                <th className="py-3 px-4">B2B Kontaktlar</th>
-                <th 
-                  onClick={() => toggleSort('visit')}
-                  className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Oxirgi Tashrif</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </div>
-                </th>
+                <th className="py-3 px-4 whitespace-nowrap">Kimning klienti</th>
+                <th className="py-3 px-4 whitespace-nowrap">Rahbar tel</th>
+                <th className="py-3 px-4 whitespace-nowrap">Rahbar ismi</th>
                 <th className="py-3 px-4 text-right">Amallar</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
                     Obyektlar topilmadi. Qidiruv parametrlarini o'zgartirib ko'ring.
                   </td>
                 </tr>
               ) : (
                 paginated.map((obj) => {
-                  const isVisited = Boolean(obj.is_visited || obj.last_visit);
-                  const hasInternal = Boolean(obj.has_internal || obj.phone || obj.tjm_name);
-
                   return (
                     <tr
                       key={obj.source_id}
@@ -426,40 +427,36 @@ export default function ObjectsTableView({
                         selectedId === obj.source_id ? 'bg-emerald-50/80 font-medium' : ''
                       }`}
                     >
-                      {/* ID */}
-                      <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">
-                        {obj.source_id}
-                      </td>
-
-                      {/* Name & TJM */}
-                      <td className="py-3 px-4 min-w-[200px] max-w-[280px]">
-                        <div className="font-bold text-slate-900 group-hover:text-[#1b815f] transition-colors truncate">
-                          {obj.tjm_name ? obj.tjm_name : obj.object_name}
-                        </div>
-                        {obj.brand_name && (
-                          <div className="text-[11px] font-semibold text-[#1b815f] truncate mt-0.5">
-                            {obj.brand_name}
-                          </div>
-                        )}
-                        {obj.tjm_name && (
-                          <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                            {obj.object_name}
-                          </div>
-                        )}
-                        <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                          {obj.address || 'Manzil kiritilmagan'}
+                      {/* Company */}
+                      <td className="py-3 px-4 max-w-[220px]">
+                        <div className="font-semibold text-slate-800 truncate" title={companyName(obj)}>
+                          {companyName(obj)}
                         </div>
                       </td>
 
-                      {/* District */}
-                      <td className="py-3 px-4 text-slate-600 font-medium whitespace-nowrap">
-                        {obj.district_name || obj.region_name || '—'}
+                      {/* Brand */}
+                      <td className="py-3 px-4 font-semibold text-[#1b815f] whitespace-nowrap max-w-[160px] truncate">
+                        {obj.brand_name || <span className="text-slate-300 font-normal">—</span>}
+                      </td>
+
+                      {/* TJM: the source's own name stands in, muted, until a company enters one */}
+                      <td className="py-3 px-4 max-w-[240px]">
+                        {obj.tjm_name ? (
+                          <div className="font-bold text-slate-900 group-hover:text-[#1b815f] transition-colors truncate" title={obj.tjm_name}>{obj.tjm_name}</div>
+                        ) : (
+                          <div className="text-slate-400 truncate" title={obj.object_name}>{obj.object_name}</div>
+                        )}
+                      </td>
+
+                      {/* Address */}
+                      <td className="py-3 px-4 text-slate-600 max-w-[220px]">
+                        <div className="truncate" title={obj.address}>{obj.address || '—'}</div>
                       </td>
 
                       {/* Status */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                          obj.status_id === 2 
+                          obj.status_id === 2
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : obj.status_id === 3
                             ? 'bg-rose-50 text-rose-700 border-rose-200'
@@ -469,55 +466,39 @@ export default function ObjectsTableView({
                         </span>
                       </td>
 
-                      {/* Floors & Apartments */}
+                      {/* Apartments */}
                       <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
-                        <div>{obj.floors && obj.floors !== '—' ? `${obj.floors} qavat` : '—'}</div>
-                        <div className="text-[10px] text-slate-400">{obj.apartment_count && obj.apartment_count !== '0' ? `${obj.apartment_count} xonadon` : ''}</div>
+                        {obj.apartment_count && obj.apartment_count !== '0' ? obj.apartment_count : '—'}
                       </td>
 
-                      {/* Builder / Customer */}
-                      <td className="py-3 px-4 text-slate-600 max-w-[200px]">
-                        <div className="font-semibold text-slate-800 text-[11px] truncate">
-                          {obj.builder || '—'}
-                        </div>
-                        <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                          {obj.customer || '—'}
-                        </div>
-                      </td>
-
-                      {/* Internal Contacts */}
-                      <td className="py-3 px-4 min-w-[150px]">
-                        {obj.phone ? (
-                          <div className="space-y-0.5">
-                            <a
-                              href={getCallUrl(obj.phone)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="font-bold text-emerald-700 hover:underline flex items-center gap-1 text-[11px]"
-                            >
-                              <Phone className="w-3 h-3" />
-                              <span>{obj.phone}</span>
-                            </a>
-                            {obj.manager_name && (
-                              <div className="text-[10px] text-slate-500 truncate">
-                                {obj.manager_name}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 italic text-[11px]">Kiritilmagan</span>
-                        )}
-                      </td>
-
-                      {/* Last Visit */}
+                      {/* Client */}
                       <td className="py-3 px-4 whitespace-nowrap">
-                        {isVisited ? (
-                          <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-[11px]">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span className="truncate max-w-[130px]">{obj.last_visit}</span>
-                          </div>
+                        {obj.client_owner ? (
+                          <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                            isUysotClient(obj) ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {obj.client_owner}
+                          </span>
                         ) : (
-                          <span className="text-slate-300 text-[11px]">—</span>
+                          <span className="text-slate-300">—</span>
                         )}
+                      </td>
+
+                      {/* Manager phone */}
+                      <td className="py-3 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        {obj.manager_phone ? (
+                          <a href={getCallUrl(obj.manager_phone)} className="font-bold text-emerald-700 hover:underline flex items-center gap-1 text-[11px]">
+                            <Phone className="w-3 h-3" />
+                            <span>{obj.manager_phone}</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+
+                      {/* Manager name */}
+                      <td className="py-3 px-4 text-slate-700 max-w-[160px] truncate">
+                        {obj.manager_name || <span className="text-slate-300">—</span>}
                       </td>
 
                       {/* Actions */}

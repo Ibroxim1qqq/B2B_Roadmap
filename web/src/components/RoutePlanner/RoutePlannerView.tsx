@@ -5,9 +5,10 @@ import { MapObject, UserProfile, SavedRoute, AIRouteRecommendation } from '../..
 import { api, isUysotCompany } from '../../lib/api';
 import { getCurrentUser } from '../../lib/auth';
 import AIRouteModal from './AIRouteModal';
+import ViaPointList from './ViaPointList';
 import { 
   calculateOSRMRoute, calculateOSRMRouteMulti, findTJMsAlongRoute, RouteResult, TJMAlongRoute, 
-  formatDistance, formatDuration, haversineMeters 
+  formatDistance, formatDuration, haversineMeters, moveItem, orderByNearest 
 } from '../../lib/routeUtils';
 import { 
   Navigation, MapPin, ArrowDownUp, Search, Compass, SlidersHorizontal, Plus,
@@ -46,8 +47,11 @@ interface RoutePlannerViewProps {
   currentUser?: UserProfile | null;
   companyId?: string;
   initialAIStops?: AIRouteRecommendation[] | null;
+  filterRouteStops?: MapObject[] | null;
+  onFilterRouteApplied?: () => void;
 }
 
+const MAX_LISTED_VIA = 5;
 const REGISTON_LAT = 39.6542;
 const REGISTON_LNG = 66.9597;
 
@@ -140,8 +144,13 @@ export default function RoutePlannerView({
   onRecordVisit,
   currentUser,
   companyId,
-  initialAIStops
+  initialAIStops,
+  filterRouteStops,
+  onFilterRouteApplied
 }: RoutePlannerViewProps) {
+  // A route handed over on opening must not be replaced by the one saved earlier.
+  const hasRouteOnOpen = useRef(Boolean(initialAIStops?.length || filterRouteStops?.length));
+
   // Multi-Company User Context
   const [activeUser, setActiveUser] = useState<UserProfile | null>(currentUser || null);
   useEffect(() => {
@@ -256,6 +265,48 @@ export default function RoutePlannerView({
     })));
   };
 
+  // Every object the filters show becomes a stop. The last one is also listed as a stop,
+  // so moving B later still visits it.
+  const handleApplyFilterRoute = useCallback((stops: MapObject[]) => {
+    const hasLocation = Boolean(userLat && userLng);
+    const center = hasLocation
+      ? { lat: userLat as number, lng: userLng as number }
+      : { lat: isUysot ? 41.2995 : REGISTON_LAT, lng: isUysot ? 69.2401 : REGISTON_LNG };
+    const ordered = orderByNearest(stops, center);
+    const nameOf = (o: MapObject) => o.tjm_name || o.object_name;
+    const first = ordered[0];
+    const last = ordered[ordered.length - 1];
+    const startPt = hasLocation
+      ? { ...center, name: 'Mening joriy joylashuvim (GPS)' }
+      : { lat: first.latitude, lng: first.longitude, name: nameOf(first) };
+    const endPt = { lat: last.latitude, lng: last.longitude, name: nameOf(last) };
+
+    setStartPoint(startPt);
+    setStartQuery(startPt.name);
+    setEndPoint(endPt);
+    setEndQuery(endPt.name);
+    setViaPoints(ordered.map(o => ({ lat: o.latitude, lng: o.longitude, name: nameOf(o), source_id: String(o.source_id) })));
+    setAiPlannedStops(ordered.map((o, index) => ({
+      source_id: String(o.source_id),
+      order: index + 1,
+      object_name: nameOf(o),
+      reason: '',
+      pitch_tip: '',
+      latitude: o.latitude,
+      longitude: o.longitude
+    })));
+    setPickingMode(null);
+    setIsAddingVia(false);
+    setShowAllVia(false);
+  }, [userLat, userLng, isUysot]);
+
+  useEffect(() => {
+    if (filterRouteStops && filterRouteStops.length > 0) {
+      handleApplyFilterRoute(filterRouteStops);
+      onFilterRouteApplied?.();
+    }
+  }, [filterRouteStops, handleApplyFilterRoute, onFilterRouteApplied]);
+
   // React to initialAIStops passed from parent
   useEffect(() => {
     if (initialAIStops && initialAIStops.length > 0) {
@@ -276,6 +327,7 @@ export default function RoutePlannerView({
   const [isAddingVia, setIsAddingVia] = useState(false);
   const [viaQuery, setViaQuery] = useState('');
   const [isViaOpen, setIsViaOpen] = useState(false);
+  const [showAllVia, setShowAllVia] = useState(false);
   const viaKey = viaPoints.map(p => `${p.lat},${p.lng}`).join(';');
   
   const [isStartOpen, setIsStartOpen] = useState(false);
@@ -430,6 +482,10 @@ export default function RoutePlannerView({
   // 1. Restore active route for this user account on mount or when account changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (hasRouteOnOpen.current) {
+      setIsStorageInitialized(true);
+      return;
+    }
     const user = activeUser || getCurrentUser();
     const storageKey = getAccountRouteStorageKey(user);
 
@@ -497,6 +553,18 @@ export default function RoutePlannerView({
     setViaQuery('');
     setIsViaOpen(false);
     setIsAddingVia(false);
+  };
+
+  const moveViaPoint = (from: number, to: number) => {
+    const next = moveItem(viaPoints, from, to);
+    setViaPoints(next);
+    // Planned stops are listed in their own order, so they follow the new one.
+    setAiPlannedStops(prev => {
+      if (!prev) return prev;
+      const rank = new Map(next.map((p, i) => [p.source_id, i]));
+      const place = (s: AIRouteRecommendation) => rank.get(String(s.source_id)) ?? next.length;
+      return [...prev].sort((a, b) => place(a) - place(b)).map((s, i) => ({ ...s, order: i + 1 }));
+    });
   };
 
   const removeViaPoint = (index: number) => {
@@ -1013,15 +1081,20 @@ export default function RoutePlannerView({
         {suggestionOptions(startSuggestions, 'A')}
       </PointField>
 
-      {viaPoints.map((point, index) => (
-        <div key={`${point.lat},${point.lng},${index}`} className="flex items-center gap-2 h-9 px-3 rounded-lg bg-slate-50">
-          <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[10px] font-medium flex items-center justify-center shrink-0 -ml-1">{index + 1}</span>
-          <span className="flex-1 min-w-0 text-[13px] text-slate-800 truncate" title={point.name}>{point.name}</span>
-          <button type="button" onClick={() => removeViaPoint(index)} title="Nuqtani olib tashlash" aria-label={`${point.name} nuqtasini olib tashlash`} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ))}
+      {viaPoints.length > MAX_LISTED_VIA && (
+        <button
+          type="button"
+          onClick={() => setShowAllVia(open => !open)}
+          className="w-full h-9 px-3 rounded-lg bg-slate-50 flex items-center justify-between gap-2 text-[13px] text-slate-700 cursor-pointer"
+        >
+          <span>{viaPoints.length} ta oraliq nuqta</span>
+          <span className="text-xs text-[#1b815f] font-medium">{showAllVia ? 'Yig\'ish' : "Ko'rsatish"}</span>
+        </button>
+      )}
+
+      {(viaPoints.length <= MAX_LISTED_VIA || showAllVia) && (
+        <ViaPointList points={viaPoints} onMove={moveViaPoint} onRemove={removeViaPoint} />
+      )}
 
       {isAddingVia && (
         <PointField

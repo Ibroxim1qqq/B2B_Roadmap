@@ -13,6 +13,7 @@ import {
   Gauge, Compass, Play, Pause, Sparkles, Layers
 } from 'lucide-react';
 import { escapeHtml, getCallUrl, getYandexNavUrl } from '../../lib/utils';
+import { isUysotClient } from '../../lib/filters';
 
 // Fix Leaflet default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -63,7 +64,7 @@ function safeFlyTo(map: L.Map | null, center: [number, number], zoom?: number, o
 interface RoutePlannerMapProps {
   startPoint: { lat: number; lng: number; name: string } | null;
   endPoint: { lat: number; lng: number; name: string } | null;
-  viaPoints?: { lat: number; lng: number; name: string }[];
+  viaPoints?: { lat: number; lng: number; name: string; source_id?: string }[];
   routeCoords: [number, number][];
   matchedTJMs: TJMAlongRoute[];
   bufferRadiusMeters: number;
@@ -379,10 +380,10 @@ export default function RoutePlannerMap({
         const isMatched = matchedTJMs.some(m => m.object.source_id === obj.source_id);
         if (!isMatched) {
           const smallDot = L.circleMarker([obj.latitude, obj.longitude], {
-            radius: 5,
-            color: '#64748b',
-            fillColor: '#94a3b8',
-            fillOpacity: 0.6,
+            radius: isUysotClient(obj) ? 7 : 5,
+            color: isUysotClient(obj) ? '#b91c1c' : '#64748b',
+            fillColor: isUysotClient(obj) ? '#dc2626' : '#94a3b8',
+            fillOpacity: isUysotClient(obj) ? 1 : 0.6,
             weight: 1.5
           });
 
@@ -507,6 +508,9 @@ export default function RoutePlannerMap({
 
     // Points between A and B, numbered in driving order
     viaPoints.forEach((point, index) => {
+      boundsPoints.push([point.lat, point.lng]);
+      // A stop on the list already has its own numbered marker here.
+      if (point.source_id && matchedTJMs.some(m => String(m.object.source_id) === point.source_id)) return;
       const viaMarker = L.marker([point.lat, point.lng], {
         icon: L.divIcon({
           className: 'custom-via-marker',
@@ -518,7 +522,6 @@ export default function RoutePlannerMap({
       });
       viaMarker.bindPopup(`<div style="font-family: sans-serif; font-size: 12px; font-weight: 600; color: #334155;">${index + 1}-nuqta: ${escapeHtml(point.name)}</div>`);
       layerGroup.addLayer(viaMarker);
-      boundsPoints.push([point.lat, point.lng]);
     });
 
     // Point B (End) - Draggable when not navigating
@@ -577,7 +580,7 @@ export default function RoutePlannerMap({
       const isVisited = Boolean(obj.is_visited || obj.last_visit);
       const isApproaching = approachingTJM?.tjm.object.source_id === obj.source_id;
 
-      let bgColor = isVisited ? '#059669' : isSelected ? '#4f46e5' : '#2563eb';
+      let bgColor = isUysotClient(obj) ? '#dc2626' : isVisited ? '#059669' : isSelected ? '#4f46e5' : '#2563eb';
       if (isApproaching) {
         bgColor = '#f59e0b'; // Gold alert when approaching
       }

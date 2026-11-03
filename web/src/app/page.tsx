@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import { useCallback, useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useObjects } from '../hooks/useObjects';
@@ -29,6 +29,10 @@ import ActiveFilterBar from '../components/Filters/ActiveFilterBar';
 import { brandOptions as listBrandOptions, clientOwnerOptions, matchesObjectFilters } from '../lib/filters';
 import MobileBottomNav from '../components/Navigation/MobileBottomNav';
 import UserProfileModal from '../components/User/UserProfileModal';
+
+
+// Every stop is a routing point, and the public routing server needs a request for each 90 of them.
+const MAX_FILTER_ROUTE_STOPS = 500;
 
 const CreateObjectModal = dynamic(() => import('../components/ObjectPanel/CreateObjectModal'), { 
   ssr: false 
@@ -273,12 +277,28 @@ function HomeContent() {
   const clientOptions = useMemo(() => clientOwnerOptions(allMarkers), [allMarkers]);
   const brandOptions = useMemo(() => listBrandOptions(allMarkers), [allMarkers]);
 
+  // Sends everything the filters show to the route planner, where every object becomes a stop.
+  const handleBuildFilterRoute = () => {
+    const stops = activeFilteredMarkers.filter(m => Number.isFinite(m.latitude) && Number.isFinite(m.longitude) && m.latitude && m.longitude);
+    if (stops.length === 0) {
+      alert("Filtrga mos, joylashuvi ma'lum obyekt yo'q.");
+      return;
+    }
+    if (stops.length > MAX_FILTER_ROUTE_STOPS) {
+      alert(`Filtrga ${stops.length.toLocaleString()} ta obyekt mos keldi. Marshrut ${MAX_FILTER_ROUTE_STOPS} tagacha obyektga tuziladi, filtrni toraytiring.`);
+      return;
+    }
+    setFilterRouteStops(stops);
+    handleTabChange('route');
+  };
+
   const handleRegionFilterChange = (reg: string) => {
     setSelectedRegion(reg);
     setSelectedDistrict('');
   };
 
   const openFilterModal = () => setIsFilterModalOpen(true);
+  const clearFilterRouteStops = useCallback(() => setFilterRouteStops(null), []);
   const activeFilterCount = countActiveFilters(advancedFilters, selectedDistrict, selectedStatus) + (selectedRegion ? 1 : 0) + (searchQuery.trim() ? 1 : 0);
 
   const renderFilterToolbar = () => (
@@ -306,6 +326,7 @@ function HomeContent() {
       onStatusChange={setSelectedStatus}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
+      onBuildRoute={handleBuildFilterRoute}
     />
   );
 
@@ -363,6 +384,7 @@ function HomeContent() {
   };
 
   const [activeAIStops, setActiveAIStops] = useState<AIRouteRecommendation[] | null>(null);
+  const [filterRouteStops, setFilterRouteStops] = useState<MapObject[] | null>(null);
 
   // Opens a deep-linked object once the user and the markers are known, so its CRM data loads for the right company.
   const focusHandled = useRef<string | null>(null);
@@ -807,6 +829,8 @@ function HomeContent() {
               currentUser={currentUser}
               companyId={effectiveCompanyId}
               initialAIStops={activeAIStops}
+              filterRouteStops={filterRouteStops}
+              onFilterRouteApplied={clearFilterRouteStops}
             />
           )}
 

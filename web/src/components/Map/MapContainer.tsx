@@ -7,6 +7,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import { MapObject } from '../../lib/types';
+import { isUysotClient } from '../../lib/filters';
 import { getRegionBySoato, UZBEKISTAN_CENTER, UZBEKISTAN_ZOOM } from '../../lib/regions';
 
 // Fix Leaflet default icon paths
@@ -147,6 +148,12 @@ export default function MapContainer({
       ringColor = 'ring-amber-500/30';
     }
 
+    // A UYSOT client must stand out whatever its other state is.
+    if (isUysotClient(marker)) {
+      bg = 'bg-red-600';
+      ringColor = 'ring-red-500/50';
+    }
+
     const ring = isSelected ? `ring-4 ${ringColor} scale-125 z-50` : '';
 
     return L.divIcon({
@@ -169,11 +176,12 @@ export default function MapContainer({
   // Cluster icon: Displays number of clustered buildings
   const createClusterCustomIcon = useCallback((cluster: any) => {
     const count = cluster.getChildCount();
+    const hasUysotClient = cluster.getAllChildMarkers().some((m: any) => m.options.uysotClient);
     return L.divIcon({
       html: `
         <div class="relative flex items-center justify-center cursor-pointer">
-          <div class="absolute w-12 h-12 rounded-full bg-emerald-500/20 animate-pulse"></div>
-          <div class="w-10 h-10 rounded-full bg-[#1b815f] text-white font-bold text-xs flex items-center justify-center border-2 border-white shadow-md">
+          <div class="absolute w-12 h-12 rounded-full ${hasUysotClient ? 'bg-red-500/25' : 'bg-emerald-500/20'} animate-pulse"></div>
+          <div class="w-10 h-10 rounded-full ${hasUysotClient ? 'bg-red-600' : 'bg-[#1b815f]'} text-white font-bold text-xs flex items-center justify-center border-2 border-white shadow-md">
             <span>${count}</span>
           </div>
         </div>
@@ -294,7 +302,7 @@ export default function MapContainer({
         : '—';
 
       const icon = createPinIcon(marker, isSelected);
-      const leafletMarker = L.marker([lat, lng], { icon });
+      const leafletMarker = L.marker([lat, lng], { icon, uysotClient: isUysotClient(marker) } as L.MarkerOptions);
 
       // Custom Popup DOM element to avoid innerHTML click issues
       const popupDiv = document.createElement('div');

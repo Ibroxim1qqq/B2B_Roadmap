@@ -1,5 +1,5 @@
 'use client';
-import { SlidersHorizontal } from 'lucide-react';
+import { Route, SlidersHorizontal } from 'lucide-react';
 import { AdvancedFilterState, countActiveFilters, INITIAL_ADVANCED_FILTERS } from '../../lib/filters';
 import { getRegionName } from '../../lib/regions';
 
@@ -14,6 +14,7 @@ interface ActiveFilterBarProps {
   onStatusChange: (status: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onBuildRoute?: () => void;
 }
 
 function Pill({ label, onRemove }: { label: string; onRemove: () => void }) {
@@ -35,7 +36,8 @@ export default function ActiveFilterBar({
   selectedStatus,
   onStatusChange,
   searchQuery,
-  onSearchChange
+  onSearchChange,
+  onBuildRoute
 }: ActiveFilterBarProps) {
   const hasSearch = searchQuery.trim() !== '';
   if (countActiveFilters(filters, selectedDistrict, selectedStatus) === 0 && !hasSearch && !selectedRegion) return null;
@@ -75,6 +77,18 @@ export default function ActiveFilterBar({
           <Pill label={`Muddati: ${filters.deadlineYear}`} onRemove={() => clear({ deadlineYear: '' })} />
         )}
       </div>
+      <div className="flex items-center gap-3 shrink-0 ml-auto">
+      {onBuildRoute && (
+        <button
+          type="button"
+          onClick={onBuildRoute}
+          title="Filtrdagi hamma obyektga marshrut tuzish"
+          className="h-7 px-2.5 rounded-lg flex items-center gap-1.5 bg-[#1b815f] hover:bg-[#15674c] text-white font-bold cursor-pointer transition-colors"
+        >
+          <Route className="w-3.5 h-3.5" />
+          <span>Marshrut</span>
+        </button>
+      )}
       <button
         type="button"
         onClick={() => {
@@ -84,10 +98,11 @@ export default function ActiveFilterBar({
           onStatusChange('');
           onSearchChange('');
         }}
-        className="text-rose-600 hover:text-rose-800 font-bold hover:underline shrink-0 cursor-pointer ml-auto text-xs"
+        className="text-rose-600 hover:text-rose-800 font-bold hover:underline cursor-pointer text-xs"
       >
         Tozalash
       </button>
+      </div>
     </div>
   );
 }
