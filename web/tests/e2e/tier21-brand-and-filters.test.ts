@@ -6,7 +6,7 @@ import { db } from '../../src/lib/db.ts';
 import { safeExternalUrl } from '../../src/lib/utils.ts';
 import { filterPoolByPrompt, parseCriteria, smartHeuristicPlanner } from '../../src/lib/aiEngine.ts';
 import {
-  brandOptions, clientOwnerOptions, countActiveFilters, DEFAULT_CLIENT_OWNERS, INITIAL_ADVANCED_FILTERS, matchesObjectFilters, normalizeFilterText, objectBrand, suggestFilterNames
+  brandOptions, clientOwnerOptions, countActiveFilters, DEFAULT_CLIENT_OWNERS, INITIAL_ADVANCED_FILTERS, matchesObjectFilters, normalizeFilterText, companyOptions, tjmOptions
 } from '../../src/lib/filters.ts';
 
 // ============================================================================
@@ -59,27 +59,30 @@ defineTest('The MChJ long form, quotes and case do not change a match', meta('FI
 });
 
 defineTest('TJM, brand and MChJ filters each read their own data', meta('FILTER_NAMES', 'name filters'), () => {
-  assert.equal(matchesObjectFilters(llc, advanced({ tjmName: 'residence' })), true);
-  assert.equal(matchesObjectFilters(llc, advanced({ tjmName: 'qavatli' })), true, 'object name counts as TJM');
-  assert.equal(matchesObjectFilters(llc, advanced({ tjmName: 'golden' })), false, 'a brand is not a TJM');
+  assert.equal(matchesObjectFilters(llc, advanced({ tjmName: 'samarqand residence' })), true);
+  assert.equal(matchesObjectFilters(llc, advanced({ tjmName: "Ko'p qavatli uy" })), false, "the source's object name is not an entered TJM");
+  assert.equal(matchesObjectFilters({ ...llc, tjm_name: 'Samarqand Residence 2' }, advanced({ tjmName: 'Samarqand Residence' })), false);
 
   assert.equal(matchesObjectFilters(llc, advanced({ brandName: 'golden house' })), true);
-  assert.equal(matchesObjectFilters(llc, advanced({ brandName: 'txtgroup' })), false, 'a company is not a brand');
-  assert.equal(matchesObjectFilters(plain, advanced({ brandName: 'golden' })), false);
+  assert.equal(matchesObjectFilters(llc, advanced({ brandName: 'TXTGROUP MCHJ' })), false, 'a company is not a brand');
+  assert.equal(matchesObjectFilters(domtut, advanced({ brandName: 'xon saroy' })), false, 'a builder is not an entered brand');
 
-  assert.equal(matchesObjectFilters(llc, advanced({ companyName: 'TXTGROUP MCHJ' })), true, 'builder');
-  assert.equal(matchesObjectFilters(llc, advanced({ companyName: 'arch build' })), true, 'customer');
-  assert.equal(matchesObjectFilters(llc, advanced({ companyName: 'golden' })), false);
-
-  assert.equal(matchesObjectFilters(llc, advanced({ brandName: 'golden', companyName: 'nobody' })), false, 'filters combine');
+  assert.equal(matchesObjectFilters(llc, advanced({ companyName: 'TXTGROUP MCHJ' })), true, 'builder, long and short form');
+  assert.equal(matchesObjectFilters(llc, advanced({ companyName: 'ARCH BUILD MCHJ' })), true, 'customer');
+  assert.equal(matchesObjectFilters(llc, advanced({ companyName: 'Golden House' })), false);
+  assert.equal(matchesObjectFilters(llc, advanced({ brandName: 'golden house', companyName: 'nobody' })), false, 'filters combine');
 });
 
-defineTest('A Domtut builder stands in as the brand until one is entered', meta('FILTER_BRAND_FALLBACK', 'objectBrand'), () => {
-  assert.equal(objectBrand(domtut), 'Xon Saroy');
-  assert.equal(objectBrand({ ...domtut, brand_name: 'Yangi' }), 'Yangi');
-  assert.equal(objectBrand(plain), '');
-  assert.equal(objectBrand({ ...plain, builder: 'TXTGROUP' }), '', 'a state register builder is a legal company, not a brand');
-  assert.equal(matchesObjectFilters(domtut, advanced({ brandName: 'xon saroy' })), true);
+defineTest('Filter lists show only the right source for each name', meta('FILTER_OPTIONS', 'option sources'), () => {
+  const objects = [llc, { ...llc, source_id: '101' }, domtut, plain];
+  assert.deepEqual(tjmOptions(objects), ['Samarqand Residence'], 'only entered names, never object names');
+  assert.deepEqual(brandOptions(objects), ['Golden House'], 'only entered brands, never builders');
+  const companies = companyOptions(objects);
+  assert.equal(companies.length, 3, 'builder, customer and the Domtut builder, once each');
+  assert.ok(companies.some(c => c.includes('TXTGROUP')) && companies.some(c => c.includes('ARCH BUILD')));
+  assert.ok(!companies.includes('—'), 'an empty value is not an option');
+  const messy: any[] = [{ builder: '-' }, { builder: ',,Zeta MCHJ' }, { builder: '"Alfa" MCHJ' }, { builder: ' ' }];
+  assert.deepEqual(companyOptions(messy), ['"Alfa" MCHJ', ',,Zeta MCHJ'], 'no placeholders, and punctuation does not decide the order');
 });
 
 defineTest('Search finds a brand, and the name filters count as active', meta('FILTER_SEARCH_COUNT', 'search and count'), () => {
@@ -87,14 +90,6 @@ defineTest('Search finds a brand, and the name filters count as active', meta('F
   assert.equal(matchesObjectFilters(plain, { ...advanced({}), search: 'golden' }), false);
   assert.equal(countActiveFilters({ ...INITIAL_ADVANCED_FILTERS, tjmName: 'a', brandName: 'b', companyName: 'c' }), 3);
   assert.equal(countActiveFilters({ ...INITIAL_ADVANCED_FILTERS, brandName: '   ' }), 0);
-});
-
-defineTest('Filter suggestions are unique, relevant and limited', meta('FILTER_SUGGEST', 'suggestFilterNames'), () => {
-  const objects = [llc, { ...llc, source_id: '101' }, domtut, plain];
-  assert.deepEqual(suggestFilterNames(objects, 'company', 'xon'), ['Xon Saroy']);
-  assert.ok(suggestFilterNames(objects, 'company', 'txtgroup mchj')[0].includes('TXTGROUP'));
-  assert.ok(!suggestFilterNames(objects, 'company', '').includes('—'));
-  assert.equal(suggestFilterNames(objects, 'tjm', '', 1).length, 1);
 });
 
 defineTest('Whose client it is can be saved and filtered', meta('CLIENT_OWNER', 'client_owner'), async () => {
@@ -201,10 +196,3 @@ defineTest('Only web links become clickable', meta('CRM_LINK_SAFE', 'safeExterna
   assert.equal(safeExternalUrl(undefined), null);
 });
 
-defineTest('Brand options come from the objects, and a chosen brand matches exactly', meta('BRAND_OPTIONS', 'brandOptions'), () => {
-  const objects = [llc, { ...llc, source_id: '101', brand_name: 'golden house' }, domtut, plain];
-  assert.deepEqual(brandOptions(objects).map(o => o.toLowerCase()), ['golden house', 'xon saroy']);
-  assert.deepEqual(brandOptions([]), []);
-  assert.equal(matchesObjectFilters(llc, advanced({ brandName: 'Golden House' })), true);
-  assert.equal(matchesObjectFilters({ ...llc, brand_name: 'Golden House Plus' }, advanced({ brandName: 'Golden House' })), false);
-});

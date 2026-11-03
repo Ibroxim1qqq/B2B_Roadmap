@@ -13,6 +13,8 @@ interface CreatableSelectProps {
   allowCreate?: boolean;
 }
 
+const MAX_VISIBLE_OPTIONS = 100;
+
 const TAG_COLORS = [
   'bg-emerald-100 text-emerald-800',
   'bg-sky-100 text-sky-800',
@@ -124,7 +126,7 @@ export default function CreatableSelect({
             className="w-full px-3 py-2 text-xs border-b border-slate-100 outline-none placeholder:text-slate-400"
           />
           <div role="listbox" aria-label={ariaLabel} className="max-h-44 overflow-y-auto py-1">
-            {visible.map(name => (
+            {visible.slice(0, MAX_VISIBLE_OPTIONS).map(name => (
               <button
                 key={name}
                 type="button"
@@ -137,6 +139,9 @@ export default function CreatableSelect({
                 {name === value && <Check className="w-3.5 h-3.5 text-[#1b815f] shrink-0" />}
               </button>
             ))}
+            {visible.length > MAX_VISIBLE_OPTIONS && (
+              <p className="px-3 py-2 text-xs text-slate-400">Yana {(visible.length - MAX_VISIBLE_OPTIONS).toLocaleString()} ta, qidirib toping</p>
+            )}
             {canCreate && (
               <button
                 type="button"

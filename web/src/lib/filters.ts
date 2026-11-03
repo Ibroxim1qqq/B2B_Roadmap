@@ -1,9 +1,9 @@
 import type { MapObject } from './types';
 
 export interface AdvancedFilterState {
-  tjmName: string; // residential complex name or the object's own name
-  brandName: string; // the sales brand a company entered, e.g. 'Golden House'
-  companyName: string; // the legal company (MChJ): builder or customer
+  tjmName: string; // the complex name a company entered
+  brandName: string; // the sales brand a company entered
+  companyName: string; // the legal company (MChJ) from the source: builder or customer
   clientOwner: string; // whose client this is: one option of the client list
   roomCount: string; // custom room count string, e.g. '1', '2', '3', '4'
   minApartments: string; // e.g. '50'
@@ -66,16 +66,14 @@ export function normalizeFilterText(value: unknown): string {
     .trim();
 }
 
+/** Source placeholders such as "—" or "-" carry no letter or digit. */
 function isEmptyValue(value: unknown): boolean {
-  const text = String(value ?? '').trim();
-  return text === '' || text === '—';
+  return !/[\p{L}\p{N}]/u.test(String(value ?? ''));
 }
 
-/** Domtut lists a sales brand as the builder, so it stands in until a company enters its own. */
-export function objectBrand(m: MapObject): string {
-  if (m.brand_name) return m.brand_name;
-  const isDomtut = String(m.source_id).startsWith('domtut_') || Boolean((m as any).is_uysot);
-  return isDomtut && !isEmptyValue(m.builder) ? String(m.builder) : '';
+/** Leading quotes and commas in source names must not decide the order. */
+function sortKey(name: string): string {
+  return name.replace(/^[^\p{L}\p{N}]+/u, '');
 }
 
 export interface ObjectFilterCriteria {
@@ -99,7 +97,7 @@ export function matchesObjectFilters(m: MapObject, criteria: ObjectFilterCriteri
     const q = searchQuery.toLowerCase().trim();
     const name = (m.object_name || '').toLowerCase();
     const tjm = (m.tjm_name || '').toLowerCase();
-    const brand = objectBrand(m).toLowerCase();
+    const brand = (m.brand_name || '').toLowerCase();
     const addr = (m.address || m.sales_office || '').toLowerCase();
     const phone = (m.phone || '').toLowerCase();
     const mgr = (m.manager_name || '').toLowerCase();
@@ -119,18 +117,17 @@ export function matchesObjectFilters(m: MapObject, criteria: ObjectFilterCriteri
     }
   }
 
-  // 3. TJM, Brand and MChJ names
+  // 3. TJM, Brand, MChJ and client are chosen options, so one must not also bring a similar name.
   const tjmQuery = normalizeFilterText(advancedFilters.tjmName);
-  if (tjmQuery && !normalizeFilterText(`${m.tjm_name || ''} ${m.object_name || ''}`).includes(tjmQuery)) {
+  if (tjmQuery && normalizeFilterText(m.tjm_name) !== tjmQuery) {
     return false;
   }
-  // Brand and client are chosen options, so one must not also bring a similar name.
   const brandQuery = normalizeFilterText(advancedFilters.brandName);
-  if (brandQuery && normalizeFilterText(objectBrand(m)) !== brandQuery) {
+  if (brandQuery && normalizeFilterText(m.brand_name) !== brandQuery) {
     return false;
   }
   const companyQuery = normalizeFilterText(advancedFilters.companyName);
-  if (companyQuery && !normalizeFilterText(`${m.builder || ''} ${m.customer || ''}`).includes(companyQuery)) {
+  if (companyQuery && normalizeFilterText(m.builder) !== companyQuery && normalizeFilterText(m.customer) !== companyQuery) {
     return false;
   }
 
@@ -232,11 +229,12 @@ function selectOptions(standard: string[], usedNames: unknown[]): string[] {
   const options = new Map<string, string>(standard.map(name => [normalizeFilterText(name), name]));
   const used = new Map<string, string>();
   for (const value of usedNames) {
-    const name = String(value ?? '').trim();
+    if (isEmptyValue(value)) continue;
+    const name = String(value).trim();
     const key = normalizeFilterText(name);
-    if (key && !options.has(key)) used.set(key, name);
+    if (key && !options.has(key) && !used.has(key)) used.set(key, name);
   }
-  return [...options.values(), ...[...used.values()].sort((a, b) => a.localeCompare(b))];
+  return [...options.values(), ...[...used.values()].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))];
 }
 
 export function clientOwnerOptions(objects: MapObject[]): string[] {
@@ -244,27 +242,14 @@ export function clientOwnerOptions(objects: MapObject[]): string[] {
 }
 
 export function brandOptions(objects: MapObject[]): string[] {
-  return selectOptions([], objects.map(objectBrand));
+  return selectOptions([], objects.map(m => m.brand_name));
 }
 
-export type FilterNameKind = 'tjm' | 'company';
-
-function namesOf(m: MapObject, kind: FilterNameKind): unknown[] {
-  if (kind === 'tjm') return [m.tjm_name, m.object_name];
-  return [m.builder, m.customer];
+export function tjmOptions(objects: MapObject[]): string[] {
+  return selectOptions([], objects.map(m => m.tjm_name));
 }
 
-/** Names to offer while typing into a filter, limited so the list stays usable. */
-export function suggestFilterNames(objects: MapObject[], kind: FilterNameKind, query: string, limit = 30): string[] {
-  const q = normalizeFilterText(query);
-  const found = new Map<string, string>();
-  for (const m of objects) {
-    for (const name of namesOf(m, kind)) {
-      if (isEmptyValue(name)) continue;
-      const key = normalizeFilterText(name);
-      if (!found.has(key) && key.includes(q)) found.set(key, String(name).trim());
-      if (found.size >= limit) return [...found.values()];
-    }
-  }
-  return [...found.values()];
+/** Builders and customers as the source lists them. */
+export function companyOptions(objects: MapObject[]): string[] {
+  return selectOptions([], objects.flatMap(m => [m.builder, m.customer]));
 }

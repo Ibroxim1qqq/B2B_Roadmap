@@ -9,8 +9,9 @@ import {
   INITIAL_ADVANCED_FILTERS, 
   brandOptions,
   clientOwnerOptions,
+  companyOptions,
   countActiveFilters,
-  suggestFilterNames
+  tjmOptions
 } from '../../lib/filters';
 import CreatableSelect from '../UI/CreatableSelect';
 import { getDistrictsForRegion, REGION_LIST } from '../../lib/regions';
@@ -34,6 +35,7 @@ interface AdvancedFilterModalProps {
   selectedRegion?: string;
   onRegionChange?: (regionSoato: string) => void;
   objects?: MapObject[];
+  showCompanyFilter?: boolean;
 }
 
 export default function AdvancedFilterModal({
@@ -50,7 +52,8 @@ export default function AdvancedFilterModal({
   onStatusChange,
   selectedRegion = '',
   onRegionChange,
-  objects = []
+  objects = [],
+  showCompanyFilter = true
 }: AdvancedFilterModalProps) {
   const activeCount = countActiveFilters(filters, selectedDistrict, selectedStatus) + (selectedRegion ? 1 : 0);
 
@@ -61,12 +64,12 @@ export default function AdvancedFilterModal({
   const suggestions = useMemo(() => {
     if (!isOpen) return { tjm: [], brand: [], company: [], client: [] };
     return {
-      tjm: suggestFilterNames(objects, 'tjm', filters.tjmName),
+      tjm: tjmOptions(objects),
       brand: brandOptions(objects),
-      company: suggestFilterNames(objects, 'company', filters.companyName),
+      company: companyOptions(objects),
       client: clientOwnerOptions(objects)
     };
-  }, [isOpen, objects, filters.tjmName, filters.companyName]);
+  }, [isOpen, objects]);
 
   if (!isOpen) return null;
 
@@ -109,20 +112,15 @@ export default function AdvancedFilterModal({
           {/* Nomi bo'yicha qidirish */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label htmlFor="filter-tjm" className="font-bold text-slate-800">TJM nomi</label>
-              <input
-                id="filter-tjm"
-                type="text"
-                list="filter-tjm-options"
-                autoComplete="off"
-                placeholder="Masalan: Samarqand Residence"
+              <span className="block font-bold text-slate-800">TJM nomi</span>
+              <CreatableSelect
+                ariaLabel="TJM filtri"
                 value={filters.tjmName}
-                onChange={(e) => onChange({ ...filters, tjmName: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                onChange={(value) => onChange({ ...filters, tjmName: value })}
+                options={suggestions.tjm}
+                placeholder="Barcha TJM"
+                allowCreate={false}
               />
-              <datalist id="filter-tjm-options">
-                {suggestions.tjm.map(name => <option key={name} value={name} />)}
-              </datalist>
             </div>
             <div className="space-y-1.5">
               <span className="block font-bold text-slate-800">Brend</span>
@@ -135,22 +133,19 @@ export default function AdvancedFilterModal({
                 allowCreate={false}
               />
             </div>
+            {showCompanyFilter && (
             <div className="space-y-1.5">
-              <label htmlFor="filter-company" className="font-bold text-slate-800">MChJ</label>
-              <input
-                id="filter-company"
-                type="text"
-                list="filter-company-options"
-                autoComplete="off"
-                placeholder="Masalan: TXTGROUP"
+              <span className="block font-bold text-slate-800">MChJ</span>
+              <CreatableSelect
+                ariaLabel="MChJ filtri"
                 value={filters.companyName}
-                onChange={(e) => onChange({ ...filters, companyName: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                onChange={(value) => onChange({ ...filters, companyName: value })}
+                options={suggestions.company}
+                placeholder="Barcha MChJ"
+                allowCreate={false}
               />
-              <datalist id="filter-company-options">
-                {suggestions.company.map(name => <option key={name} value={name} />)}
-              </datalist>
             </div>
+            )}
             <div className="space-y-1.5">
               <span className="block font-bold text-slate-800">Kimning klienti</span>
               <CreatableSelect

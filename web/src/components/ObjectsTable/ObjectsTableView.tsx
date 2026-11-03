@@ -1,5 +1,4 @@
 'use client';
-import { objectBrand } from '../../lib/filters';
 import { useState, useMemo, useRef } from 'react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { MapObject } from '../../lib/types';
@@ -437,9 +436,9 @@ export default function ObjectsTableView({
                         <div className="font-bold text-slate-900 group-hover:text-[#1b815f] transition-colors truncate">
                           {obj.tjm_name ? obj.tjm_name : obj.object_name}
                         </div>
-                        {objectBrand(obj) && (
+                        {obj.brand_name && (
                           <div className="text-[11px] font-semibold text-[#1b815f] truncate mt-0.5">
-                            {objectBrand(obj)}
+                            {obj.brand_name}
                           </div>
                         )}
                         {obj.tjm_name && (

@@ -1021,6 +1021,7 @@ function HomeContent() {
         filteredCount={displayList.length}
         totalCount={allMarkers.length}
         objects={allMarkers}
+        showCompanyFilter={!isUysotCompany(effectiveCompanyId)}
       />
 
       {/* Weekly Sync Notification Drawer */}
