@@ -10,6 +10,7 @@ import { MapObject, AIChatMessage, AIChatAction, AIRouteRecommendation } from '.
 
 interface GlobalAIAssistantProps {
   objects: MapObject[];
+  scopeObjects?: MapObject[]; // set while filters are active: the assistant answers from these only
   userLat?: number | null;
   userLng?: number | null;
   companyId?: string;
@@ -37,6 +38,7 @@ const INITIAL_PROMPTS = [
 
 export default function GlobalAIAssistant({
   objects,
+  scopeObjects,
   userLat,
   userLng,
   companyId,
@@ -100,7 +102,8 @@ export default function GlobalAIAssistant({
         companyId,
         userLat: userLat || undefined,
         userLng: userLng || undefined,
-        history: messages.filter(m => m.id !== 'welcome').map(m => ({ sender: m.sender, text: m.text }))
+        history: messages.filter(m => m.id !== 'welcome').map(m => ({ sender: m.sender, text: m.text })),
+        scopeIds: scopeObjects?.map(o => String(o.source_id))
       });
 
       if (res.success && res.data) {

@@ -11,6 +11,8 @@ export interface MapObject {
   district_name?: string;
   sphere_name?: string;
   tjm_name?: string;
+  brand_name?: string;
+  client_owner?: string;
   phone?: string;
   sales_office?: string;
   manager_name?: string;
@@ -34,6 +36,7 @@ export interface MapObject {
   difficulty?: string;
   notes?: string;
   distance?: number;
+  custom_values?: Record<string, string>;
 }
 
 export interface ObjectDetail {
@@ -68,6 +71,8 @@ export interface ObjectDetail {
   };
   internal: {
     tjm_name?: string;
+    brand_name?: string;
+    client_owner?: string;
     phone?: string;
     sales_office?: string;
     manager_name?: string;
@@ -151,6 +156,7 @@ export interface SavedRoute {
   tjm_count: number;
   tjm_list: string;
   buffer_radius_m: number;
+  via_points?: string; // JSON list of { lat, lng, name } between A and B
   notes?: string;
   status?: string;
   created_at: string;

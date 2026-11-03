@@ -6,13 +6,13 @@ export const dynamic = 'force-dynamic';
 
 const PAGE_SIZE = 25;
 const EDITABLE = new Set([
-  'object_name', 'address', 'region_soato', 'region_name', 'district_soato', 'district_name', 'latitude', 'longitude',
+  'object_name', 'brand_name', 'address', 'region_soato', 'region_name', 'district_soato', 'district_name', 'latitude', 'longitude',
   'status', 'customer', 'builder', 'designer', 'difficulty', 'floors', 'apartment_count', 'block_count', 'deadline',
   'phone', 'sales_office', 'manager_name', 'manager_phone', 'telegram', 'email', 'notes'
 ]);
 
 function matches(item: any, query: string): boolean {
-  return [item.source_id, item.object_name, item.tjm_name, item.address, item.district_name, item.builder, item.customer, item.phone, item.company_id]
+  return [item.source_id, item.object_name, item.tjm_name, item.brand_name, item.address, item.district_name, item.builder, item.customer, item.phone, item.company_id]
     .some(value => String(value ?? '').toLowerCase().includes(query));
 }
 

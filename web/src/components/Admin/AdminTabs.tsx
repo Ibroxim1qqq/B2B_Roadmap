@@ -283,6 +283,7 @@ const OBJECT_FIELDS: FormField[] = [
   { key: 'apartment_count', label: 'Xonadonlar', half: true },
   { key: 'block_count', label: 'Bloklar', half: true },
   { key: 'deadline', label: 'Muddat', half: true },
+  { key: 'brand_name', label: 'Brend', half: true },
   { key: 'builder', label: 'Quruvchi', half: true },
   { key: 'customer', label: 'Buyurtmachi', half: true },
   { key: 'phone', label: 'Telefon', half: true },

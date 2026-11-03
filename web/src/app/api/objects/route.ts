@@ -14,7 +14,7 @@ function formatObject(item: any) {
     region_name: item.region_name || getRegionName(item.region_soato),
     district_name: item.district_name || getDistrictName(item.district_soato),
     is_visited: Boolean(item.last_visit || item.is_visited),
-    has_internal: Boolean(item.phone || item.manager_name || item.tjm_name || item.notes || item.has_internal)
+    has_internal: Boolean(item.phone || item.manager_name || item.tjm_name || item.brand_name || item.notes || item.has_internal)
   };
 }
 

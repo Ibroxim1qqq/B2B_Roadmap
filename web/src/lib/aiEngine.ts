@@ -1,6 +1,7 @@
 import type { AIRoutePlanResult, AIPitchBriefing, AIChatAction } from './types.ts';
 import { calculateDistance } from './utils.ts';
 import { getDistrictName, REGION_LIST } from './regions.ts';
+import { INITIAL_ADVANCED_FILTERS, matchesObjectFilters } from './filters.ts';
 
 // -------------------------------------------------------------
 // Comprehensive District & Regional Center Registry
@@ -367,6 +368,7 @@ export function objectInLocation(o: any, location: ResolvedLocation): boolean {
 export interface QueryCriteria {
   location: ResolvedLocation | null;
   limit: number;
+  explicitLimit: boolean;
   exactFloor: number | null;
   minFloor: number | null;
   maxFloor: number | null;
@@ -378,6 +380,10 @@ export interface QueryCriteria {
   visited: boolean | null;
   highPriority: boolean;
   status: string | null;
+  filled: boolean | null;
+  difficulty: string | null;
+  roomCount: string | null;
+  ownClients: boolean;
   terms: string[];
   wantsRoute: boolean;
   wantsStats: boolean;
@@ -392,6 +398,7 @@ const STOP_WORDS = new Set([
   'kerak', 'menga', 'bizga', 'sizga', 'mening', 'men', 'biz', 'siz', 'yangi', 'eng', 'va', 'yoki', 'bilan', 'uchun', 'ham', 'bolgan', 'boladigan', 'qilib', 'qil',
   'ta', 'tasi', 'tadan', 'tagacha', 'dona', 'yaxshi', 'qulay', 'optimal', 'tez', 'tezkor', 'foydali', 'samarali', 'kerakli', 'qisqa', 'manzil', 'manzili', 'yil', 'yili', 'yilda', 'yilgi', 'nechta', 'qancha', 'jami', 'umumiy', 'statistika', 'statistikasi', 'statistikani', 'hisobot', 'hisoboti', 'hisobotni', 'tuman', 'tumani', 'tumandagi', 'tumanidagi',
   'shahar', 'shahri', 'shahardagi', 'shahridagi', 'viloyat', 'viloyati', 'viloyatdagi', 'viloyatidagi', 'markazi', 'markazidagi', 'hudud', 'hududi', 'hududida', 'hududidagi',
+  'brend', 'brendi', 'brendli', 'mchj', 'jamiyat', 'jamiyati', 'kompaniya', 'kompaniyasi', 'klient', 'klienti', 'klientlar', 'klientlari', 'klientlarimiz', 'mijoz', 'mijozi', 'mijozlar', 'mijozlari', 'mijozlarimiz', 'kimning', 'bizning', 'bizniki', 'toldirilgan', 'toldirilmagan', 'malumot', 'malumoti', 'malumotlari', 'malumotsiz', 'toifa', 'toifali', 'xona', 'xonali',
   'qavat', 'qavatli', 'qavatlik', 'qavatdan', 'qavatgacha', 'baland', 'past', 'kop', 'ortiq', 'ziyod', 'kam', 'gacha', 'dan', 'yuqori', 'ustuvor', 'ustuvorlik', 'muhim', 'xonadon', 'xonadonli', 'honadon', 'kvartira', 'kvartirali',
   'telefon', 'telefoni', 'telefonli', 'telefonlari', 'telefonlarini', 'raqam', 'raqami', 'raqamli', 'raqamlari', 'nomer', 'nomeri', 'aloqa', 'kiritilgan', 'rahbar', 'rahbari', 'menejer', 'menejeri', 'direktor', 'boshliq',
   'borilmagan', 'borilgan', 'bormagan', 'borganlar', 'tashrif', 'tashrifi', 'tashrifsiz', 'qilinmagan', 'qilingan', 'marshrut', 'marshruti', 'yonalish', 'tuz', 'tuzib', 'tuzing', 'reja', 'rejasi', 'borish', 'kunlik', 'bugun', 'bugungi', 'ertaga',
@@ -419,14 +426,26 @@ export function parseCriteria(query: string): QueryCriteria {
   const countMatch = q.match(/(\d+)\s*(?:ta|dona)\b(?!\s*(?:xonadon|honadon|kvartira|qavat))/) || q.match(/(\d+)\s*(?:bino|uy|obyekt|tjm)/);
   const limit = countMatch ? Math.min(Math.max(parseInt(countMatch[1], 10), 1), 20) : 5;
 
+  const floorRangeMatch = q.match(/(\d+)\s*(?:-|–|dan)\s*(\d+)\s*(?:gacha)?\s*-?\s*qavat/) || q.match(/(\d+)\s*-?\s*qavat\w*\s+(\d+)\s*-?\s*qavat/);
   const minFloorMatch = q.match(/(\d+)\s*-?\s*qavat(?:li)?(?:dan)?\s*(?:kop|ortiq|baland|yuqori|ziyod)/);
   const maxFloorMatch = q.match(/(\d+)\s*-?\s*qavat(?:li)?(?:gacha|dan\s*(?:kam|past))/);
-  const exactFloorMatch = !minFloorMatch && !maxFloorMatch ? q.match(/(\d+)\s*-?\s*qavat/) : null;
+  const exactFloorMatch = !floorRangeMatch && !minFloorMatch && !maxFloorMatch ? q.match(/(\d+)\s*-?\s*qavat/) : null;
 
+  const aptRangeMatch = q.match(/(\d+)\s*(?:ta)?\s*(?:dan|-|–)\s*(\d+)\s*(?:ta)?\s*(?:gacha)?\s*(?:xonadon|honadon|kvartira)/);
   const minAptMatch = q.match(/(\d+)\s*(?:ta)?\s*(?:dan)?\s*(?:kop|ortiq|ziyod)\s*(?:xonadon|honadon|kvartira)/)
-    || q.match(/(?:xonadon|honadon|kvartira)[^\d]*(\d+)\s*(?:ta)?\s*(?:dan)?\s*(?:kop|ortiq|ziyod)/);
+    || q.match(/(?:xonadon|honadon|kvartira)[^\d]*(\d+)\s*(?:ta)?\s*(?:dan)?\s*(?:kop|ortiq|ziyod)/)
+    || q.match(/(\d+)\s*\+\s*(?:xonadon|honadon|kvartira)/)
+    || q.match(/(\d+)\s*(?:ta\s*)?(?:xonadon|honadon|kvartira)\w*\s*(?:kop|ortiq|ziyod|yuqori)/);
   const maxAptMatch = q.match(/(\d+)\s*(?:ta)?\s*(?:dan)?\s*(?:kam|gacha)\s*(?:xonadon|honadon|kvartira)/)
-    || q.match(/(?:xonadon|honadon|kvartira)[^\d]*(\d+)\s*(?:ta)?\s*(?:dan)?\s*(?:kam|gacha)/);
+    || q.match(/(?:xonadon|honadon|kvartira)[^\d]*(\d+)\s*(?:ta)?\s*(?:dan)?\s*(?:kam|gacha)/)
+    || q.match(/(\d+)\s*(?:ta\s*)?(?:xonadon|honadon|kvartira)\w*?(?:gacha|dan\s*kam)/);
+  // "200 xonadonli" means a building of about that size or larger; an exact count would rarely match.
+  const plainAptMatch = !aptRangeMatch && !minAptMatch && !maxAptMatch ? q.match(/(\d+)\s*(?:ta\s*)?(?:xonadon|honadon|kvartira)/) : null;
+
+  const filled = /(toldirilmagan|malumotsiz)/.test(q) ? false : /toldirilgan/.test(q) ? true : null;
+  const difficultyMatch = q.match(/\b(iv|iii|ii|i)\s*-?\s*toifa/);
+  const roomMatch = q.match(/(\d)\s*-?\s*xonali/);
+  const ownClients = /(bizning|bizni?ki|ozimizning)\s*(?:klient|mijoz)|(?:klient|mijoz)\w*\s*bizni?ki/.test(q);
 
   const notVisited = /(borilmagan|bormagan|tashrif qilinmagan|tashrifsiz)/.test(q);
   const visited = !notVisited && /(borilgan|borganlar|tashrif qilingan)/.test(q);
@@ -442,6 +461,8 @@ export function parseCriteria(query: string): QueryCriteria {
     .split(/[^\p{L}\p{N}+]+/u)
     .filter(word => {
       if (!word || STOP_WORDS.has(word) || locationKeywords.some(kw => kw.split(' ').some(part => part.length >= 3 && word.startsWith(part)))) return false;
+      // Size and category words are read as filters above, whatever their ending.
+      if (/^(xonadon|honadon|kvartira|qavat|toifa)/.test(word) || word === difficultyMatch?.[1]) return false;
       // Bare numbers are counts and years; only long digit runs can be part of a phone number.
       if (/^\+?\d+$/.test(word)) return word.replace('+', '').length >= 5;
       if (/^\d+/.test(word)) return false;
@@ -450,24 +471,29 @@ export function parseCriteria(query: string): QueryCriteria {
     .map(stemTerm)
     .filter(term => !STOP_WORDS.has(term));
 
-  const hasFilters = Boolean(location || minFloorMatch || maxFloorMatch || exactFloorMatch || minAptMatch || maxAptMatch || notVisited || visited || status);
+  const hasFilters = Boolean(location || floorRangeMatch || minFloorMatch || maxFloorMatch || exactFloorMatch || aptRangeMatch || minAptMatch || maxAptMatch || plainAptMatch || notVisited || visited || status || filled !== null || difficultyMatch || roomMatch || ownClients);
   const isGreeting = !hasFilters && terms.length === 0
     && (q === '' || /^(salom|assalom|hello|hi\b|qalaysiz|rahmat|yordam|nima qila|qanday yordam)/.test(q));
 
   return {
     location,
     limit,
+    explicitLimit: Boolean(countMatch),
     exactFloor: exactFloorMatch ? parseInt(exactFloorMatch[1], 10) : null,
-    minFloor: minFloorMatch ? parseInt(minFloorMatch[1], 10) : null,
-    maxFloor: maxFloorMatch ? parseInt(maxFloorMatch[1], 10) : null,
-    minApartments: minAptMatch ? parseInt(minAptMatch[1], 10) : null,
-    maxApartments: maxAptMatch ? parseInt(maxAptMatch[1], 10) : null,
+    minFloor: floorRangeMatch ? parseInt(floorRangeMatch[1], 10) : minFloorMatch ? parseInt(minFloorMatch[1], 10) : null,
+    maxFloor: floorRangeMatch ? parseInt(floorRangeMatch[2], 10) : maxFloorMatch ? parseInt(maxFloorMatch[1], 10) : null,
+    minApartments: aptRangeMatch ? parseInt(aptRangeMatch[1], 10) : minAptMatch ? parseInt(minAptMatch[1], 10) : plainAptMatch ? parseInt(plainAptMatch[1], 10) : null,
+    maxApartments: aptRangeMatch ? parseInt(aptRangeMatch[2], 10) : maxAptMatch ? parseInt(maxAptMatch[1], 10) : null,
     deadlineYear: /(?:topshir|bit|tugay|muddat|yil)/.test(q) ? (q.match(/\b(20[2-3]\d)\b/)?.[1] ?? null) : null,
     requirePhone: /(telefon|nomer|raqam|aloqa)/.test(q),
     requireManager: /(rahbar|menejer|direktor|boshliq)/.test(q),
     visited: notVisited ? false : visited ? true : null,
     highPriority: /(yuqori ustuvor|ustuvor|muhim|priority)/.test(q),
     status,
+    filled,
+    difficulty: difficultyMatch ? difficultyMatch[1].toUpperCase() : null,
+    roomCount: roomMatch ? roomMatch[1] : null,
+    ownClients,
     terms,
     wantsRoute: /\b(marshrut|yonalish|reja|borish)/.test(q),
     wantsStats: /\b(nechta|qancha|jami|statistika|hisobot|umumiy)/.test(q),
@@ -499,13 +525,19 @@ function matchesFilters(o: any, c: QueryCriteria): boolean {
   if (c.visited !== null && isVisited !== c.visited) return false;
   if (c.highPriority && o.priority !== 'Yuqori') return false;
   if (c.status && !normalizeText(o.status).includes(c.status)) return false;
+  // A phone alone can come from the source, so "filled" looks at what a company entered itself.
+  const isFilled = Boolean(o.tjm_name || o.brand_name || o.client_owner || o.manager_name || o.sales_office);
+  if (c.filled !== null && isFilled !== c.filled) return false;
+  if (c.ownClients && !normalizeText(o.client_owner).includes('bizniki')) return false;
+  if (c.difficulty && String(o.difficulty || '').toUpperCase().match(/^(IV|III|II|I)\b/)?.[1] !== c.difficulty) return false;
+  if (c.roomCount && !matchesObjectFilters(o, { advanced: { ...INITIAL_ADVANCED_FILTERS, roomCount: c.roomCount } })) return false;
   return true;
 }
 
 function termHits(o: any, terms: string[]): number {
   if (terms.length === 0) return 0;
   const text = normalizeText([
-    o.object_name, o.tjm_name, o.builder, o.developer, o.customer, o.manager_name, o.phone,
+    o.object_name, o.tjm_name, o.brand_name, o.client_owner, o.builder, o.developer, o.customer, o.manager_name, o.phone,
     o.manager_phone, o.address, o.notes, o.sales_office, o.class_building
   ].filter(Boolean).join(' '));
   return terms.filter(term => text.includes(term) || text.includes(transliterate(term))).length;
@@ -533,6 +565,11 @@ function describeCriteria(c: QueryCriteria): string {
   if (c.visited === true) parts.push('tashrif qilingan');
   if (c.highPriority) parts.push('yuqori ustuvorlikdagi');
   if (c.status) parts.push(`holati: ${c.status}`);
+  if (c.filled === true) parts.push("ma'lumoti to'ldirilgan");
+  if (c.filled === false) parts.push("ma'lumoti to'ldirilmagan");
+  if (c.ownClients) parts.push('bizning klientlar');
+  if (c.difficulty) parts.push(`${c.difficulty}-toifa`);
+  if (c.roomCount) parts.push(`${c.roomCount} xonali`);
   if (c.terms.length > 0) parts.push(`"${c.terms.join(' ')}"`);
   return parts.map(p => `**${p}**`).join(', ');
 }
@@ -743,14 +780,14 @@ export function analyzeAndSearchDatabase(
 }
 
 /** Applies a free-text route request to the pool; used by the route planner dialog. */
-export function filterPoolByPrompt(pool: any[], prompt?: string): { scope: any[]; center?: [number, number] } {
+export function filterPoolByPrompt(pool: any[], prompt?: string): { scope: any[]; center?: [number, number]; limit?: number } {
   if (!prompt?.trim()) return { scope: pool };
   const c = parseCriteria(prompt);
   const filtered = pool.filter(o => matchesFilters(o, c));
   const scope = c.terms.length > 0 ? filtered.filter(o => termHits(o, c.terms) === c.terms.length) : filtered;
   // Free text the engine cannot read must not empty the plan; an explicit filter that matched nothing may.
   const hasFilter = filtered.length !== pool.length;
-  return { scope: scope.length > 0 || hasFilter ? scope : pool, center: c.location?.center };
+  return { scope: scope.length > 0 || hasFilter ? scope : pool, center: c.location?.center, limit: c.explicitLimit ? c.limit : undefined };
 }
 
 export function smartHeuristicPlanner(

@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import type L from 'leaflet';
 import { REGION_LIST, UZBEKISTAN_REGIONS } from '../../lib/regions';
+import { DEFAULT_CLIENT_OWNERS } from '../../lib/filters';
+import CreatableSelect from '../UI/CreatableSelect';
 
 
 interface CreateObjectModalProps {
@@ -16,6 +18,8 @@ interface CreateObjectModalProps {
   userLat?: number | null;
   defaultRegionSoato?: string;
   userLng?: number | null;
+  clientOptions?: string[];
+  brandOptions?: string[];
 }
 
 export default function CreateObjectModal({
@@ -24,7 +28,9 @@ export default function CreateObjectModal({
   onSave,
   userLat,
   defaultRegionSoato = '1718',
-  userLng
+  userLng,
+  clientOptions = DEFAULT_CLIENT_OWNERS,
+  brandOptions = []
 }: CreateObjectModalProps) {
   const [activeTab, setActiveTab] = useState<'basic' | 'crm'>('basic');
   const [submitting, setSubmitting] = useState(false);
@@ -32,6 +38,8 @@ export default function CreateObjectModal({
 
   // Form states
   const [tjmName, setTjmName] = useState('');
+  const [brandName, setBrandName] = useState('');
+  const [clientOwner, setClientOwner] = useState('');
   const [regionSoato, setRegionSoato] = useState(defaultRegionSoato);
   const [districtSoato, setDistrictSoato] = useState('');
   const region = UZBEKISTAN_REGIONS[regionSoato];
@@ -181,6 +189,8 @@ export default function CreateObjectModal({
       await onSave({
         tjm_name: tjmName.trim(),
         object_name: tjmName.trim(),
+        brand_name: brandName.trim(),
+        client_owner: clientOwner.trim(),
         region_soato: regionSoato,
         region_name: region?.name || '',
         district_soato: districtSoato,
@@ -207,6 +217,8 @@ export default function CreateObjectModal({
 
       // Reset form
       setTjmName('');
+      setBrandName('');
+      setClientOwner('');
       setAddress('');
       setFloors('');
       setApartments('');
@@ -361,6 +373,32 @@ export default function CreateObjectModal({
                     value={tjmName}
                     onChange={(e) => setTjmName(e.target.value)}
                     className="w-full text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl px-3 py-2.5 outline-none transition-all"
+                  />
+                </div>
+
+                {/* Brand */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Brend Nomi
+                  </label>
+                  <CreatableSelect
+                    ariaLabel="Brend nomi"
+                    value={brandName}
+                    onChange={setBrandName}
+                    options={brandOptions}
+                  />
+                </div>
+
+                {/* Client owner */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Kimning Klienti
+                  </label>
+                  <CreatableSelect
+                    ariaLabel="Kimning klienti"
+                    value={clientOwner}
+                    onChange={setClientOwner}
+                    options={clientOptions}
                   />
                 </div>
 

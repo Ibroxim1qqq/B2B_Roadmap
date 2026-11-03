@@ -396,11 +396,9 @@ export default function MapContainer({
     if (!isActive || !mapRef.current) return;
     const timer = setTimeout(() => {
       try {
-        if (mapRef.current && containerRef.current) {
-          const size = mapRef.current.getSize();
-          if (size && size.x > 0 && size.y > 0) {
-            mapRef.current.invalidateSize();
-          }
+        // getSize() stays 0x0 for a map created on a hidden tab, so the real element decides.
+        if (mapRef.current && containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
+          mapRef.current.invalidateSize();
         }
       } catch (_) {}
     }, 150);
@@ -413,8 +411,7 @@ export default function MapContainer({
     const map = mapRef.current;
     const observer = new ResizeObserver(() => {
       try {
-        const size = map.getSize();
-        if (size && size.x > 0 && size.y > 0) {
+        if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
           map.invalidateSize();
         }
       } catch (_) {}

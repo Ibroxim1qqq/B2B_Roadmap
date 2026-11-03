@@ -22,6 +22,7 @@ import './tier17-filters-and-pure-neon.test.ts';
 import './tier18-security-regressions.test.ts';
 import './tier19-ai-assistant-quality.test.ts';
 import './tier20-admin-management.test.ts';
+import './tier21-brand-and-filters.test.ts';
 
 // --- CLI Parsing ---
 const args = process.argv.slice(2);

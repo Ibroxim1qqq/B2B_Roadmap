@@ -25,6 +25,8 @@ import AdvancedFilterModal, {
   INITIAL_ADVANCED_FILTERS, 
   countActiveFilters 
 } from '../components/Filters/AdvancedFilterModal';
+import ActiveFilterBar from '../components/Filters/ActiveFilterBar';
+import { brandOptions as listBrandOptions, clientOwnerOptions, matchesObjectFilters } from '../lib/filters';
 import MobileBottomNav from '../components/Navigation/MobileBottomNav';
 import UserProfileModal from '../components/User/UserProfileModal';
 
@@ -264,121 +266,48 @@ function HomeContent() {
 
   // Real-time active filtering for region, search, district, and status
   const activeFilteredMarkers = useMemo(() => {
-    return allMarkers.filter(m => {
-      // 1. Region Filter
-      if (selectedRegion && m.region_soato !== selectedRegion) {
-        return false;
-      }
-
-      // 1. Search Query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const name = (m.object_name || '').toLowerCase();
-        const tjm = (m.tjm_name || '').toLowerCase();
-        const addr = (m.address || m.sales_office || '').toLowerCase();
-        const phone = (m.phone || '').toLowerCase();
-        const mgr = (m.manager_name || '').toLowerCase();
-        const builder = (m.builder || '').toLowerCase();
-        const customer = (m.customer || '').toLowerCase();
-        if (
-          !name.includes(q) && 
-          !tjm.includes(q) && 
-          !addr.includes(q) && 
-          !phone.includes(q) && 
-          !mgr.includes(q) &&
-          !builder.includes(q) &&
-          !customer.includes(q)
-        ) {
-          return false;
-        }
-      }
-
-      // 2. District Filter
-      if (selectedDistrict && selectedDistrict !== 'Barcha tumanlar') {
-                const dClean = selectedDistrict.toLowerCase().replace(/['`’‘]/g, '').replace(/(\s*tumani|\s*shahar|\s*shahri)$/i, '').trim();
-        const mDist = (m.district_name || '').toLowerCase().replace(/['`’‘]/g, '').trim();
-        const mAddr = (m.address || '').toLowerCase().replace(/['`’‘]/g, '').trim();
-        const mName = (m.object_name || '').toLowerCase().replace(/['`’‘]/g, '').trim();
-        const matchesDistrict = (mDist && (mDist.includes(dClean) || dClean.includes(mDist))) || mAddr.includes(dClean) || mName.includes(dClean);
-        if (!matchesDistrict) {
-          return false;
-        }
-      }
-
-      // 3. Status Filter (e.g. Jarayonda, To'xtatilgan, Muzlatilgan, Topshirilgan)
-      if (selectedStatus && selectedStatus !== 'Barcha statuslar') {
-        const s = selectedStatus.toLowerCase().replace(/(da|ida)$/, '').trim();
-        const mStatus = (m.status || '').toLowerCase().trim();
-        if (!mStatus.includes(s) && !s.includes(mStatus)) {
-          return false;
-        }
-      }
-
-      // 4. Room count (Custom input matching)
-      if (advancedFilters.roomCount && advancedFilters.roomCount.trim() !== '') {
-        const query = advancedFilters.roomCount.trim();
-        const rawName = ((m.object_name || '') + ' ' + (m.tjm_name || '')).toLowerCase();
-        const numbers = query.match(/\d+/g) || [];
-        if (numbers.length > 0) {
-          const matches = numbers.some(num => {
-            const word = num === '1' ? 'bir' : num === '2' ? 'ikki' : num === '3' ? 'uch' : num === '4' ? "to['`]?rt" : num;
-            const regex = new RegExp('(^|\\D)' + num + '\\s*[-–]?\\s*xona|' + word + '\\s*xona', 'i');
-            return regex.test(rawName);
-          });
-          if (!matches) return false;
-        } else {
-          if (!rawName.includes(query.toLowerCase())) return false;
-        }
-      }
-
-      // 5. Apartment Range (Custom min/max)
-      if (advancedFilters.minApartments || advancedFilters.maxApartments) {
-        const cleanAp = parseInt(String(m.apartment_count || '0').replace(/\D+/g, '') || '0', 10);
-        const minAp = advancedFilters.minApartments ? parseInt(advancedFilters.minApartments, 10) : 0;
-        const maxAp = advancedFilters.maxApartments ? parseInt(advancedFilters.maxApartments, 10) : Infinity;
-        if (cleanAp < minAp || cleanAp > maxAp) return false;
-      }
-
-      // 6. Floor Range (Custom min/max)
-      if (advancedFilters.minFloors || advancedFilters.maxFloors) {
-        // Floors may be a range such as "9-16": keep the object when the range overlaps the filter.
-        const floorNumbers = (String(m.floors || '').match(/\d+/g) || []).map(Number);
-        const lowFloor = floorNumbers.length ? Math.min(...floorNumbers) : 0;
-        const highFloor = floorNumbers.length ? Math.max(...floorNumbers) : 0;
-        const minFl = advancedFilters.minFloors ? parseInt(advancedFilters.minFloors, 10) : 0;
-        const maxFl = advancedFilters.maxFloors ? parseInt(advancedFilters.maxFloors, 10) : Infinity;
-        if (highFloor < minFl || lowFloor > maxFl) return false;
-      }
-
-      // 7. Visit Status (Tashrif holati)
-      if (advancedFilters.visitStatus && advancedFilters.visitStatus !== 'all') {
-        const isVisited = Boolean(m.is_visited || m.last_visit);
-        if (advancedFilters.visitStatus === 'visited' && !isVisited) return false;
-        if (advancedFilters.visitStatus === 'not_visited' && isVisited) return false;
-      }
-
-      // 8. CRM Status (B2B ma'lumot to'ldirilganligi)
-      if (advancedFilters.crmStatus && advancedFilters.crmStatus !== 'all') {
-        const isFilled = Boolean(m.has_internal || m.phone || m.manager_name || m.tjm_name || m.sales_office);
-        if (advancedFilters.crmStatus === 'filled' && !isFilled) return false;
-        if (advancedFilters.crmStatus === 'empty' && isFilled) return false;
-      }
-
-      // 9. Difficulty / Category (Qurilish toifasi)
-      if (advancedFilters.difficulty && advancedFilters.difficulty !== 'all') {
-        const category = (m.difficulty || '').toUpperCase().match(/^(IV|III|II|I)\b/)?.[1];
-        if (category !== advancedFilters.difficulty) return false;
-      }
-
-      // 10. Deadline Year (Topshirish muddati)
-      if (advancedFilters.deadlineYear && advancedFilters.deadlineYear.trim() !== '' && advancedFilters.deadlineYear !== 'all') {
-        const dline = (m.deadline || '').toLowerCase();
-        if (!dline.includes(advancedFilters.deadlineYear.trim().toLowerCase())) return false;
-      }
-
-      return true;
-    });
+    const criteria = { region: selectedRegion, search: searchQuery, district: selectedDistrict, status: selectedStatus, advanced: advancedFilters };
+    return allMarkers.filter(m => matchesObjectFilters(m, criteria));
   }, [allMarkers, selectedRegion, searchQuery, selectedDistrict, selectedStatus, advancedFilters]);
+
+  const clientOptions = useMemo(() => clientOwnerOptions(allMarkers), [allMarkers]);
+  const brandOptions = useMemo(() => listBrandOptions(allMarkers), [allMarkers]);
+
+  const handleRegionFilterChange = (reg: string) => {
+    setSelectedRegion(reg);
+    setSelectedDistrict('');
+  };
+
+  const openFilterModal = () => setIsFilterModalOpen(true);
+  const activeFilterCount = countActiveFilters(advancedFilters, selectedDistrict, selectedStatus) + (selectedRegion ? 1 : 0) + (searchQuery.trim() ? 1 : 0);
+
+  const renderFilterToolbar = () => (
+            <FilterToolbar
+              selectedDistrict={selectedDistrict}
+              onDistrictChange={setSelectedDistrict}
+              selectedStatus={selectedStatus}
+              onStatusChange={setSelectedStatus}
+              onMyLocation={handleLocateMe}
+              locating={locating}
+              onOpenAdvancedFilters={openFilterModal}
+              activeAdvancedFilterCount={activeFilterCount}
+            />
+  );
+
+  const activeFilterBar = () => (
+    <ActiveFilterBar
+      filters={advancedFilters}
+      onChange={setAdvancedFilters}
+      selectedRegion={selectedRegion}
+      onRegionChange={handleRegionFilterChange}
+      selectedDistrict={selectedDistrict}
+      onDistrictChange={setSelectedDistrict}
+      selectedStatus={selectedStatus}
+      onStatusChange={setSelectedStatus}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+    />
+  );
 
   // Calculate distances if user location exists
   const objectsWithDistance = useDistance(activeFilteredMarkers, location.lat, location.lng);
@@ -386,15 +315,13 @@ function HomeContent() {
 
   // Real-time calculation for the 4 top summary cards (reflects selected region or nationwide)
   const stats = useMemo(() => {
-    const targetPool = selectedRegion 
-      ? allMarkers.filter(m => m.region_soato === selectedRegion)
-      : allMarkers;
+    const targetPool = activeFilteredMarkers;
     const total = targetPool.length;
     const visited = targetPool.filter(m => Boolean(m.is_visited || m.last_visit)).length;
     const filled = targetPool.filter(m => Boolean(m.has_internal || m.tjm_name || m.phone || m.manager_name)).length;
     const notVisited = Math.max(0, total - visited);
     return { total, visited, filled, notVisited };
-  }, [allMarkers, selectedRegion]);
+  }, [activeFilteredMarkers]);
 
   // Load custom field settings
   useEffect(() => {
@@ -741,6 +668,9 @@ function HomeContent() {
         {/* Workspace Body (Center Canvas + Right Panel) */}
         <div className="flex-1 flex overflow-hidden min-h-0 relative">
           <main className="flex-1 flex flex-col overflow-y-auto bg-slate-100 min-w-0 pb-16 lg:pb-0">
+            {/* Active filters stay on top of every page that the filters apply to */}
+            {activeTab !== 'custom_fields' && activeFilterBar()}
+
             {/* Map View: Kept mounted in DOM to prevent Leaflet container re-use crashes */}
             <div className={activeTab === 'map' ? 'flex flex-col flex-1 h-full min-w-0 overflow-hidden' : 'hidden'}>
             {/* SuperAdmin View Indicator */}
@@ -830,97 +760,7 @@ function HomeContent() {
             </div>
 
             {/* 2. Filter Pills Bar (Directly Above the Map) */}
-            <FilterToolbar
-              selectedRegion={selectedRegion}
-              onRegionChange={(reg) => {
-                setSelectedRegion(reg);
-                setSelectedDistrict('');
-              }}
-              selectedDistrict={selectedDistrict}
-              onDistrictChange={setSelectedDistrict}
-              selectedStatus={selectedStatus}
-              onStatusChange={setSelectedStatus}
-              onMyLocation={handleLocateMe}
-              locating={locating}
-              onOpenAdvancedFilters={() => setIsFilterModalOpen(true)}
-              activeAdvancedFilterCount={countActiveFilters(advancedFilters, selectedDistrict, selectedStatus)}
-            />
-
-            {/* Active Filters Pill Bar */}
-            {countActiveFilters(advancedFilters) > 0 && (
-              <div className="bg-emerald-50/90 border-b border-emerald-200/60 px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto text-xs shrink-0 select-none">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-bold text-emerald-950 flex items-center gap-1 text-[11px] uppercase tracking-wider">
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#1b815f]" />
-                    <span>Filtrlar:</span>
-                  </span>
-                  {selectedDistrict && selectedDistrict !== 'Barcha tumanlar' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>Tuman: {selectedDistrict}</span>
-                      <button onClick={() => setSelectedDistrict('')} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  )}
-                  {selectedStatus && selectedStatus !== 'Barcha statuslar' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>Status: {selectedStatus}</span>
-                      <button onClick={() => setSelectedStatus('')} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  )}
-                  {advancedFilters.roomCount && advancedFilters.roomCount.trim() !== '' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>Xona: {advancedFilters.roomCount}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, roomCount: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  )}
-                  {(advancedFilters.minApartments || advancedFilters.maxApartments) && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>Xonadon: {advancedFilters.minApartments || '0'} - {advancedFilters.maxApartments || '∞'}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, minApartments: '', maxApartments: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  )}
-                  {(advancedFilters.minFloors || advancedFilters.maxFloors) && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>Qavat: {advancedFilters.minFloors || '0'} - {advancedFilters.maxFloors || '∞'}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, minFloors: '', maxFloors: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  )}
-                  {advancedFilters.visitStatus !== 'all' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>{advancedFilters.visitStatus === 'visited' ? 'Borilgan' : 'Borilmagan'}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, visitStatus: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  )}
-                  {advancedFilters.crmStatus !== 'all' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>{advancedFilters.crmStatus === 'filled' ? 'B2B to\'ldirilgan' : 'B2B kiritilmagan'}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, crmStatus: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  )}
-                  {advancedFilters.difficulty !== 'all' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>Toifa: {advancedFilters.difficulty}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, difficulty: 'all' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  )}
-                  {advancedFilters.deadlineYear && advancedFilters.deadlineYear.trim() !== '' && advancedFilters.deadlineYear !== 'all' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold shadow-2xs">
-                      <span>Muddati: {advancedFilters.deadlineYear}</span>
-                      <button onClick={() => setAdvancedFilters(prev => ({ ...prev, deadlineYear: '' }))} className="hover:text-rose-600 cursor-pointer font-bold ml-0.5">×</button>
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setAdvancedFilters(INITIAL_ADVANCED_FILTERS);
-                    setSelectedDistrict('');
-                    setSelectedStatus('');
-                  }}
-                  className="text-rose-600 hover:text-rose-800 font-bold hover:underline shrink-0 cursor-pointer ml-auto text-xs"
-                >
-                  Tozalash
-                </button>
-              </div>
-            )}
+            {renderFilterToolbar()}
 
             {/* 3. Fullscreen Map Area (Edge-to-edge on mobile) */}
             <div className="flex-1 p-0 lg:p-5 lg:pt-2 lg:pb-4 min-h-0 relative">
@@ -956,6 +796,9 @@ function HomeContent() {
           {activeTab === 'route' && (
             <RoutePlannerView
               objects={allMarkers}
+              filteredObjects={activeFilteredMarkers}
+              onOpenFilters={openFilterModal}
+              activeFilterCount={activeFilterCount}
               userLat={location.lat}
               userLng={location.lng}
               onSelectObject={handleSelectObject}
@@ -977,19 +820,16 @@ function HomeContent() {
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               selectedRegion={selectedRegion}
-              onRegionChange={(reg) => {
-                setSelectedRegion(reg);
-                setSelectedDistrict('');
-              }}
               selectedDistrict={selectedDistrict}
               onDistrictChange={setSelectedDistrict}
               selectedStatus={selectedStatus}
               onStatusChange={setSelectedStatus}
-              onOpenAdvancedFilters={() => setIsFilterModalOpen(true)}
-              activeAdvancedFilterCount={countActiveFilters(advancedFilters, selectedDistrict, selectedStatus)}
+              onOpenAdvancedFilters={openFilterModal}
+              activeAdvancedFilterCount={activeFilterCount}
             />
           )}
 
+          {activeTab === 'dashboard' && renderFilterToolbar()}
           {activeTab === 'dashboard' && (
             <DashboardView
               objects={displayList}
@@ -1021,6 +861,8 @@ function HomeContent() {
                   sourceId={selectedId}
                   initialData={objectDetail.internal}
                   fields={customFields}
+                  clientOptions={clientOptions}
+                  brandOptions={brandOptions}
                   onSave={handleSaveObject}
                   onCancel={() => setIsEditing(false)}
                   onClear={handleClearB2B}
@@ -1056,6 +898,8 @@ function HomeContent() {
                     sourceId={selectedId as string}
                     initialData={objectDetail.internal}
                     fields={customFields}
+                  clientOptions={clientOptions}
+                  brandOptions={brandOptions}
                     onSave={handleSaveObject}
                     onCancel={() => setIsEditing(false)}
                     onClear={handleClearB2B}
@@ -1102,6 +946,8 @@ function HomeContent() {
                   sourceId={selectedId}
                   initialData={objectDetail.internal}
                   fields={customFields}
+                  clientOptions={clientOptions}
+                  brandOptions={brandOptions}
                   onSave={handleSaveObject}
                   onCancel={() => setIsEditing(false)}
                   onClear={handleClearB2B}
@@ -1142,6 +988,8 @@ function HomeContent() {
         userLat={location.lat}
         userLng={location.lng}
         defaultRegionSoato={selectedRegion || (isUysotCompany(effectiveCompanyId) ? '1726' : '1718')}
+        clientOptions={clientOptions}
+        brandOptions={brandOptions}
       />
 
       {/* Mobile Bottom Navigation */}
@@ -1160,6 +1008,7 @@ function HomeContent() {
         onChange={setAdvancedFilters}
         onReset={() => {
           setAdvancedFilters(INITIAL_ADVANCED_FILTERS);
+          setSelectedRegion('');
           setSelectedDistrict('');
           setSelectedStatus('');
         }}
@@ -1168,12 +1017,10 @@ function HomeContent() {
         selectedStatus={selectedStatus}
         onStatusChange={setSelectedStatus}
         selectedRegion={selectedRegion}
-        onRegionChange={(reg) => {
-          setSelectedRegion(reg);
-          setSelectedDistrict('');
-        }}
+        onRegionChange={handleRegionFilterChange}
         filteredCount={displayList.length}
         totalCount={allMarkers.length}
+        objects={allMarkers}
       />
 
       {/* Weekly Sync Notification Drawer */}
@@ -1189,6 +1036,7 @@ function HomeContent() {
       {/* Global AI Copilot Assistant */}
       <GlobalAIAssistant
         objects={allMarkers}
+        scopeObjects={activeFilterCount > 0 ? activeFilteredMarkers : undefined}
         userLat={location.lat}
         userLng={location.lng}
         companyId={effectiveCompanyId}

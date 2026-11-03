@@ -63,6 +63,7 @@ function safeFlyTo(map: L.Map | null, center: [number, number], zoom?: number, o
 interface RoutePlannerMapProps {
   startPoint: { lat: number; lng: number; name: string } | null;
   endPoint: { lat: number; lng: number; name: string } | null;
+  viaPoints?: { lat: number; lng: number; name: string }[];
   routeCoords: [number, number][];
   matchedTJMs: TJMAlongRoute[];
   bufferRadiusMeters: number;
@@ -70,11 +71,11 @@ interface RoutePlannerMapProps {
   selectedTJMId: string | null;
   onSelectTJM: (id: string) => void;
   showAllMarkers?: boolean;
-  pickingMode: 'A' | 'B' | null;
+  pickingMode: 'A' | 'B' | 'via' | null;
   onMapClick: (lat: number, lng: number) => void;
   onDragStartPoint: (lat: number, lng: number) => void;
   onDragEndPoint: (lat: number, lng: number) => void;
-  onSetPointFromObject: (obj: MapObject, pointType: 'A' | 'B') => void;
+  onSetPointFromObject: (obj: MapObject, pointType: 'A' | 'B' | 'via') => void;
   onCancelPicking: () => void;
   onClearRoute?: () => void;
   onStartNavigation?: () => void;
@@ -178,6 +179,7 @@ function getPinCursor(type: 'A' | 'B'): string {
 export default function RoutePlannerMap({
   startPoint,
   endPoint,
+  viaPoints = [],
   routeCoords,
   matchedTJMs,
   bufferRadiusMeters,
@@ -205,8 +207,9 @@ export default function RoutePlannerMap({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   // Active pick type: 'A' (green pin) or 'B' (red pin) or null
-  const activePickType: 'A' | 'B' | null = useMemo(() => {
+  const activePickType: 'A' | 'B' | 'via' | null = useMemo(() => {
     if (isNavigating) return null;
+    if (pickingMode === 'via') return 'via';
     if (pickingMode === 'A' || !startPoint) return 'A';
     if (pickingMode === 'B' || (startPoint && !endPoint)) return 'B';
     return null;
@@ -322,7 +325,7 @@ export default function RoutePlannerMap({
 
     if (containerRef.current) {
       if (activePickType) {
-        containerRef.current.style.cursor = getPinCursor(activePickType);
+        containerRef.current.style.cursor = activePickType === 'via' ? 'crosshair' : getPinCursor(activePickType);
       } else {
         containerRef.current.style.cursor = '';
       }
@@ -502,6 +505,22 @@ export default function RoutePlannerMap({
       boundsPoints.push([startPoint.lat, startPoint.lng]);
     }
 
+    // Points between A and B, numbered in driving order
+    viaPoints.forEach((point, index) => {
+      const viaMarker = L.marker([point.lat, point.lng], {
+        icon: L.divIcon({
+          className: 'custom-via-marker',
+          html: `<div style="width: 26px; height: 26px; border-radius: 50%; background: #334155; color: white; border: 2px solid white; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${index + 1}</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13]
+        }),
+        title: point.name
+      });
+      viaMarker.bindPopup(`<div style="font-family: sans-serif; font-size: 12px; font-weight: 600; color: #334155;">${index + 1}-nuqta: ${escapeHtml(point.name)}</div>`);
+      layerGroup.addLayer(viaMarker);
+      boundsPoints.push([point.lat, point.lng]);
+    });
+
     // Point B (End) - Draggable when not navigating
     if (endPoint) {
       const endIcon = L.divIcon({
@@ -644,6 +663,7 @@ export default function RoutePlannerMap({
     matchedTJMs, 
     startPoint, 
     endPoint, 
+    viaPoints, 
     bufferRadiusMeters, 
     selectedTJMId, 
     showAllMarkers, 
@@ -936,7 +956,7 @@ export default function RoutePlannerMap({
       {activePickType && (
         <div className="hidden md:flex absolute top-4 left-1/2 -translate-x-1/2 z-[500] h-10 px-4 rounded-lg bg-white shadow-md items-center gap-3 text-[13px]">
           <span className="text-slate-900 whitespace-nowrap">
-            {activePickType === 'A' ? 'Boshlanish joyini tanlang' : 'Borish joyini tanlang'}
+            {activePickType === 'A' ? 'Boshlanish joyini tanlang' : activePickType === 'via' ? 'Oraliq nuqtani tanlang' : 'Borish joyini tanlang'}
           </span>
           {pickingMode && (
             <button type="button" onClick={onCancelPicking} className="text-slate-500 hover:text-slate-900 cursor-pointer">

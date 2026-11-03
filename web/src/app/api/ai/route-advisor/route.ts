@@ -22,12 +22,21 @@ interface RequestBody {
   unvisited_only?: boolean;
   high_priority_only?: boolean;
   max_stops?: number;
+  scope_ids?: unknown;
   target_object?: any;
   history?: { sender?: string; text?: string }[];
 }
 
 const poolCache = new Map<string, { pool: any[]; at: number }>();
 const CACHE_TTL_MS = 60 * 1000;
+const MAX_SCOPE_IDS = 20000;
+
+/** Narrows the company's own objects to what the user's filters show; ids outside the pool are ignored. */
+function applyFilterScope(pool: any[], scopeIds: unknown): any[] {
+  if (!Array.isArray(scopeIds)) return pool;
+  const ids = new Set(scopeIds.slice(0, MAX_SCOPE_IDS).map(String));
+  return pool.filter(o => ids.has(String(o.source_id)));
+}
 
 async function getCompanyPool(companyId: string, isUysot: boolean): Promise<any[]> {
   const cached = poolCache.get(companyId);
@@ -123,7 +132,9 @@ export async function POST(req: Request) {
       ? user.company_name || companyId
       : (await db.getCompanies()).find(c => c.company_id === companyId)?.company_name || companyId;
 
-    const pool = await getCompanyPool(companyId, isUysot);
+    const companyPool = await getCompanyPool(companyId, isUysot);
+    const pool = applyFilterScope(companyPool, body.scope_ids);
+    const isScoped = Array.isArray(body.scope_ids);
 
     // ACTION A: Interactive Global Chat & Search
     if (action === 'chat') {
@@ -162,11 +173,13 @@ Faqat shu JSON strukturasida javob qaytaring:
         }
       }
 
+      const scopeNote = isScoped ? `Faol filtrlarga mos **${pool.length.toLocaleString()}** ta obyekt ichidan javob beryapman.\n\n` : '';
+
       return NextResponse.json({
         success: true,
         engine,
         data: {
-          text: groundTruth.replyText,
+          text: scopeNote + groundTruth.replyText,
           suggested_objects: groundTruth.suggestedObjects,
           route_stops: groundTruth.routeStops,
           actions: groundTruth.actions
@@ -222,8 +235,9 @@ Faqat shu JSON strukturasida O'ZBEK TILIDA javob qaytaring:
     }
 
     // ACTION C: Plan Route
-    const { scope, center } = filterPoolByPrompt(pool, body.prompt);
-    const maxStops = Math.min(Math.max(Number(body.max_stops) || 5, 1), 8);
+    const { scope, center, limit } = filterPoolByPrompt(pool, body.prompt);
+    // A count written in the request wins over the dialog's selector.
+    const maxStops = limit ?? Math.min(Math.max(Number(body.max_stops) || 5, 1), 8);
     const plan = smartHeuristicPlanner(
       scope,
       body.user_lat,

@@ -111,11 +111,11 @@ defineTest('Navbar.tsx binds useClickOutside to user profile dropdown', {
   assert.match(content, /setUserDropdownOpen\(false\)/, 'Navbar.tsx outside click must close user dropdown');
 });
 
-defineTest('FilterToolbar.tsx binds useClickOutside to district and status dropdowns', {
+defineTest('ObjectsTableView.tsx binds useClickOutside to district and status dropdowns', {
   tier: 1, milestone: 1, feature: 'F1',
-  description: 'FilterToolbar attaches refs and useClickOutside to filter dropdowns'
+  description: 'The table attaches refs and useClickOutside to its filter dropdowns'
 }, () => {
-  const content = readSrcFile('components/Filters/FilterToolbar.tsx');
+  const content = readSrcFile('components/ObjectsTable/ObjectsTableView.tsx');
   assert.match(content, /useClickOutside\s*\(\s*districtRef/, 'FilterToolbar must bind useClickOutside to districtRef');
   assert.match(content, /useClickOutside\s*\(\s*statusRef/, 'FilterToolbar must bind useClickOutside to statusRef');
   assert.match(content, /ref=\{districtRef\}/, 'FilterToolbar must attach districtRef to JSX element');
@@ -316,12 +316,12 @@ defineTest('ObjectsTableView.tsx table data rows permit text selection', {
 // FEATURE 5: Fake Chevron Removal
 // ============================================================================
 
-defineTest('FilterToolbar.tsx region selector supports interactive navigation or clean styling', {
+defineTest('The region filter lives inside the filter dialog, not the toolbar', {
   tier: 1, milestone: 2, feature: 'F5',
-  description: 'Region selector supports selectedRegion and clean styling'
+  description: 'Region is chosen in AdvancedFilterModal'
 }, () => {
-  const content = readSrcFile('components/Filters/FilterToolbar.tsx');
-  assert.ok(content.includes('selectedRegion') || content.includes('Region'), 'FilterToolbar supports region selection');
+  assert.ok(readSrcFile('components/Filters/AdvancedFilterModal.tsx').includes('onRegionChange?.('), 'The dialog changes the region');
+  assert.ok(!readSrcFile('components/Filters/FilterToolbar.tsx').includes('selectedRegion'), 'The toolbar has no region control');
 });
 
 defineTest('FilterToolbar.tsx static Category badge does not contain ChevronDown', {

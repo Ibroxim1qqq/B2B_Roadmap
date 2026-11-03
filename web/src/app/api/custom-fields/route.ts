@@ -6,6 +6,9 @@ export const dynamic = 'force-dynamic';
 
 const DEFAULT_FIELDS = [
   { field_name: 'tjm_name', field_type: 'text', required: false, visible: true, column_letter: 'W', label: 'TJM Nomi', desc: 'Turar-joy majmuasining tijoriy brend nomi' },
+  { field_name: 'brand_name', field_type: 'text', required: false, visible: true, column_letter: 'AG', label: 'Brend nomi', desc: 'Obyekt sotiladigan brend' },
+  { field_name: 'client_owner', field_type: 'select', required: false, visible: true, column_letter: 'AH', label: 'Kimning klienti', desc: 'UYSOT CRM, UYSOT.UZ, UYQUR yoki boshqa' },
+  { field_name: 'crm_link', field_type: 'url', required: false, visible: true, column_letter: 'AI', label: 'CRM havolasi', desc: 'Gaplashilgan bo\'lsa, CRM dagi havola: https://...' },
   { field_name: 'phone', field_type: 'phone', required: false, visible: true, column_letter: 'X', label: 'Aloqa telefoni', desc: 'Sotuv bo\'limi yoki obyekt mas\'uli telefoni' },
   { field_name: 'sales_office', field_type: 'text', required: false, visible: true, column_letter: 'Y', label: 'Sotuv ofisi manzili', desc: 'Obyekt sotuv ofisi joylashuvi' },
   { field_name: 'manager_name', field_type: 'text', required: false, visible: true, column_letter: 'Z', label: 'Rahbar / Menejer ismi', desc: 'Quruvchi yoki sotuv rahbari' },

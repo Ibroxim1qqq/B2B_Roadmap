@@ -7,9 +7,14 @@ import {
 import { 
   AdvancedFilterState, 
   INITIAL_ADVANCED_FILTERS, 
-  countActiveFilters 
+  brandOptions,
+  clientOwnerOptions,
+  countActiveFilters,
+  suggestFilterNames
 } from '../../lib/filters';
-import { getDistrictsForRegion } from '../../lib/regions';
+import CreatableSelect from '../UI/CreatableSelect';
+import { getDistrictsForRegion, REGION_LIST } from '../../lib/regions';
+import type { MapObject } from '../../lib/types';
 
 export type { AdvancedFilterState };
 export { INITIAL_ADVANCED_FILTERS, countActiveFilters };
@@ -28,6 +33,7 @@ interface AdvancedFilterModalProps {
   onStatusChange?: (status: string) => void;
   selectedRegion?: string;
   onRegionChange?: (regionSoato: string) => void;
+  objects?: MapObject[];
 }
 
 export default function AdvancedFilterModal({
@@ -42,18 +48,30 @@ export default function AdvancedFilterModal({
   onDistrictChange,
   selectedStatus = '',
   onStatusChange,
-  selectedRegion = ''
+  selectedRegion = '',
+  onRegionChange,
+  objects = []
 }: AdvancedFilterModalProps) {
-  const activeCount = countActiveFilters(filters, selectedDistrict, selectedStatus);
+  const activeCount = countActiveFilters(filters, selectedDistrict, selectedStatus) + (selectedRegion ? 1 : 0);
 
   const districts = useMemo(() => {
     return getDistrictsForRegion(selectedRegion);
   }, [selectedRegion]);
 
+  const suggestions = useMemo(() => {
+    if (!isOpen) return { tjm: [], brand: [], company: [], client: [] };
+    return {
+      tjm: suggestFilterNames(objects, 'tjm', filters.tjmName),
+      brand: brandOptions(objects),
+      company: suggestFilterNames(objects, 'company', filters.companyName),
+      client: clientOwnerOptions(objects)
+    };
+  }, [isOpen, objects, filters.tjmName, filters.companyName]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div 
         className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
         role="dialog"
@@ -88,12 +106,88 @@ export default function AdvancedFilterModal({
         {/* Modal Scrollable Body */}
         <div className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
           
-          {/* 1. Tuman va Status (Tashqaridan ko'chirilgan filtrlari) */}
+          {/* Nomi bo'yicha qidirish */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label htmlFor="filter-tjm" className="font-bold text-slate-800">TJM nomi</label>
+              <input
+                id="filter-tjm"
+                type="text"
+                list="filter-tjm-options"
+                autoComplete="off"
+                placeholder="Masalan: Samarqand Residence"
+                value={filters.tjmName}
+                onChange={(e) => onChange({ ...filters, tjmName: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+              />
+              <datalist id="filter-tjm-options">
+                {suggestions.tjm.map(name => <option key={name} value={name} />)}
+              </datalist>
+            </div>
+            <div className="space-y-1.5">
+              <span className="block font-bold text-slate-800">Brend</span>
+              <CreatableSelect
+                ariaLabel="Brend filtri"
+                value={filters.brandName}
+                onChange={(value) => onChange({ ...filters, brandName: value })}
+                options={suggestions.brand}
+                placeholder="Barcha brendlar"
+                allowCreate={false}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="filter-company" className="font-bold text-slate-800">MChJ</label>
+              <input
+                id="filter-company"
+                type="text"
+                list="filter-company-options"
+                autoComplete="off"
+                placeholder="Masalan: TXTGROUP"
+                value={filters.companyName}
+                onChange={(e) => onChange({ ...filters, companyName: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+              />
+              <datalist id="filter-company-options">
+                {suggestions.company.map(name => <option key={name} value={name} />)}
+              </datalist>
+            </div>
+            <div className="space-y-1.5">
+              <span className="block font-bold text-slate-800">Kimning klienti</span>
+              <CreatableSelect
+                ariaLabel="Klient filtri"
+                value={filters.clientOwner}
+                onChange={(value) => onChange({ ...filters, clientOwner: value })}
+                options={suggestions.client}
+                placeholder="Barcha klientlar"
+                allowCreate={false}
+              />
+            </div>
+          </div>
+
+          {/* 1. Viloyat, Tuman va Status */}
+          <div className="space-y-1.5">
+            <label className="font-bold text-slate-800 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-[#1b815f]" />
+              <span>Viloyat / shahar</span>
+            </label>
+            <select
+              aria-label="Viloyat yoki shahar"
+              value={selectedRegion}
+              onChange={(e) => onRegionChange?.(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#1b815f] focus:ring-2 focus:ring-emerald-500/10 rounded-xl text-xs font-semibold outline-none transition-all text-slate-800 cursor-pointer"
+            >
+              <option value="">Barcha viloyatlar</option>
+              {REGION_LIST.map(r => (
+                <option key={r.soato} value={r.soato}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="font-bold text-slate-800 flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-[#1b815f]" />
-                <span>Tuman</span>
+                <span>Tuman / shahar</span>
               </label>
               <select
                 value={selectedDistrict}

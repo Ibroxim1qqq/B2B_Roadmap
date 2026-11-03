@@ -116,6 +116,9 @@ export default function ObjectDetails({ detail, companyId, distance, onClose, on
 
   const hasB2BData = Boolean(
     internal.tjm_name || 
+    internal.brand_name || 
+    internal.client_owner || 
+    internal.crm_link || 
     internal.phone || 
     internal.sales_office || 
     internal.manager_name || 
@@ -320,6 +323,38 @@ export default function ObjectDetails({ detail, companyId, distance, onClose, on
             </div>
 
             <div className="flex items-start justify-between gap-3">
+              <span className="text-slate-400 shrink-0">Brend:</span>
+              <span className="font-bold text-slate-900 text-right">
+                {internal.brand_name || <span className="text-slate-400 font-normal italic">Kiritilmagan</span>}
+              </span>
+            </div>
+
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-slate-400 shrink-0">Kimning klienti:</span>
+              <span className="font-bold text-slate-900 text-right">
+                {internal.client_owner || <span className="text-slate-400 font-normal italic">Kiritilmagan</span>}
+              </span>
+            </div>
+
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-slate-400 shrink-0">CRM havolasi:</span>
+              {safeExternalUrl(internal.crm_link) ? (
+                <a
+                  href={safeExternalUrl(internal.crm_link) as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-emerald-700 hover:underline text-right"
+                >
+                  CRM da ochish
+                </a>
+              ) : (
+                <span className="font-medium text-slate-900 text-right break-all">
+                  {internal.crm_link || <span className="text-slate-400 font-normal italic">Kiritilmagan</span>}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-start justify-between gap-3">
               <span className="text-slate-400 shrink-0">Telefon:</span>
               {internal.phone ? (
                 <a 
@@ -410,7 +445,7 @@ export default function ObjectDetails({ detail, companyId, distance, onClose, on
             {/* User defined custom fields */}
             {(() => {
               const standardKeys = [
-                'tjm_name', 'phone', 'sales_office', 'manager_name', 
+                'tjm_name', 'brand_name', 'client_owner', 'crm_link', 'phone', 'sales_office', 'manager_name', 
                 'manager_phone', 'telegram', 'instagram', 'priority', 'notes',
                 'last_visit', 'visited_by', 'visit_lat_lng'
               ];

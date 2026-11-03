@@ -6,7 +6,7 @@ import { apiError, HttpError, readJsonBody, requireUser, resolveCompanyId, userA
 export const dynamic = 'force-dynamic';
 
 const TEXT_FIELDS = [
-  'customer', 'designer', 'builder', 'floors', 'apartment_count', 'deadline', 'phone', 'sales_office',
+  'brand_name', 'client_owner', 'customer', 'designer', 'builder', 'floors', 'apartment_count', 'deadline', 'phone', 'sales_office',
   'manager_name', 'manager_phone', 'telegram', 'instagram', 'notes', 'last_visit', 'visited_by', 'visit_lat_lng'
 ];
 

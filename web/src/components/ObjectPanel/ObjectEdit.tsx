@@ -1,18 +1,22 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { CustomField } from '../../lib/types';
+import { DEFAULT_CLIENT_OWNERS } from '../../lib/filters';
+import CreatableSelect from '../UI/CreatableSelect';
 import { X, Save, Building, Phone, MapPin, User, Send, Globe, Trash2, Tag, FileText, Calendar, Hash } from 'lucide-react';
 
 interface Props {
   sourceId: string;
   initialData: Record<string, any>;
   fields?: CustomField[];
+  clientOptions?: string[];
+  brandOptions?: string[];
   onSave: (data: Record<string, string>) => Promise<void>;
   onCancel: () => void;
   onClear?: () => Promise<void>;
 }
 
-export default function ObjectEdit({ sourceId, initialData, fields = [], onSave, onCancel, onClear }: Props) {
+export default function ObjectEdit({ sourceId, initialData, fields = [], clientOptions = DEFAULT_CLIENT_OWNERS, brandOptions = [], onSave, onCancel, onClear }: Props) {
   const [data, setData] = useState<Record<string, string>>({});
   const [allFields, setAllFields] = useState<(CustomField & { label?: string; desc?: string })[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,6 +29,8 @@ export default function ObjectEdit({ sourceId, initialData, fields = [], onSave,
     const initialMap: Record<string, string> = {};
     // Base default fields
     initialMap.tjm_name = String(initialData?.tjm_name || '');
+    initialMap.brand_name = String(initialData?.brand_name || '');
+    initialMap.client_owner = String(initialData?.client_owner || '');
     initialMap.phone = String(initialData?.phone || '');
     initialMap.sales_office = String(initialData?.sales_office || '');
     initialMap.manager_name = String(initialData?.manager_name || '');
@@ -90,9 +96,12 @@ export default function ObjectEdit({ sourceId, initialData, fields = [], onSave,
 
   // Separate standard base fields from additional custom fields
   const standardFieldKeys = [
-    'tjm_name', 'phone', 'sales_office', 'manager_name', 
+    'tjm_name', 'brand_name', 'client_owner', 'phone', 'sales_office', 'manager_name', 
     'manager_phone', 'telegram', 'instagram', 'priority', 'notes'
   ];
+
+  // These two are managed from the general field list, so hiding them there hides them here.
+  const isFieldShown = (name: string) => allFields.length === 0 || allFields.some(f => f.field_name === name);
 
   const additionalCustomFields = allFields.filter(
     f => !standardFieldKeys.includes(f.field_name) && f.visible !== false
@@ -128,6 +137,26 @@ export default function ObjectEdit({ sourceId, initialData, fields = [], onSave,
             />
           </div>
         </div>
+
+        {isFieldShown('brand_name') && <div>
+          <label className="block font-semibold text-slate-700 mb-1">Brend nomi</label>
+          <CreatableSelect
+            ariaLabel="Brend nomi"
+            value={data.brand_name || ''}
+            onChange={(value) => handleChange('brand_name', value)}
+            options={brandOptions}
+          />
+        </div>}
+
+        {isFieldShown('client_owner') && <div>
+          <label className="block font-semibold text-slate-700 mb-1">Kimning klienti</label>
+          <CreatableSelect
+            ariaLabel="Kimning klienti"
+            value={data.client_owner || ''}
+            onChange={(value) => handleChange('client_owner', value)}
+            options={clientOptions}
+          />
+        </div>}
 
         <div>
           <label className="block font-semibold text-slate-700 mb-1">Aloqa telefoni</label>
@@ -281,6 +310,7 @@ export default function ObjectEdit({ sourceId, initialData, fields = [], onSave,
                 ) : (
                   <input
                     type={f.field_type === 'phone' ? 'tel' : f.field_type === 'url' ? 'url' : 'text'}
+                    aria-label={f.label || f.field_name}
                     placeholder={f.desc || `${f.label || f.field_name} kiriting...`}
                     value={data[f.field_name] || ''}
                     onChange={(e) => handleChange(f.field_name, e.target.value)}

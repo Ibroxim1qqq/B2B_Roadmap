@@ -10,7 +10,7 @@ import {
   formatDistance, formatDuration, haversineMeters 
 } from '../../lib/routeUtils';
 import { 
-  Navigation, MapPin, ArrowDownUp, Search, Compass,
+  Navigation, MapPin, ArrowDownUp, Search, Compass, SlidersHorizontal, Plus,
   CheckCircle2, Clock, Phone, ChevronRight, Eye, Layers, 
   Route as RouteIcon, Sparkles, Check, Crosshair, X, LocateFixed, RotateCcw,
   BookmarkCheck, Bookmark, Calendar, Building2, User, Loader2,
@@ -35,6 +35,9 @@ const RoutePlannerMap = dynamic(() => import('./RoutePlannerMap'), {
 
 interface RoutePlannerViewProps {
   objects: MapObject[];
+  filteredObjects?: MapObject[];
+  onOpenFilters?: () => void;
+  activeFilterCount?: number;
   userLat?: number | null;
   userLng?: number | null;
   onSelectObject: (id: string) => void;
@@ -56,8 +59,15 @@ function getAccountRouteStorageKey(user?: UserProfile | null): string {
   return 'b2b_active_route_guest';
 }
 
+interface RoutePoint {
+  lat: number;
+  lng: number;
+  name: string;
+  source_id?: string;
+}
+
 interface PointFieldProps {
-  kind: 'A' | 'B';
+  kind: 'A' | 'B' | 'via';
   query: string;
   placeholder: string;
   isOpen: boolean;
@@ -78,10 +88,10 @@ function PointField({
       <div className={`flex items-center gap-2 h-10 px-3 rounded-lg bg-slate-50 border transition-colors ${
         isPicking ? 'border-[#1b815f] bg-white' : 'border-transparent focus-within:border-slate-300 focus-within:bg-white'
       }`}>
-        <span className={`w-2 h-2 rounded-full shrink-0 ${kind === 'A' ? 'bg-[#1b815f]' : 'bg-slate-900'}`} />
+        <span className={`w-2 h-2 rounded-full shrink-0 ${kind === 'A' ? 'bg-[#1b815f]' : kind === 'B' ? 'bg-slate-900' : 'bg-slate-400'}`} />
         <input
           type="text"
-          aria-label={kind === 'A' ? 'Qayerdan' : 'Qayerga'}
+          aria-label={kind === 'A' ? 'Qayerdan' : kind === 'B' ? 'Qayerga' : "Oraliq nuqta"}
           placeholder={placeholder}
           value={query}
           onFocus={onFocus}
@@ -120,6 +130,9 @@ const OPTION_CLASS = 'w-full text-left px-3 py-2 text-[13px] text-slate-700 hove
 
 export default function RoutePlannerView({
   objects: rawObjects,
+  filteredObjects,
+  onOpenFilters,
+  activeFilterCount = 0,
   userLat,
   userLng,
   onSelectObject,
@@ -141,12 +154,13 @@ export default function RoutePlannerView({
   }, [currentUser]);
 
   const isUysot = isUysotCompany(companyId || activeUser?.company_id);
-  const objects = useMemo(() => {
-    return (rawObjects || []).filter(o => {
-      const isDomtut = String(o.source_id).startsWith('domtut_') || Boolean((o as any).is_uysot);
-      return isUysot ? isDomtut : !isDomtut;
-    });
-  }, [rawObjects, isUysot]);
+  const inDataset = useCallback((o: MapObject) => {
+    const isDomtut = String(o.source_id).startsWith('domtut_') || Boolean((o as any).is_uysot);
+    return isUysot ? isDomtut : !isDomtut;
+  }, [isUysot]);
+  // Any object can be a start or end point; only those matching the filters count as stops and map markers.
+  const objects = useMemo(() => (rawObjects || []).filter(inDataset), [rawObjects, inDataset]);
+  const stopObjects = useMemo(() => (filteredObjects || rawObjects || []).filter(inDataset), [filteredObjects, rawObjects, inDataset]);
 
   // Route persistence per account
   const [isStorageInitialized, setIsStorageInitialized] = useState(false);
@@ -211,6 +225,7 @@ export default function RoutePlannerView({
     const centerLat = isUysot ? 41.2995 : REGISTON_LAT;
     const centerLng = isUysot ? 69.2401 : REGISTON_LNG;
 
+    const hasLocation = Boolean(userLat && userLng);
     const startPt = (userLat && userLng) ? {
       lat: userLat,
       lng: userLng,
@@ -232,26 +247,13 @@ export default function RoutePlannerView({
     setStartQuery(startPt.name);
     setEndPoint(endPt);
     setEndQuery(endPt.name);
-
-    const waypoints: { lat: number; lng: number }[] = [
-      { lat: startPt.lat, lng: startPt.lng },
-      ...stops.map(s => ({ lat: s.latitude || startPt.lat, lng: s.longitude || startPt.lng }))
-    ];
-
-    setCalculating(true);
-    try {
-      const multiRes = await calculateOSRMRouteMulti(waypoints);
-      if (multiRes && multiRes.coordinates.length > 0) {
-        setRouteResult(multiRes);
-        const tjms = findTJMsAlongRoute(objects, multiRes.coordinates, bufferRadius);
-        const merged = mergeAIStopsWithBufferTJMs(tjms, stops);
-        setMatchedTJMs(merged);
-      }
-    } catch (err) {
-      console.error('Failed to calculate AI multi-route:', err);
-    } finally {
-      setCalculating(false);
-    }
+    // The route itself is calculated by the effect that watches the points.
+    setViaPoints(stops.slice(hasLocation ? 0 : 1, -1).filter(s => s.latitude && s.longitude).map(s => ({
+      lat: s.latitude as number,
+      lng: s.longitude as number,
+      name: s.object_name,
+      source_id: String(s.source_id)
+    })));
   };
 
   // React to initialAIStops passed from parent
@@ -268,12 +270,19 @@ export default function RoutePlannerView({
   
   // DEFAULT: Destination (Point B) is completely empty! No TJM is auto-selected!
   const [endPoint, setEndPoint] = useState<{ lat: number; lng: number; name: string } | null>(null);
+
+  // Optional points between A and B, as many as the user wants
+  const [viaPoints, setViaPoints] = useState<RoutePoint[]>([]);
+  const [isAddingVia, setIsAddingVia] = useState(false);
+  const [viaQuery, setViaQuery] = useState('');
+  const [isViaOpen, setIsViaOpen] = useState(false);
+  const viaKey = viaPoints.map(p => `${p.lat},${p.lng}`).join(';');
   
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [isEndOpen, setIsEndOpen] = useState(false);
 
   // Picking mode: 'A' or 'B' or null
-  const [pickingMode, setPickingMode] = useState<'A' | 'B' | null>(null);
+  const [pickingMode, setPickingMode] = useState<'A' | 'B' | 'via' | null>(null);
 
   // Buffer Radius (default: 200m)
   const [bufferRadius, setBufferRadius] = useState<number>(200);
@@ -365,42 +374,48 @@ export default function RoutePlannerView({
     ).slice(0, 8);
   }, [objects, endQuery]);
 
+  const viaSuggestions = useMemo(() => {
+    if (!viaQuery.trim()) return objects.slice(0, 8);
+    const q = viaQuery.toLowerCase();
+    return objects.filter(o =>
+      (o.tjm_name || '').toLowerCase().includes(q) ||
+      (o.object_name || '').toLowerCase().includes(q) ||
+      (o.address || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+  }, [objects, viaQuery]);
+
   // Calculate Route
   const handleCalculateRoute = useCallback(async (
     customStart = startPoint,
-    customEnd = endPoint
+    customEnd = endPoint,
+    customVia = viaPoints
   ) => {
     if (!customStart || !customEnd) return;
 
     setCalculating(true);
     try {
-      const res = await calculateOSRMRoute(
-        customStart.lat,
-        customStart.lng,
-        customEnd.lat,
-        customEnd.lng
-      );
+      const res = await calculateOSRMRouteMulti([customStart, ...customVia, customEnd].map(p => ({ lat: p.lat, lng: p.lng })));
 
       setRouteResult(res);
 
       // Find TJMs along this route within the selected radius
-      const found = findTJMsAlongRoute(objects, res.coordinates, bufferRadius);
+      const found = findTJMsAlongRoute(stopObjects, res.coordinates, bufferRadius);
       setMatchedTJMs(found);
     } catch (e) {
       console.error(e);
     } finally {
       setCalculating(false);
     }
-  }, [startPoint, endPoint, objects, bufferRadius]);
+  }, [startPoint, endPoint, viaPoints, stopObjects, bufferRadius]);
 
   // Re-run matching when buffer radius changes
   useEffect(() => {
     if (routeResult && routeResult.coordinates.length > 0) {
-      const found = findTJMsAlongRoute(objects, routeResult.coordinates, bufferRadius);
+      const found = findTJMsAlongRoute(stopObjects, routeResult.coordinates, bufferRadius);
       const merged = mergeAIStopsWithBufferTJMs(found, aiPlannedStops);
       setMatchedTJMs(merged);
     }
-  }, [bufferRadius, routeResult, objects, aiPlannedStops, mergeAIStopsWithBufferTJMs]);
+  }, [bufferRadius, routeResult, stopObjects, aiPlannedStops, mergeAIStopsWithBufferTJMs]);
 
   // Trigger calculation when both start and end points exist and change
   useEffect(() => {
@@ -410,7 +425,7 @@ export default function RoutePlannerView({
       setRouteResult(null);
       setMatchedTJMs([]);
     }
-  }, [startPoint?.lat, startPoint?.lng, endPoint?.lat, endPoint?.lng]);
+  }, [startPoint?.lat, startPoint?.lng, endPoint?.lat, endPoint?.lng, viaKey]);
 
   // 1. Restore active route for this user account on mount or when account changes
   useEffect(() => {
@@ -431,6 +446,7 @@ export default function RoutePlannerView({
             setEndPoint(saved.endPoint);
             setEndQuery(saved.endQuery || saved.endPoint.name || '');
           }
+          setViaPoints(Array.isArray(saved.viaPoints) ? saved.viaPoints : []);
           if (saved.bufferRadius) {
             setBufferRadius(saved.bufferRadius);
           }
@@ -455,13 +471,14 @@ export default function RoutePlannerView({
         startQuery,
         endPoint,
         endQuery,
+        viaPoints,
         bufferRadius
       };
       localStorage.setItem(storageKey, JSON.stringify(payload));
     } else {
       localStorage.removeItem(storageKey);
     }
-  }, [startPoint, startQuery, endPoint, endQuery, bufferRadius, isStorageInitialized, activeUser]);
+  }, [startPoint, startQuery, endPoint, endQuery, viaPoints, bufferRadius, isStorageInitialized, activeUser]);
 
 
   // Swap Point A and Point B
@@ -472,6 +489,22 @@ export default function RoutePlannerView({
     setStartQuery(endQuery);
     setEndPoint(tempPt);
     setEndQuery(tempQ);
+    setViaPoints(prev => [...prev].reverse());
+  };
+
+  const addViaPoint = (point: RoutePoint) => {
+    setViaPoints(prev => [...prev, point]);
+    setViaQuery('');
+    setIsViaOpen(false);
+    setIsAddingVia(false);
+  };
+
+  const removeViaPoint = (index: number) => {
+    const removed = viaPoints[index];
+    setViaPoints(prev => prev.filter((_, i) => i !== index));
+    if (removed?.source_id) {
+      setAiPlannedStops(prev => prev && prev.filter(s => String(s.source_id) !== removed.source_id));
+    }
   };
 
   // Set Start Point to Live GPS
@@ -532,7 +565,10 @@ export default function RoutePlannerView({
       ? (nearby.tjm_name || nearby.object_name) 
       : `Xaritadagi nuqta (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
 
-    if (pickingMode === 'A') {
+    if (pickingMode === 'via') {
+      addViaPoint({ lat, lng, name: pointName });
+      setPickingMode(null);
+    } else if (pickingMode === 'A') {
       const pt = { lat, lng, name: pointName };
       setStartPoint(pt);
       setStartQuery(pointName);
@@ -572,14 +608,17 @@ export default function RoutePlannerView({
   };
 
   // Handle setting point directly from an object
-  const handleSetPointFromObject = (obj: MapObject, pointType: 'A' | 'B') => {
+  const handleSetPointFromObject = (obj: MapObject, pointType: 'A' | 'B' | 'via') => {
     const pt = {
       lat: obj.latitude,
       lng: obj.longitude,
       name: obj.tjm_name || obj.object_name
     };
 
-    if (pointType === 'A') {
+    if (pointType === 'via') {
+      addViaPoint({ ...pt, source_id: String(obj.source_id) });
+      setPickingMode(null);
+    } else if (pointType === 'A') {
       setStartPoint(pt);
       setStartQuery(pt.name);
       setPickingMode(null);
@@ -601,7 +640,7 @@ export default function RoutePlannerView({
     const centerLat = (startPoint?.lat) || userLat || (isUysot ? 41.2995 : REGISTON_LAT);
     const centerLng = (startPoint?.lng) || userLng || (isUysot ? 69.2401 : REGISTON_LNG);
 
-    return [...objects]
+    return [...stopObjects]
       .filter(o => !o.last_visit && !Boolean((o as any).is_visited) && o.latitude && o.longitude)
       .map(o => ({
         object: o,
@@ -609,7 +648,7 @@ export default function RoutePlannerView({
       }))
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 8);
-  }, [objects, startPoint?.lat, startPoint?.lng, userLat, userLng, isUysot]);
+  }, [stopObjects, startPoint?.lat, startPoint?.lng, userLat, userLng, isUysot]);
 
   // 1-Tap quick auto AI route with 5 nearest unvisited TJMs
   const handleQuickNearestAIRoute = async () => {
@@ -680,6 +719,9 @@ export default function RoutePlannerView({
     setStartQuery('');
     setEndPoint(null);
     setEndQuery('');
+    setViaPoints([]);
+    setIsAddingVia(false);
+    setViaQuery('');
     setRouteResult(null);
     setMatchedTJMs([]);
     setAiPlannedStops(null);
@@ -695,7 +737,7 @@ export default function RoutePlannerView({
   };
 
   // Enter Picking Mode
-  const triggerPickingMode = (mode: 'A' | 'B') => {
+  const triggerPickingMode = (mode: 'A' | 'B' | 'via') => {
     setPickingMode(mode);
     setIsStartOpen(false);
     setIsEndOpen(false);
@@ -766,6 +808,8 @@ export default function RoutePlannerView({
       }
     }
 
+    viaPoints.forEach(p => waypoints.push({ lat: p.lat, lng: p.lng }));
+
     if (endPoint) {
       waypoints.push({ lat: endPoint.lat, lng: endPoint.lng });
     }
@@ -774,7 +818,7 @@ export default function RoutePlannerView({
       try {
         const res = await calculateOSRMRouteMulti(waypoints);
         setRouteResult(res);
-        const matched = findTJMsAlongRoute(objects, res.coordinates, bufferRadius);
+        const matched = findTJMsAlongRoute(stopObjects, res.coordinates, bufferRadius);
         setMatchedTJMs(matched);
       } catch (err) {
         console.error('Multi-point navigation routing failed:', err);
@@ -848,6 +892,7 @@ export default function RoutePlannerView({
         tjm_count: matchedTJMs.length,
         tjm_list: tjmListString,
         buffer_radius_m: bufferRadius,
+        via_points: viaPoints.length > 0 ? JSON.stringify(viaPoints) : '',
         notes: `${matchedTJMs.length} ta TJM topildi. Qidiruv radiusi: ${bufferRadius}m`,
         status: 'Rejalashtirilgan'
       };
@@ -889,8 +934,16 @@ export default function RoutePlannerView({
       setBufferRadius(route.buffer_radius_m);
     }
 
+    let savedVia: RoutePoint[] = [];
+    try {
+      savedVia = route.via_points ? JSON.parse(route.via_points) : [];
+    } catch {
+      // An unreadable list still leaves a usable A to B route.
+    }
+    setViaPoints(savedVia);
+
     setShowSavedRoutesModal(false);
-    handleCalculateRoute(startPt, endPt);
+    handleCalculateRoute(startPt, endPt, savedVia);
   };
 
   // The form folds away once a route exists, so the map stays visible on a phone.
@@ -915,14 +968,14 @@ export default function RoutePlannerView({
     }
   };
 
-  const suggestionOptions = (list: MapObject[], kind: 'A' | 'B') => list.map(obj => (
+  const suggestionOptions = (list: MapObject[], kind: 'A' | 'B' | 'via') => list.map(obj => (
     <button
       key={obj.source_id}
       type="button"
       onClick={() => {
         handleSetPointFromObject(obj, kind);
         if (kind === 'A') setIsStartOpen(false);
-        else setIsEndOpen(false);
+        else if (kind === 'B') setIsEndOpen(false);
       }}
       className={OPTION_CLASS}
     >
@@ -960,6 +1013,42 @@ export default function RoutePlannerView({
         {suggestionOptions(startSuggestions, 'A')}
       </PointField>
 
+      {viaPoints.map((point, index) => (
+        <div key={`${point.lat},${point.lng},${index}`} className="flex items-center gap-2 h-9 px-3 rounded-lg bg-slate-50">
+          <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[10px] font-medium flex items-center justify-center shrink-0 -ml-1">{index + 1}</span>
+          <span className="flex-1 min-w-0 text-[13px] text-slate-800 truncate" title={point.name}>{point.name}</span>
+          <button type="button" onClick={() => removeViaPoint(index)} title="Nuqtani olib tashlash" aria-label={`${point.name} nuqtasini olib tashlash`} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer shrink-0">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+
+      {isAddingVia && (
+        <PointField
+          kind="via"
+          query={viaQuery}
+          placeholder="Oraliq nuqta: TJM nomi yoki manzil"
+          isOpen={isViaOpen}
+          isPicking={pickingMode === 'via'}
+          onFocus={() => setIsViaOpen(true)}
+          onQueryChange={(value) => {
+            setViaQuery(value);
+            setIsViaOpen(true);
+          }}
+          onClear={() => {
+            setViaQuery('');
+            setIsViaOpen(false);
+            setIsAddingVia(false);
+          }}
+          onPick={() => triggerPickingMode('via')}
+        >
+          <button type="button" onClick={() => triggerPickingMode('via')} className={OPTION_CLASS}>
+            Xaritadan tanlash
+          </button>
+          {suggestionOptions(viaSuggestions, 'via')}
+        </PointField>
+      )}
+
       <PointField
         kind="B"
         query={endQuery}
@@ -982,6 +1071,18 @@ export default function RoutePlannerView({
 
       <button
         type="button"
+        onClick={() => {
+          setIsAddingVia(true);
+          setIsViaOpen(true);
+        }}
+        className="h-8 px-1 flex items-center gap-1.5 text-xs font-medium text-[#1b815f] hover:text-[#15674c] cursor-pointer"
+      >
+        <Plus className="w-3.5 h-3.5" />
+        <span>Nuqta qo&apos;shish</span>
+      </button>
+
+      <button
+        type="button"
         onClick={handleSwap}
         title="Almashtirish"
         className="absolute right-[76px] top-[33px] z-10 w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center cursor-pointer"
@@ -989,6 +1090,21 @@ export default function RoutePlannerView({
         <ArrowDownUp className="w-3 h-3" />
       </button>
     </div>
+  );
+
+  const filterButton = onOpenFilters && (
+    <button
+      type="button"
+      onClick={onOpenFilters}
+      title="Filtrlar: TJM, brend, MChJ va boshqalar"
+      className={`h-8 px-2.5 rounded-lg flex items-center gap-1.5 text-xs font-medium cursor-pointer transition-colors shrink-0 ${
+        activeFilterCount > 0 ? 'bg-[#1b815f] text-white hover:bg-[#15674c]' : 'bg-slate-100 text-slate-700 hover:text-slate-900'
+      }`}
+    >
+      <SlidersHorizontal className="w-3.5 h-3.5" />
+      <span>Filtr</span>
+      {activeFilterCount > 0 && <span className="tabular-nums">{activeFilterCount}</span>}
+    </button>
   );
 
   const radiusControl = (
@@ -1102,7 +1218,9 @@ export default function RoutePlannerView({
   const emptyStops = (
     <p className="px-6 py-10 text-center text-[13px] text-slate-500">
       {matchedTJMs.length === 0
-        ? `Yo'ldan ${bufferRadius} m ichida TJM topilmadi. Masofani oshirib ko'ring.`
+        ? activeFilterCount > 0
+          ? `Yo'ldan ${bufferRadius} m ichida filtrga mos TJM yo'q. Filtrni o'zgartirib ko'ring.`
+          : `Yo'ldan ${bufferRadius} m ichida TJM topilmadi. Masofani oshirib ko'ring.`
         : "Bu filtrga mos to'xtash joyi yo'q."}
     </p>
   );
@@ -1122,11 +1240,14 @@ export default function RoutePlannerView({
 
           <div className="flex items-center justify-between gap-2">
             {radiusControl}
-            {(startPoint || endPoint) && (
-              <button type="button" onClick={handleClearRoute} className="text-xs text-slate-500 hover:text-slate-900 cursor-pointer">
-                Tozalash
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {filterButton}
+              {(startPoint || endPoint) && (
+                <button type="button" onClick={handleClearRoute} className="text-xs text-slate-500 hover:text-slate-900 cursor-pointer">
+                  Tozalash
+                </button>
+              )}
+            </div>
           </div>
 
           {!routeResult && (
@@ -1247,7 +1368,7 @@ export default function RoutePlannerView({
             {pickingMode ? (
               <div className="h-11 px-3 rounded-xl bg-white shadow-md flex items-center justify-between gap-2">
                 <span className="text-[13px] font-medium text-slate-900 truncate">
-                  {pickingMode === 'A' ? 'Boshlanish joyini xaritadan tanlang' : 'Borish joyini xaritadan tanlang'}
+                  {pickingMode === 'A' ? 'Boshlanish joyini xaritadan tanlang' : pickingMode === 'via' ? 'Oraliq nuqtani xaritadan tanlang' : 'Borish joyini xaritadan tanlang'}
                 </span>
                 <button type="button" onClick={() => setPickingMode(null)} className="text-[13px] text-slate-500 shrink-0 cursor-pointer">
                   Bekor
@@ -1262,6 +1383,7 @@ export default function RoutePlannerView({
                 <span className="min-w-0 flex items-center gap-2 text-[13px] text-slate-900">
                   <span className="truncate">{startPoint?.name || 'Qayerdan'}</span>
                   <span className="text-slate-400 shrink-0">&rarr;</span>
+                  {viaPoints.length > 0 && <span className="text-xs text-slate-500 shrink-0">+{viaPoints.length} &rarr;</span>}
                   <span className="truncate">{endPoint?.name || 'Qayerga'}</span>
                 </span>
                 <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
@@ -1271,6 +1393,7 @@ export default function RoutePlannerView({
                 {routeForm}
                 <div className="flex items-center justify-between gap-2 px-1">
                   {radiusControl}
+                  {filterButton}
                   <button
                     type="button"
                     onClick={() => setIsMobileControlsCollapsed(true)}
@@ -1288,10 +1411,11 @@ export default function RoutePlannerView({
         <RoutePlannerMap
           startPoint={startPoint}
           endPoint={endPoint}
+          viaPoints={viaPoints}
           routeCoords={routeResult ? routeResult.coordinates : []}
           matchedTJMs={matchedTJMs}
           bufferRadiusMeters={bufferRadius}
-          allObjects={objects}
+          allObjects={stopObjects}
           selectedTJMId={selectedId}
           onSelectTJM={onSelectObject}
           showAllMarkers={showAllMarkers || !routeResult}
@@ -1674,7 +1798,8 @@ export default function RoutePlannerView({
       <AIRouteModal
         isOpen={showAIRouteModal}
         onClose={() => setShowAIRouteModal(false)}
-        objects={objects}
+        objects={stopObjects}
+        activeFilterCount={activeFilterCount}
         userLat={userLat}
         userLng={userLng}
         companyId={companyId}

@@ -95,12 +95,13 @@ function formatRowToMapObject(r: any): MapObject {
   const district = getDistrictName(String(r.district_soato || r.district || ''), regSoato) || SOATO_DISTRICT_MAP[r.district_soato] || r.district || regName;
 
   const tjm = String(r.tjm_name || '').trim();
+  const brand = String(r.brand_name || '').trim();
   const phone = String(r.phone || '').trim();
   const manager = String(r.manager_name || '').trim();
   const salesOffice = String(r.sales_office || '').trim();
   const lastVisit = String(r.last_visit || '').trim();
 
-  const hasInternal = Boolean(tjm || phone || manager || salesOffice);
+  const hasInternal = Boolean(tjm || brand || phone || manager || salesOffice);
   const isFullyFilled = Boolean(tjm && phone && manager);
   const isVisited = Boolean(lastVisit);
 
@@ -108,6 +109,9 @@ function formatRowToMapObject(r: any): MapObject {
     source_id: String(r.source_id || ''),
     object_name: String(r.object_name || r.tjm_name || 'Qurilish obyekti'),
     tjm_name: tjm,
+    brand_name: brand,
+    custom_values: r.custom_values || {},
+    client_owner: String(r.client_owner || '').trim(),
     latitude: lat,
     longitude: lng,
     status: String(r.status || 'Qurilish jarayonida'),
@@ -230,6 +234,8 @@ export function formatRowToObjectDetail(r: any): ObjectDetail {
     internal: {
       ...(r.custom_values || {}),
       tjm_name: String(r.tjm_name || '').trim(),
+      brand_name: String(r.brand_name || '').trim(),
+      client_owner: String(r.client_owner || '').trim(),
       phone: String(r.phone || '').trim(),
       sales_office: String(r.sales_office || '').trim(),
       manager_name: String(r.manager_name || '').trim(),
@@ -383,7 +389,10 @@ export function formatMapObjectToObjectDetail(m: MapObject): ObjectDetail {
       image_url: String(m.image_url || '')
     },
     internal: {
+      ...(m.custom_values || {}),
       tjm_name: String(m.tjm_name || '').trim(),
+      brand_name: String(m.brand_name || '').trim(),
+      client_owner: String(m.client_owner || '').trim(),
       phone: String(m.phone || '').trim(),
       sales_office: String(m.sales_office || '').trim(),
       manager_name: String(m.manager_name || '').trim(),
@@ -442,6 +451,9 @@ export const api = {
     }
     return [
       { field_name: 'tjm_name', field_type: 'text', required: false, visible: true, column_letter: 'W' },
+      { field_name: 'brand_name', field_type: 'text', required: false, visible: true, column_letter: 'AG' },
+      { field_name: 'client_owner', field_type: 'select', required: false, visible: true, column_letter: 'AH' },
+      { field_name: 'crm_link', field_type: 'url', required: false, visible: true, column_letter: 'AI' },
       { field_name: 'phone', field_type: 'phone', required: false, visible: true, column_letter: 'X' },
       { field_name: 'sales_office', field_type: 'text', required: false, visible: true, column_letter: 'Y' },
       { field_name: 'manager_name', field_type: 'text', required: false, visible: true, column_letter: 'Z' },
@@ -707,7 +719,7 @@ export const api = {
     unvisitedOnly?: boolean;
     highPriorityOnly?: boolean;
     maxStops?: number;
-    objects: MapObject[];
+    scopeIds?: string[];
   }): Promise<{ success: boolean; data?: AIRoutePlanResult; error?: string }> => {
     try {
       const res = await fetch('/api/ai/route-advisor', {
@@ -721,7 +733,8 @@ export const api = {
           prompt: params.prompt,
           unvisited_only: params.unvisitedOnly,
           high_priority_only: params.highPriorityOnly,
-          max_stops: params.maxStops || 5
+          max_stops: params.maxStops || 5,
+          scope_ids: params.scopeIds
         })
       });
       return parseResponse(res);
@@ -753,6 +766,7 @@ export const api = {
     userLat?: number | null;
     userLng?: number | null;
     history?: { sender: string; text: string }[];
+    scopeIds?: string[];
   }): Promise<{
     success: boolean;
     data?: {
@@ -773,7 +787,8 @@ export const api = {
           message: params.message,
           user_lat: params.userLat,
           user_lng: params.userLng,
-          history: params.history
+          history: params.history,
+          scope_ids: params.scopeIds
         })
       });
       return parseResponse(res);

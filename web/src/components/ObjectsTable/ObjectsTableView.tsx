@@ -1,4 +1,5 @@
 'use client';
+import { objectBrand } from '../../lib/filters';
 import { useState, useMemo, useRef } from 'react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { MapObject } from '../../lib/types';
@@ -8,7 +9,7 @@ import {
   Building2, Clock, ShieldCheck, Layers, Tag, SlidersHorizontal
 } from 'lucide-react';
 import { getNavigationUrl, getCallUrl } from '../../lib/utils';
-import { REGION_LIST, getDistrictsForRegion, getRegionName } from '../../lib/regions';
+import { getDistrictsForRegion } from '../../lib/regions';
 
 interface ObjectsTableViewProps {
   objects: (MapObject & { distance?: number })[];
@@ -19,7 +20,6 @@ interface ObjectsTableViewProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   selectedRegion?: string;
-  onRegionChange?: (r: string) => void;
   selectedDistrict: string;
   onDistrictChange: (d: string) => void;
   selectedStatus: string;
@@ -37,7 +37,6 @@ export default function ObjectsTableView({
   searchQuery,
   onSearchChange,
   selectedRegion = '',
-  onRegionChange,
   selectedDistrict,
   onDistrictChange,
   selectedStatus,
@@ -49,15 +48,12 @@ export default function ObjectsTableView({
   const [sortBy, setSortBy] = useState<'name' | 'district' | 'floors' | 'apartments' | 'visit'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [regionOpen, setRegionOpen] = useState(false);
   const [districtOpen, setDistrictOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
 
-  const regionRef = useRef<HTMLDivElement>(null);
   const districtRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(regionRef, () => setRegionOpen(false), regionOpen);
   useClickOutside(districtRef, () => setDistrictOpen(false), districtOpen);
   useClickOutside(statusRef, () => setStatusOpen(false), statusOpen);
   const pageSize = 15;
@@ -263,59 +259,6 @@ export default function ObjectsTableView({
             )}
           </div>
 
-          {/* Region Selector */}
-          {onRegionChange && (
-            <div ref={regionRef} className="relative">
-              <button
-                onClick={() => { setRegionOpen(!regionOpen); setDistrictOpen(false); setStatusOpen(false); }}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl font-semibold text-slate-700 transition-colors cursor-pointer"
-              >
-                <span>{selectedRegion ? getRegionName(selectedRegion) : "🇺🇿 Barcha viloyatlar"}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
-              {regionOpen && (
-                <div className="absolute left-0 mt-1.5 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-1.5 max-h-56 overflow-y-auto animate-in fade-in duration-150">
-                  <button
-                    onClick={() => {
-                      onRegionChange('');
-                      onDistrictChange('');
-                      setRegionOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full text-left px-3 py-1.5 rounded-xl flex items-center justify-between text-xs font-medium cursor-pointer ${
-                      !selectedRegion
-                        ? 'bg-emerald-50 text-emerald-700 font-bold'
-                        : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <span>🇺🇿 Barcha viloyatlar</span>
-                    {!selectedRegion && <Check className="w-3.5 h-3.5 text-[#1b815f]" />}
-                  </button>
-                  <div className="my-1 border-t border-slate-100"></div>
-                  {REGION_LIST.map(r => (
-                    <button
-                      key={r.soato}
-                      onClick={() => {
-                        onRegionChange(r.soato);
-                        onDistrictChange('');
-                        setRegionOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full text-left px-3 py-1.5 rounded-xl flex items-center justify-between text-xs font-medium cursor-pointer ${
-                        selectedRegion === r.soato
-                          ? 'bg-emerald-50 text-emerald-700 font-bold'
-                          : 'hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <span>{r.name}</span>
-                      {selectedRegion === r.soato && <Check className="w-3.5 h-3.5 text-[#1b815f]" />}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* District Selector */}
           <div ref={districtRef} className="relative">
             <button
@@ -494,6 +437,11 @@ export default function ObjectsTableView({
                         <div className="font-bold text-slate-900 group-hover:text-[#1b815f] transition-colors truncate">
                           {obj.tjm_name ? obj.tjm_name : obj.object_name}
                         </div>
+                        {objectBrand(obj) && (
+                          <div className="text-[11px] font-semibold text-[#1b815f] truncate mt-0.5">
+                            {objectBrand(obj)}
+                          </div>
+                        )}
                         {obj.tjm_name && (
                           <div className="text-[11px] text-slate-400 truncate mt-0.5">
                             {obj.object_name}

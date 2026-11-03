@@ -8,6 +8,7 @@ interface AIRouteModalProps {
   isOpen: boolean;
   onClose: () => void;
   objects: MapObject[];
+  activeFilterCount?: number;
   userLat?: number | null;
   userLng?: number | null;
   companyId?: string;
@@ -49,6 +50,7 @@ export default function AIRouteModal({
   isOpen,
   onClose,
   objects,
+  activeFilterCount = 0,
   userLat,
   userLng,
   companyId,
@@ -82,7 +84,7 @@ export default function AIRouteModal({
         unvisitedOnly,
         highPriorityOnly,
         maxStops,
-        objects: cleanObjects
+        scopeIds: activeFilterCount > 0 ? cleanObjects.map(o => String(o.source_id)) : undefined
       });
 
       if (res.success && res.data) {
@@ -146,6 +148,12 @@ export default function AIRouteModal({
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {!result ? (
             <>
+              {activeFilterCount > 0 && (
+                <p className="px-3 py-2 rounded-xl bg-emerald-50 text-xs font-semibold text-emerald-800">
+                  Marshrut faol filtrlarga mos {objects.length.toLocaleString()} ta obyekt ichidan tuziladi.
+                </p>
+              )}
+
               {/* Presets Grid */}
               <div>
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5 mb-2.5">

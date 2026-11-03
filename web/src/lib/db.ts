@@ -194,7 +194,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at
 `;
 
 // Additive only: nothing here may drop or rewrite existing rows. Bump SCHEMA_VERSION when adding statements.
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 6;
 export const MIGRATIONS_SQL = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
     version INT PRIMARY KEY,
@@ -258,7 +258,17 @@ ALTER TABLE objects ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
 ALTER TABLE objects ADD COLUMN IF NOT EXISTS price_from TEXT DEFAULT '';
 ALTER TABLE objects ADD COLUMN IF NOT EXISTS class_building TEXT DEFAULT '';
 
-ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+
+ALTER TABLE company_data ADD COLUMN IF NOT EXISTS brand_name TEXT DEFAULT '';
+ALTER TABLE objects ADD COLUMN IF NOT EXISTS brand_name TEXT DEFAULT '';
+ALTER TABLE company_data ADD COLUMN IF NOT EXISTS client_owner TEXT DEFAULT '';
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS via_points TEXT DEFAULT '';
+INSERT INTO custom_fields (company_id, field_name, field_type, required, visible, column_letter, label, description) VALUES
+  ('', 'brand_name', 'text', false, true, 'AG', 'Brend nomi', 'Obyekt sotiladigan brend'),
+  ('', 'client_owner', 'select', false, true, 'AH', 'Kimning klienti', 'UYSOT CRM, UYSOT.UZ, UYQUR yoki boshqa'),
+  ('', 'crm_link', 'url', false, true, 'AI', 'CRM havolasi', 'Gaplashilgan bo''lsa, CRM dagi havola')
+  ON CONFLICT (company_id, field_name) DO NOTHING
 `;
 
 // 3. In-memory store for local development and the automated tests. Never used in production.
@@ -358,7 +368,10 @@ const localStore: LocalStore = {
     { field_name: 'instagram', field_type: 'url', required: false, visible: true, column_letter: 'AC' },
     { field_name: 'notes', field_type: 'textarea', required: false, visible: true, column_letter: 'AD' },
     { field_name: 'priority', field_type: 'select', required: false, visible: true, column_letter: 'AE' },
-    { field_name: 'last_visit', field_type: 'date', required: false, visible: true, column_letter: 'AF' }
+    { field_name: 'last_visit', field_type: 'date', required: false, visible: true, column_letter: 'AF' },
+    { field_name: 'brand_name', field_type: 'text', required: false, visible: true, column_letter: 'AG' },
+    { field_name: 'client_owner', field_type: 'select', required: false, visible: true, column_letter: 'AH' },
+    { field_name: 'crm_link', field_type: 'url', required: false, visible: true, column_letter: 'AI' }
   ],
   activityLogs: [],
   initialized: false
@@ -464,7 +477,7 @@ async function ready() {
 }
 
 const CRM_COLUMNS = [
-  'tjm_name', 'phone', 'sales_office', 'manager_name', 'manager_phone', 'telegram',
+  'tjm_name', 'brand_name', 'client_owner', 'phone', 'sales_office', 'manager_name', 'manager_phone', 'telegram',
   'instagram', 'notes', 'priority', 'last_visit', 'visited_by', 'visit_lat_lng'
 ] as const;
 type CrmColumn = typeof CRM_COLUMNS[number];
@@ -684,12 +697,12 @@ export const db = {
       const customJson = JSON.stringify(pickCustomValues(data));
       await sql`
         INSERT INTO company_data (
-          company_id, user_id, source_id, tjm_name, phone, sales_office,
+          company_id, user_id, source_id, tjm_name, brand_name, client_owner, phone, sales_office,
           manager_name, manager_phone, telegram, instagram, notes,
           priority, last_visit, visited_by, visit_lat_lng, custom_values, updated_at
         ) VALUES (
           ${companyId}, ${userId}, ${sourceId},
-          COALESCE(${v.tjm_name}::text, ''), COALESCE(${v.phone}::text, ''), COALESCE(${v.sales_office}::text, ''),
+          COALESCE(${v.tjm_name}::text, ''), COALESCE(${v.brand_name}::text, ''), COALESCE(${v.client_owner}::text, ''), COALESCE(${v.phone}::text, ''), COALESCE(${v.sales_office}::text, ''),
           COALESCE(${v.manager_name}::text, ''), COALESCE(${v.manager_phone}::text, ''), COALESCE(${v.telegram}::text, ''),
           COALESCE(${v.instagram}::text, ''), COALESCE(${v.notes}::text, ''), COALESCE(${v.priority}::text, ''),
           COALESCE(${v.last_visit}::text, ''), COALESCE(${v.visited_by}::text, ''), COALESCE(${v.visit_lat_lng}::text, ''),
@@ -698,6 +711,8 @@ export const db = {
         ON CONFLICT (company_id, source_id) DO UPDATE SET
           user_id = EXCLUDED.user_id,
           tjm_name = COALESCE(${v.tjm_name}::text, company_data.tjm_name),
+          brand_name = COALESCE(${v.brand_name}::text, company_data.brand_name),
+          client_owner = COALESCE(${v.client_owner}::text, company_data.client_owner),
           phone = COALESCE(${v.phone}::text, company_data.phone),
           sales_office = COALESCE(${v.sales_office}::text, company_data.sales_office),
           manager_name = COALESCE(${v.manager_name}::text, company_data.manager_name),
@@ -718,7 +733,13 @@ export const db = {
 
     const ovKey = `${companyId}_${sourceId}`;
     const existing = localStore.companyData.get(ovKey) || {};
-    localStore.companyData.set(ovKey, { ...existing, ...data, company_id: companyId, source_id: sourceId });
+    localStore.companyData.set(ovKey, {
+      ...existing,
+      ...data,
+      custom_values: { ...existing.custom_values, ...pickCustomValues(data) },
+      company_id: companyId,
+      source_id: sourceId
+    });
     return true;
   },
 
@@ -731,7 +752,7 @@ export const db = {
         txn`DELETE FROM company_data WHERE company_id = ${companyId} AND source_id = ${sourceId} AND (is_custom_tjm = false OR is_custom_tjm IS NULL)`,
         txn`
           UPDATE company_data SET
-            tjm_name = '', phone = '', sales_office = '', manager_name = '', manager_phone = '',
+            tjm_name = '', brand_name = '', client_owner = '', phone = '', sales_office = '', manager_name = '', manager_phone = '',
             telegram = '', instagram = '', notes = '', priority = '', last_visit = '', visited_by = '',
             visit_lat_lng = '', custom_values = '{}'::jsonb,
             custom_object_json = custom_object_json - ${crmKeys}::text[],
@@ -792,11 +813,11 @@ export const db = {
       await sql`
         INSERT INTO company_data (
           company_id, user_id, source_id, is_custom_tjm, custom_object_json,
-          tjm_name, phone, sales_office, manager_name, manager_phone, telegram,
+          tjm_name, brand_name, client_owner, phone, sales_office, manager_name, manager_phone, telegram,
           instagram, notes, priority, last_visit, visited_by, visit_lat_lng, updated_at
         ) VALUES (
           ${companyId}, ${userId}, ${sourceId}, true, ${JSON.stringify(data)}::jsonb,
-          COALESCE(${v.tjm_name}::text, ''), COALESCE(${v.phone}::text, ''), COALESCE(${v.sales_office}::text, ''),
+          COALESCE(${v.tjm_name}::text, ''), COALESCE(${v.brand_name}::text, ''), COALESCE(${v.client_owner}::text, ''), COALESCE(${v.phone}::text, ''), COALESCE(${v.sales_office}::text, ''),
           COALESCE(${v.manager_name}::text, ''), COALESCE(${v.manager_phone}::text, ''), COALESCE(${v.telegram}::text, ''),
           COALESCE(${v.instagram}::text, ''), COALESCE(${v.notes}::text, ''), COALESCE(${v.priority}::text, ''),
           COALESCE(${v.last_visit}::text, ''), COALESCE(${v.visited_by}::text, ''), COALESCE(${v.visit_lat_lng}::text, ''),
@@ -1142,6 +1163,7 @@ export const db = {
       const rows = await sql`
         UPDATE objects SET
           object_name = COALESCE(${text('object_name')}::text, object_name),
+          brand_name = COALESCE(${text('brand_name')}::text, brand_name),
           address = COALESCE(${text('address')}::text, address),
           region_soato = COALESCE(${text('region_soato')}::text, region_soato),
           region_name = COALESCE(${text('region_name')}::text, region_name),
@@ -1464,6 +1486,7 @@ export const db = {
         tjm_count: parseInt(r.tjm_count) || 0,
         tjm_list: r.tjm_list || '',
         buffer_radius_m: parseInt(r.buffer_radius_m) || 200,
+        via_points: r.via_points || '',
         notes: r.notes || '',
         status: r.status || 'active',
         created_at: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString()
@@ -1492,6 +1515,7 @@ export const db = {
       tjm_count: routeData.tjm_count || 0,
       tjm_list: routeData.tjm_list || '',
       buffer_radius_m: routeData.buffer_radius_m || 200,
+      via_points: routeData.via_points || '',
       notes: routeData.notes || '',
       status: routeData.status || 'active',
       created_at: new Date().toISOString()
@@ -1502,13 +1526,13 @@ export const db = {
         INSERT INTO routes (
           route_id, company_id, user_id, user_name, route_name, start_name, start_lat,
           start_lng, end_name, end_lat, end_lng, distance_km, duration_min, tjm_count,
-          tjm_list, buffer_radius_m, notes, status, created_at
+          tjm_list, buffer_radius_m, via_points, notes, status, created_at
         ) VALUES (
           ${item.id}, ${item.company_id}, ${item.user_id}, ${item.user_name},
           ${item.route_name}, ${item.start_name}, ${item.start_lat}, ${item.start_lng},
           ${item.end_name}, ${item.end_lat}, ${item.end_lng}, ${item.distance_km},
           ${item.duration_min}, ${item.tjm_count}, ${item.tjm_list}, ${item.buffer_radius_m},
-          ${item.notes}, ${item.status}, NOW()
+          ${item.via_points}, ${item.notes}, ${item.status}, NOW()
         )
       `;
       return item;
